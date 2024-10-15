@@ -20,3 +20,6 @@ class BackgroundInDB(BaseModel):
     description: str
     prompt: str
     image_s3_key: str
+
+    class Config:
+        from_attributes=True

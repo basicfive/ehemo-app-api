@@ -1,5 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, Float, Enum
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, String, Integer, DateTime, Float, Enum, ForeignKey
 from sqlalchemy.sql import func
 
 from app.core.enums.generation_status import GenerationStatusEnum
@@ -8,16 +7,10 @@ from app.models.base import TimeStampModel
 class GenerationRequest(TimeStampModel):
     __tablename__ = "generation_request"
 
-    user_id = Column(Integer, index=True)
-    hair_variant_model_id = Column(Integer)
-    background_id = Column(Integer)
-    image_resolution_id = Column(Integer)
-
-    user = relationship("User", back_populates="generation_request")
-    hair_variant_model = relationship("HairVariantModel", back_populates="generation_request")
-    background = relationship("Background", back_populates="generation_request")
-    image_resolution = relationship("ImageResolution", back_populates="generation_request")
-    image_generation_job = relationship("ImageGenerationJob", back_populates="generation_request")
+    user_id = Column(Integer, ForeignKey("user.id"), index=True)
+    hair_variant_model_id = Column(Integer, ForeignKey("hair_variant_model.id"))
+    background_id = Column(Integer, ForeignKey("background.id"))
+    image_resolution_id = Column(Integer, ForeignKey("image_resolution.id"))
 
 class ImageGenerationJob(TimeStampModel):
     __tablename__ = "image_generation_job"
@@ -29,7 +22,5 @@ class ImageGenerationJob(TimeStampModel):
     width = Column(Integer, nullable=False)
     height = Column(Integer, nullable=False)
 
-    generation_request_id = Column(Integer, index=True)
+    generation_request_id = Column(Integer, ForeignKey("generation_request.id"), index=True)
 
-    generation_request = relationship("GenerationRequest", back_populates="image_generation_job.py")
-    generated_image = relationship("GeneratedImage", back_populates="image_generation_job.py")

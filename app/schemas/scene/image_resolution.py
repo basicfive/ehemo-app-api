@@ -29,3 +29,6 @@ class ImageResolutionInDB(BaseModel):
     aspect_width: int
     aspect_height: int
     image_s3_key: str
+
+    class Config:
+        from_attributes=True

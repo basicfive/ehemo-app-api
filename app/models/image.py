@@ -8,7 +8,7 @@ class GeneratedImage(TimeStampModel):
     webui_png_info = Column(String(2048), nullable=False)
 
     user_id = Column(Integer, ForeignKey("user.id"), index=True)
-    generated_image_group_id = Column(Integer, ForeignKey("generation_image_group.id"), index=True)
+    generated_image_group_id = Column(Integer, ForeignKey("generated_image_group.id"), index=True)
     image_generation_job_id = Column(Integer, ForeignKey("image_generation_job.id"))
 
 class GeneratedImageGroup(TimeStampModel):

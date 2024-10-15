@@ -12,3 +12,6 @@ class PostureAndClothingInDB(BaseModel):
     id: int
     prompt: str
     gender_id: int
+
+    class Config:
+        from_attributes=True

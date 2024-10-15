@@ -49,7 +49,6 @@ class Color(TimeStampModel):
     description = Column(String(100), nullable=False)
     order = Column(Integer, nullable=False)
 
-
 class LoRAModel(TimeStampModel):
     __tablename__ = "lora_model"
     prompt = Column(String(255), nullable=False)
