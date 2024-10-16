@@ -1,5 +1,6 @@
 from typing import List, Dict, Any
 from sqlalchemy.orm import DeclarativeBase
+from datetime import datetime, date
 
 # import os
 # import boto3
@@ -26,14 +27,10 @@ def remove_duplicates_set(lst: List[int]) -> List[int]:
     return list(set(lst))
 
 
-from datetime import datetime, date
-
-
 def serialize_datetime(obj):
     if isinstance(obj, (datetime, date)):
         return obj.isoformat()
     return obj
-
 
 def model_list_to_dict(model_list: List[DeclarativeBase]) -> Dict[str, List[Dict[str, Any]]]:
     if not model_list:

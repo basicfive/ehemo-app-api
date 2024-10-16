@@ -9,6 +9,7 @@ class UserUpdate(BaseModel):
 
 class UserInDB(BaseModel):
     id: int
+    token: int
 
     class Config:
         from_attributes=True

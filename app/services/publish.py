@@ -6,6 +6,8 @@ from app.models.hair import HairVariantModel, HairDesignColor, HairDesign, HairS
 from app.repositories.hair import GenderRepository, HairStyleRepository, LengthRepository, HairStyleLengthRepository, \
     HairDesignRepository, HairDesignColorRepository, HairVariantModelRepository
 
+# 이거 서비스로 바꾸자.
+# 그래야 에러 처리가 쉽다.
 class PublishService:
     def __init__(
             self,
@@ -61,7 +63,7 @@ class PublishService:
 
         # print(json.dumps(model_list_to_dict(hair_design_list), indent=2))
         # 3. HairStyleLength
-        hair_style_length_list = self.hair_style_length_repo.get_all_by_hair_style_and_length(hair_style_length_set)
+        hair_style_length_list = self.hair_style_length_repo.get_all_by_hair_style_and_length_set(hair_style_length_set)
 
         hair_style_length_ids: List[int] = [hair_style_length.id for hair_style_length in hair_style_length_list]
         self.hair_style_length_repo.update_is_published(hair_style_length_ids, is_published=True)

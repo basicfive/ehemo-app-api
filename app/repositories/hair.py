@@ -1,6 +1,8 @@
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
-from sqlalchemy import update, or_, and_, select
+from sqlalchemy import update, select
 from typing import List, Tuple
+from collections import defaultdict
 
 from app.repositories.base import BaseRepository
 from app.schemas.hair.color import ColorCreate, ColorUpdate, SpecificColorCreate, SpecificColorUpdate
@@ -83,25 +85,30 @@ class HairStyleLengthRepository(BaseRepository[HairStyleLength, HairStyleLengthC
     def get_all_by_hair_style(self, hair_style_id: int):
         self.db.query(HairStyleLength).filter(HairStyleLength.hair_style_id == hair_style_id).all()
 
-    # TODO: n*n 연산임.(얼마 안되는 n 이지만) 이를 피하기 위해 구조적으로 변경할 수 있는게 있을까?
-    def get_all_by_hair_style_and_length(self, pairs: List[Tuple[int, int]]) -> List[HairStyleLength]:
+    def get_all_by_hair_style_and_length_set(self, pairs: List[Tuple[int, int]]) -> List[HairStyleLength]:
         if not pairs:
             return []
 
         unique_pairs = set(pairs)
 
-        conditions = [
-            and_(
-                HairStyleLength.hair_style_id == pair[0],
-                HairStyleLength.length_id == pair[1]
-            )
-            for pair in unique_pairs
-        ]
+        # hair_style_id를 기준으로 그룹화
+        hair_style_groups = defaultdict(set)
+        for hair_style_id, length_id in unique_pairs:
+            hair_style_groups[hair_style_id].add(length_id)
 
-        stmt = select(HairStyleLength).where(or_(*conditions))
+        stmt = select(HairStyleLength).where(
+            HairStyleLength.hair_style_id.in_(hair_style_groups.keys())
+        )
 
         result = self.db.execute(stmt)
-        return list(result.scalars().all())
+        all_matches = result.scalars().all()
+
+        filtered_results = [
+            match for match in all_matches
+            if match.length_id in hair_style_groups[match.hair_style_id]
+        ]
+
+        return filtered_results
 
     def update_is_published(self, ids: List[int], is_published: bool):
         stmt = (
@@ -117,14 +124,20 @@ class HairDesignRepository(BaseRepository[HairDesign, HairDesignCreate, HairDesi
         super().__init__(model=HairDesign, db=db)
         self.db = db
 
-    def get_all_by_length(self, length_id: int):
-        self.db.query(HairDesign).filter(HairDesign.length_id == length_id).all()
-
     def get_all_by_hair_style(self, hair_style_id: int):
-        self.db.query(HairDesign).filter(HairDesign.hair_style_id == hair_style_id).all()
+        self.db.query(HairDesign).filter(HairDesign.hair_style_id.is_(hair_style_id)).all()
 
+    def get_all_by_hair_style_and_length(self, hair_style_id: int, length_id: int):
+        stmt = select(HairDesign).where(
+            (HairDesign.hair_style_id.is_(hair_style_id)) &
+            (HairDesign.length_id.is_(length_id))
+        )
 
-
+        try:
+            result = self.db.execute(stmt)
+            return result.scalars().all()
+        except NoResultFound:
+            raise ValueError(f"HairDesign with hairstyle id: {hair_style_id}, length_id: {length_id} does not exist in the database")
 
 class HairDesignColorRepository(BaseRepository[HairDesignColor, HairDesignColorCreate, HairDesignColorUpdate]):
     def __init__(self, db: Session):
@@ -151,8 +164,8 @@ class HairVariantModelRepository(BaseRepository[HairVariantModel, HairVariantMod
         super().__init__(model=HairVariantModel, db=db)
         self.db = db
 
-    def get_all_by_hair_design_color(self, hair_design_color_id: int) -> List[HairVariantModel]:
-        return self.db.query(HairVariantModel).filter(HairVariantModel.hair_design_color_id == hair_design_color_id).all()
+    def get_by_hair_design_color(self, hair_design_color_id: int) -> HairVariantModel:
+        return self.db.query(HairVariantModel).filter(HairVariantModel.hair_design_color_id == hair_design_color_id).first()
 
     def get_all_by_lora_model(self, lora_model_id: int) -> List[HairVariantModel]:
         return self.db.query(HairVariantModel).filter(HairVariantModel.lora_model_id == lora_model_id).all()

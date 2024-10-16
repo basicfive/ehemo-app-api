@@ -1,4 +1,6 @@
 from typing import List
+
+from app.core.decorators import handle_not_found
 from app.models.hair import HairStyle, Gender, Length, HairStyleLength, Color, SpecificColor, LoRAModel, \
     HairDesignColor, HairVariantModel, HairDesign
 from app.repositories.hair import GenderRepository, HairStyleRepository, LengthRepository, HairStyleLengthRepository, \
@@ -54,11 +56,11 @@ class HairStyleLengthService(BaseService[HairStyleLength, HairStyleLengthInDB, H
             for db_hair_style_length in self.repo.get_all_by_hair_style(hair_style_id)
         ]
 
-    def get_all_by_length(self, length_id: int) -> List[HairStyleLengthInDB]:
-        return [
-            HairStyleLengthInDB.model_validate(db_hair_style_length)
-            for db_hair_style_length in self.repo.get_all_by_length(length_id)
-        ]
+    # def get_all_by_length(self, length_id: int) -> List[HairStyleLengthInDB]:
+    #     return [
+    #         HairStyleLengthInDB.model_validate(db_hair_style_length)
+    #         for db_hair_style_length in self.repo.get_all_by_length(length_id)
+    #     ]
 
 class HairDesignService(BaseService[HairDesign, HairDesignInDB, HairDesignCreate, HairDesignUpdate, HairDesignRepository]):
     def __init__(self, repo: HairDesignRepository):
@@ -70,11 +72,17 @@ class HairDesignService(BaseService[HairDesign, HairDesignInDB, HairDesignCreate
             for db_hair_design in self.repo.get_all_by_hair_style(hair_style_id)
         ]
 
-    def get_all_by_length(self, length_id: int) -> List[HairDesignInDB]:
+    def get_all_by_hair_style_and_length(self, hair_style_id: int, length_id: int):
         return [
-            HairDesignInDB.model_validate(db_hair_style_length)
-            for db_hair_style_length in self.repo.get_all_by_length(length_id)
+            HairDesignInDB.model_validate(db_hair_design)
+            for db_hair_design in self.repo.get_all_by_hair_style_and_length(hair_style_id=hair_style_id, length_id=length_id)
         ]
+
+    # def get_all_by_length(self, length_id: int) -> List[HairDesignInDB]:
+    #     return [
+    #         HairDesignInDB.model_validate(db_hair_style_length)
+    #         for db_hair_style_length in self.repo.get_all_by_length(length_id)
+    #     ]
 
 class HairDesignColorService(BaseService[HairDesignColor, HairDesignColorInDB, HairDesignColorCreate, HairDesignColorUpdate, HairDesignColorRepository]):
     def __init__(self, repo: HairDesignColorRepository):
@@ -90,9 +98,9 @@ class HairVariantModelService(BaseService[HairVariantModel,HairVariantModelInDB,
     def __init__(self, repo: HairVariantModelRepository):
         super().__init__(repo, HairVariantModelInDB)
 
-    def get_all_by_hair_design_color(self, hair_design_color_id: int) -> List[HairVariantModelInDB]:
-        return [
-            HairVariantModelInDB.model_validate(db_hair_variant_model)
-            for db_hair_variant_model in self.repo.get_all_by_hair_design_color(hair_design_color_id)
-        ]
+    @handle_not_found
+    def get_by_hair_design_color(self, hair_design_color_id: int) -> HairVariantModelInDB:
+        db_hair_variant_model: HairVariantModel = self.repo.get_by_hair_design_color(hair_design_color_id)
+        return HairVariantModelInDB.model_validate(db_hair_variant_model)
+
 
