@@ -1,7 +1,7 @@
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 from sqlalchemy import update, select
-from typing import List, Tuple
+from typing import List, Tuple, Type
 from collections import defaultdict
 
 from app.repositories.base import BaseRepository
@@ -164,8 +164,17 @@ class HairVariantModelRepository(BaseRepository[HairVariantModel, HairVariantMod
         super().__init__(model=HairVariantModel, db=db)
         self.db = db
 
-    def get_by_hair_design_color(self, hair_design_color_id: int) -> HairVariantModel:
-        return self.db.query(HairVariantModel).filter(HairVariantModel.hair_design_color_id == hair_design_color_id).first()
+    def get_by_hair_style_length_color(self, hair_style_id: int, length_id: int, color_id: int) -> HairVariantModel:
+        stmt = select(HairVariantModel).filter_by(
+            hair_style_id=hair_style_id,
+            length_id=length_id,
+            color_id=color_id
+        )
+        result = self.db.execute(stmt).scalar_one_or_none()
+        if not result:
+            raise ValueError(
+                f"There is no corresponding HairVariantModel with hs_id: {hair_style_id}, length_id: {length_id}, color_id: {color_id}")
+        return result
 
     def get_all_by_lora_model(self, lora_model_id: int) -> List[HairVariantModel]:
         return self.db.query(HairVariantModel).filter(HairVariantModel.lora_model_id == lora_model_id).all()

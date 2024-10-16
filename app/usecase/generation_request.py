@@ -1,11 +1,9 @@
 from typing import List
+
 from app.schemas.generation.generation_request import GenerationRequestCreateRequest, GenerationRequestCreateResponse, \
     GenerationRequestCreate, GenerationRequestInDB
 
 from app.schemas.hair.hair_variant_model import HairVariantModelInDB
-from app.schemas.hair.length import LengthInDB
-from app.schemas.hair.color import ColorInDB
-from app.schemas.user.user import UserInDB
 from app.services.generation import GenerationRequestService
 from app.services.hair import ColorService
 from app.services.user import UserService
@@ -75,8 +73,6 @@ class GenerationRequestUseCase:
             color_service: ColorService,
             background_service: BackgroundService,
             image_resolution_service: ImageResolutionService,
-            hair_design_color_service: HairDesignColorService,
-            hair_design_service: HairDesignService,
     ):
         self.hair_variant_model_service = hair_variant_model_service
         self.generation_request_service = generation_request_service
@@ -87,14 +83,14 @@ class GenerationRequestUseCase:
         self.color_service = color_service
         self.background_service = background_service
         self.image_resolution_service = image_resolution_service
-        self.hair_design_color_service = hair_design_color_service
-        self.hair_design_service = hair_design_service
 
-    def create_generation_request(
-            self,
-            request: GenerationRequestCreateRequest
-    ) -> GenerationRequestCreateResponse:
-        hair_variant_model: HairVariantModelInDB = self.hair_variant_model_service.get_by_hair_design_color(request.hair_design_color_id)
+    def create_generation_request(self, request: GenerationRequestCreateRequest) -> GenerationRequestCreateResponse:
+        hair_variant_model: HairVariantModelInDB = self.hair_variant_model_service.get_by_hair_style_length_color(
+            hair_style_id=request.hair_style_id,
+            length_id=request.length_id,
+            color_id=request.color_id
+        )
+
         generation_request_create = GenerationRequestCreate(
             user_id=request.user_id,
             hair_variant_model_id=hair_variant_model.id,
@@ -102,26 +98,22 @@ class GenerationRequestUseCase:
             image_resolution_id=request.image_resolution_id
         )
         generation_request: GenerationRequestInDB = self.generation_request_service.create(obj_in=generation_request_create)
-        user: UserInDB = self.user_service.get(obj_id=generation_request.user_id)
-        hair_design_color: HairDesignColorInDB = self.hair_design_color_service.get(request.hair_design_color_id)
-        color: ColorInDB = self.color_service.get(hair_design_color.color_id)
-        hair_design: HairDesignInDB = self.hair_design_service.get(hair_design_color.hair_design_id)
-        hair_style: HairStyleInDB = self.hair_style_service.get(hair_design.hair_style_id)
-        if hair_design.length_id:
-            length: LengthInDB = self.length_service.get(hair_design.length_id)
-        else:
-            length: LengthInDB = None
-        gender: GenderInDB = self.gender_service.get(hair_style.gender_id)
-        background: BackgroundInDB = self.background_service.get(request.background_id)
-        image_resolution: ImageResolutionInDB = self.image_resolution_service.get(request.image_resolution_id)
+
+        return self._create_request_response(hair_variant_model, generation_request)
+
+    def _create_request_response(
+            self,
+            hair_variant_model: HairVariantModelInDB,
+            generation_request: GenerationRequestInDB
+    ) -> GenerationRequestCreateResponse:
 
         return GenerationRequestCreateResponse(
             generation_request_id=generation_request.id,
-            user=user,
-            gender=gender,
-            hair_style=hair_style,
-            length=length,
-            color=color,
-            background=background,
-            image_resolution=image_resolution
+            user=self.user_service.get(obj_id=generation_request.user_id),
+            gender=self.gender_service.get(hair_variant_model.gender_id),
+            hair_style=self.hair_style_service.get(hair_variant_model.hair_style_id),
+            length=self.hair_style_service.get(hair_variant_model.length_id) if hair_variant_model.length_id else None,
+            color=self.color_service.get(hair_variant_model.color_id),
+            background=self.background_service.get(generation_request.background_id),
+            image_resolution=self.image_resolution_service.get(generation_request.image_resolution_id),
         )

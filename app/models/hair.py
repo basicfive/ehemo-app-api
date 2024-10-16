@@ -1,4 +1,4 @@
-from sqlalchemy import String, Column, Integer, Boolean, ForeignKey
+from sqlalchemy import String, Column, Integer, Boolean, ForeignKey, Index
 from sqlalchemy.orm import relationship
 
 from app.models.base import TimeStampModel
@@ -89,8 +89,17 @@ class HairDesignColor(TimeStampModel): # HairDesignColor == HairVariant
 
 class HairVariantModel(TimeStampModel):
     __tablename__ = "hair_variant_model"
+
     is_published = Column(Boolean, default=False, nullable=False)
 
-    hair_design_color_id = Column(Integer, ForeignKey("hair_design_color.id"), nullable=False, index=True)
+    gender_id = Column(Integer, ForeignKey("gender.id"), nullable=False)
+    hair_style_id = Column(Integer, ForeignKey("hair_style.id"), nullable=False)
+    length_id = Column(Integer, ForeignKey("length.id"), nullable=True)
+    color_id = Column(Integer, ForeignKey("color.id"), nullable=False)
     lora_model_id = Column(Integer, ForeignKey("lora_model.id"), nullable=False)
+
+    __table_args__ = (
+        Index('idx_hair_variant_style_length_color',
+              'hair_style_id', 'length_id', 'color_id'),
+    )
 

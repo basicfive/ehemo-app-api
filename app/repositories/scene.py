@@ -1,4 +1,7 @@
+from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.expression import func
+from typing import List
 
 from app.repositories.base import BaseRepository
 from app.models.scene import Background, ImageResolution, PostureAndClothing
@@ -15,6 +18,10 @@ class PostureAndClothingRepository(BaseRepository[PostureAndClothing, PostureAnd
     def __init__(self, db: Session):
         super().__init__(model=PostureAndClothingCreate, db=db)
         self.db = db
+
+    def get_random_records(self, limit: int = 10) -> List[PostureAndClothing]:
+        stmt = select(PostureAndClothing).order_by(func.random()).limit(limit)
+        return list(self.db.scalars(stmt).all())
 
 class ImageResolutionRepository(BaseRepository[ImageResolution, ImageResolutionCreate, ImageResolutionUpdate]):
     def __init__(self, db: Session):

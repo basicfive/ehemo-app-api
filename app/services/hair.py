@@ -99,8 +99,12 @@ class HairVariantModelService(BaseService[HairVariantModel,HairVariantModelInDB,
         super().__init__(repo, HairVariantModelInDB)
 
     @handle_not_found
-    def get_by_hair_design_color(self, hair_design_color_id: int) -> HairVariantModelInDB:
-        db_hair_variant_model: HairVariantModel = self.repo.get_by_hair_design_color(hair_design_color_id)
+    def get_by_hair_style_length_color(self, hair_style_id: int, length_id: int, color_id: int) -> HairVariantModelInDB:
+        db_hair_variant_model: HairVariantModel = self.repo.get_by_hair_style_length_color(
+            hair_style_id=hair_style_id,
+            length_id=length_id,
+            color_id=color_id
+        )
         return HairVariantModelInDB.model_validate(db_hair_variant_model)
 
 

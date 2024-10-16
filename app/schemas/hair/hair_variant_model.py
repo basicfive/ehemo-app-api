@@ -2,16 +2,25 @@ from typing import Optional
 from pydantic import BaseModel
 
 class HairVariantModelCreate(BaseModel):
-    hair_design_color_id: int
+    gender_id: int
+    hair_style_id: int
+    length_id: Optional[int]
+    color_id: int
     lora_model_id: int
 
 class HairVariantModelUpdate(BaseModel):
-    hair_design_color_id: Optional[int]
+    gender_id: Optional[int]
+    hair_style_id: Optional[int]
+    length_id: Optional[int]
+    color_id: Optional[int]
     lora_model_id: Optional[int]
 
 class HairVariantModelInDB(BaseModel):
     id: int
-    hair_design_color_id: int
+    gender_id: int
+    hair_style_id: int
+    length_id: Optional[int]
+    color_id: int
     lora_model_id: int
 
     class Config:
