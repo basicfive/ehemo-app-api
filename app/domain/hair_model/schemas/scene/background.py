@@ -7,12 +7,14 @@ class BackgroundCreate(BaseModel):
     description: str
     prompt: str
     image_s3_key: str
+    order: int
 
 class BackgroundUpdate(BaseModel):
     title: Optional[str]
     description: Optional[str]
     prompt: Optional[str]
     image_s3_key: Optional[str]
+    order: Optional[int]
 
 class BackgroundInDB(BaseModel):
     id: int
@@ -20,6 +22,7 @@ class BackgroundInDB(BaseModel):
     description: str
     prompt: str
     image_s3_key: str
+    order: int
 
     class Config:
         from_attributes=True

@@ -1,6 +1,6 @@
 from sqlalchemy.exc import NoResultFound
-from sqlalchemy.orm import Session
-from sqlalchemy import update, select, func
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import update, select, func, and_
 from typing import List, Tuple
 from collections import defaultdict
 from fastapi import Depends
@@ -112,11 +112,20 @@ class HairStyleLengthRepository(CRUDRepository[HairStyleLength, HairStyleLengthC
         super().__init__(model=HairStyleLength, db=db)
         self.db = db
 
-    def get_all_by_length(self, length_id: int):
-        self.db.query(HairStyleLength).filter(HairStyleLength.length_id == length_id).all()
+    def get_all_by_length(self, length_id: int) -> List[HairStyleLength]:
+        return self.db.query(HairStyleLength).filter(HairStyleLength.length_id == length_id).all()
 
-    def get_all_by_hair_style(self, hair_style_id: int):
-        self.db.query(HairStyleLength).filter(HairStyleLength.hair_style_id == hair_style_id).all()
+    def get_all_by_hair_style(self, hair_style_id: int) -> List[HairStyleLength]:
+        return self.db.query(HairStyleLength).filter(HairStyleLength.hair_style_id == hair_style_id).all()
+
+    def get_all_by_hair_style_with_length(self, hair_style_id: int) -> List[HairStyleLength]:
+        stmt = (
+            select(HairStyleLength)
+            .options(joinedload(HairStyleLength.length))
+            .where(HairStyleLength.hair_style_id == hair_style_id)
+        )
+        return list(self.db.scalars(stmt).all())
+
 
     def get_all_by_hair_style_and_length_set(self, pairs: List[Tuple[int, int]]) -> List[HairStyleLength]:
         if not pairs:
@@ -162,18 +171,20 @@ class HairDesignRepository(CRUDRepository[HairDesign, HairDesignCreate, HairDesi
         super().__init__(model=HairDesign, db=db)
         self.db = db
 
-    def get_all_by_hair_style(self, hair_style_id: int):
-        self.db.query(HairDesign).filter(HairDesign.hair_style_id.is_(hair_style_id)).all()
+    def get_all_by_hair_style(self, hair_style_id: int) -> List[HairDesign]:
+        stmt = select(HairDesign).where(HairDesign.hair_style_id == hair_style_id)
+        return list(self.db.scalars(stmt).all())
 
-    def get_all_by_hair_style_and_length(self, hair_style_id: int, length_id: int):
+    def get_by_hair_style_and_length(self, hair_style_id: int, length_id: int):
         stmt = select(HairDesign).where(
-            (HairDesign.hair_style_id.is_(hair_style_id)) &
-            (HairDesign.length_id.is_(length_id))
+            and_(
+                HairDesign.hair_style_id == hair_style_id,
+                HairDesign.length_id == length_id
+            )
         )
 
         try:
-            result = self.db.execute(stmt)
-            return result.scalars().all()
+            return self.db.execute(stmt).scalar_one()
         except NoResultFound:
             raise ValueError(f"HairDesign with hairstyle id: {hair_style_id}, length_id: {length_id} does not exist in the database")
 
@@ -189,6 +200,14 @@ class HairDesignColorRepository(CRUDRepository[HairDesignColor, HairDesignColorC
 
     def get_all_by_hair_design(self, hair_design_id: int) -> List[HairDesignColor]:
         return self.db.query(HairDesignColor).filter(HairDesignColor.hair_design_id == hair_design_id).all()
+
+    def get_all_by_hair_design_with_color(self, hair_design_id: int) -> List[HairDesignColor]:
+        stmt = (
+            select(HairDesignColor)
+            .options(joinedload(HairDesignColor.color))
+            .where(HairDesignColor.hair_design_id == hair_design_id)
+        )
+        return list(self.db.scalars(stmt).all())
 
     def get_all_by_color(self, color_id: int) -> List[HairDesignColor]:
         return self.db.query(HairDesignColor).filter(HairDesignColor.color_id == color_id).all()
@@ -256,7 +275,7 @@ def get_background_repository(db: Session = Depends(get_db)) -> BackgroundReposi
 
 class PostureAndClothingRepository(CRUDRepository[PostureAndClothing, PostureAndClothingCreate, PostureAndClothingUpdate]):
     def __init__(self, db: Session):
-        super().__init__(model=PostureAndClothingCreate, db=db)
+        super().__init__(model=PostureAndClothing, db=db)
         self.db = db
 
     def get_random_records(self, limit: int = 10) -> List[PostureAndClothing]:

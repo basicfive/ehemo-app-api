@@ -1,18 +1,23 @@
 from typing import List
 from fastapi import Depends
-
 from app.application.query.hair_model_query import HairModelQueryService, HairModelDetails, get_hair_model_query_service
-from app.application.services.generation.dto import CreateGenerationRequestRequest, \
-    CreateGenerationRequestResponse, MQPublishMessage
+from app.application.services.generation.dto.create_generation_request import CreateGenerationRequestRequest, \
+    CreateGenerationRequestResponse
+from app.application.services.generation.dto.mq import MQPublishMessage
 from app.core.constants import SINGLE_INFERENCE_IMAGE_CNT, DISTILLED_CFG_SCALE
 from app.core.enums.generation_status import GenerationStatusEnum
 from app.core.utils import generate_unique_s3_key
-
 from app.domain.generation.schemas.generation_request import GenerationRequestCreate, GenerationRequestUpdate
 from app.domain.generation.schemas.image_generation_job import ImageGenerationJobCreate, ImageGenerationJobInDB, \
     ImageGenerationJobUpdate
 from app.domain.generation.services.generation_domain_service import calculate_generation_sec
-from app.domain.hair_model.models.hair import HairVariantModel
+from app.domain.hair_model.models.hair import HairVariantModel, Length
+from app.domain.hair_model.schemas.hair.gender import GenderInDB
+from app.domain.hair_model.schemas.hair.hair_style import HairStyleInDB
+from app.domain.hair_model.schemas.hair.length import LengthInDB
+from app.domain.hair_model.schemas.hair.color import ColorInDB
+from app.domain.hair_model.schemas.scene.background import BackgroundInDB
+from app.domain.hair_model.schemas.scene.image_resolution import ImageResolutionInDB
 from app.domain.hair_model.services.hair_model_prompt import create_prompts
 from app.infrastructure.mq.rabbit_mq_service import RabbitMQService, get_rabbit_mq_service
 from app.infrastructure.repositories.generation.generation import GenerationRequestRepository, \
@@ -68,7 +73,12 @@ class RequestGenerationApplicationService:
         return CreateGenerationRequestResponse(
             generation_request_id=generation_request.id,
             user=self.user_repo.get(obj_id=request.user_id),
-            **hair_model_details.model_dump()
+            gender=GenderInDB.model_validate(hair_model_details.gender),
+            hair_style=HairStyleInDB.model_validate(hair_model_details.hair_style),
+            length=LengthInDB.model_validate(hair_model_details.length),
+            color=ColorInDB.model_validate(hair_model_details.color),
+            background=BackgroundInDB.model_validate(hair_model_details.background),
+            image_resolution=ImageResolutionInDB.model_validate(hair_model_details.image_resolution)
         )
 
     # TODO: 수정 사항 반영하는 코드는 어떻게 깔끔하게 짤지 다시 생각해보자.
@@ -121,7 +131,11 @@ class RequestGenerationApplicationService:
         hair_model_details.length = self.hair_model_query_service.get_length_by_hair_style(hair_style_id=hair_model_details.hair_style.id)
 
         prompt_list: List[str] = create_prompts(
-            **hair_model_details.model_dump(),
+            length=hair_model_details.length,
+            gender=hair_model_details.gender,
+            background=hair_model_details.background,
+            lora_model=hair_model_details.lora_model,
+            specific_color_list=hair_model_details.specific_color_list,
             posture_and_clothing_list=posture_and_clothing_list,
             count=SINGLE_INFERENCE_IMAGE_CNT
         )
@@ -145,7 +159,7 @@ class RequestGenerationApplicationService:
         for image_generation_job in image_generation_job_list:
             print(image_generation_job.model_dump_json(indent=2))
 
-        # return 10
+        return 10
 
         # # MQ 요청 보내기
         # for image_generation_job in image_generation_job_list:

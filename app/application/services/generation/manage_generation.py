@@ -1,9 +1,7 @@
 import json
 from typing import List
-
 from fastapi import Depends
-
-from app.application.services.generation.dto import MQConsumeMessage
+from app.application.services.generation.dto.mq import MQConsumeMessage
 from app.core.enums.generation_status import GenerationStatusEnum
 from app.domain.generation.models.generation import ImageGenerationJob
 from app.domain.generation.models.image import GeneratedImageGroup, GeneratedImage

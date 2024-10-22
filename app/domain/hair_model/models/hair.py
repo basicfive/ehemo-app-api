@@ -1,4 +1,5 @@
 from sqlalchemy import String, Column, Integer, Boolean, ForeignKey, Index
+from sqlalchemy.orm import relationship
 
 from app.core.db.time_stamp_model import TimeStampModel
 
@@ -62,6 +63,9 @@ class HairStyleLength(TimeStampModel):
     hair_style_id = Column(Integer, ForeignKey("hair_style.id"), nullable=False, index=True)
     length_id = Column(Integer, ForeignKey("length.id"), nullable=False)
 
+    hair_style = relationship("HairStyle")
+    length = relationship("Length")
+
 # class HairStyleBang(TimeStampModel):
 #     __tablename__ = "hair_style_bang"
 #     # image_s3_key = Column(String(2048), nullable=False)
@@ -82,6 +86,8 @@ class HairDesignColor(TimeStampModel): # HairDesignColor == HairVariant
 
     hair_design_id = Column(Integer, ForeignKey("hair_design.id"), nullable=False, index=True)
     color_id = Column(Integer, ForeignKey("color.id"), nullable=False)
+
+    color = relationship("Color")
 
 class HairVariantModel(TimeStampModel):
     __tablename__ = "hair_variant_model"

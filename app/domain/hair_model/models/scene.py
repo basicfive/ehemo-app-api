@@ -8,6 +8,7 @@ class Background(TimeStampModel):
     description = Column(String(100), nullable=False)
     prompt = Column(String(1024), nullable=False)
     image_s3_key = Column(String(2048), nullable=False)
+    order = Column(Integer, nullable=True)
 
 class PostureAndClothing(TimeStampModel):
     __tablename__ = "posture_and_clothing"
@@ -25,3 +26,4 @@ class ImageResolution(TimeStampModel):
     aspect_width = Column(Integer, nullable=False)
     aspect_height = Column(Integer, nullable=False)
     image_s3_key = Column(String(2048), nullable=False)
+    order = Column(Integer, nullable=True)

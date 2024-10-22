@@ -1,5 +1,5 @@
 from fastapi import APIRouter, status, Depends
-
+from typing import List
 from app.domain.hair_model.schemas.hair.color import ColorCreate, ColorInDB, SpecificColorInDB, SpecificColorCreate
 from app.domain.hair_model.schemas.hair.gender import GenderCreate, GenderInDB
 from app.domain.hair_model.schemas.hair.hair_design import HairDesignInDB, HairDesignCreate
@@ -95,7 +95,6 @@ def create_hair_variant_model(
 ) -> HairVariantModelInDB:
     return service.create(obj_in=hair_variant_model)
 
-
 @router.post("/backgrounds", response_model=BackgroundInDB, status_code=status.HTTP_201_CREATED)
 def create_background(
         background: BackgroundCreate,
@@ -103,12 +102,12 @@ def create_background(
 ) -> BackgroundInDB:
     return service.create(obj_in=background)
 
-@router.post("/posture-and-clothing", response_model=PostureAndClothingInDB, status_code=status.HTTP_201_CREATED)
-def create_background(
-        posture_and_clothing: PostureAndClothingCreate,
+@router.post("/posture-and-clothing/batch", response_model=bool, status_code=status.HTTP_201_CREATED)
+def create_posture_and_clothing_batch(
+        posture_and_clothing_list: List[PostureAndClothingCreate],
         service: PostureAndClothingCRUDService = Depends(get_posture_and_clothing_crud_service)
-) -> PostureAndClothingInDB:
-    return service.create(obj_in=posture_and_clothing)
+) -> bool:
+    return service.create_batch(posture_and_clothing_list)
 
 @router.post("/image-resolution", response_model=ImageResolutionInDB, status_code=status.HTTP_201_CREATED)
 def create_image_resolution(
@@ -116,6 +115,4 @@ def create_image_resolution(
         service: ImageResolutionCRUDService = Depends(get_image_resolution_crud_service)
 ) -> ImageResolutionInDB:
     return service.create(obj_in=image_resolution)
-
-
 

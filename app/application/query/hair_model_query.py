@@ -1,6 +1,6 @@
 from fastapi import Depends
 from typing import Optional, List
-from app.application.query.dto import HairModelDetails
+from app.application.query.dto.hair_model_details import HairModelDetails
 from app.domain.hair_model.models.hair import HairVariantModel, SpecificColor, Length, HairStyle
 from app.domain.hair_model.models.scene import PostureAndClothing
 from app.infrastructure.repositories.hair_model.hair_model import HairVariantModelRepository, ColorRepository, \
@@ -72,7 +72,7 @@ class HairModelQueryService:
             specific_color_list=specific_color_list,
             lora_model=self.lora_model_repo.get(hair_variant_model.lora_model_id),
             background=self.background_repo.get(background_id),
-            image_resolution=self.background_repo.get(image_resolution_id)
+            image_resolution=self.image_resolution_repo.get(image_resolution_id)
         )
 
     def get_random_posture_and_clothing(self, limit: int) -> List[PostureAndClothing]:

@@ -4,27 +4,6 @@ from datetime import datetime, date, UTC
 import uuid
 import random
 
-# import os
-# import boto3
-# from botocore.exceptions import ClientError
-#
-# s3_client = boto3.client('s3')
-# BUCKET_NAME = os.environ.get('S3_BUCKET_NAME')
-#
-# def create_presigned_url(s3_key, expiration: int = 600, http_method: str ='GET'):
-#     try:
-#         response = s3_client.generated_presigned_url(
-#             'get_object',
-#             Params={'Bucket' : BUCKET_NAME, 'Key' : s3_key},
-#             ExpiresIn=expiration,
-#             HttpMethod=http_method
-#         )
-#     except ClientError as e:
-#         print(f"{e}")
-#         return None
-#
-#     return response
-
 def remove_duplicates_set(lst: List[int]) -> List[int]:
     return list(set(lst))
 

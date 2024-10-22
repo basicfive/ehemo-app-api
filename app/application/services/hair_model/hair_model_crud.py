@@ -182,6 +182,11 @@ class PostureAndClothingCRUDService(
     def __init__(self, repo: PostureAndClothingRepository):
         super().__init__(repo=repo, model_in_db=PostureAndClothingInDB)
 
+    def create_batch(self, posture_and_clothing_create_list: List[PostureAndClothingCreate]) -> bool:
+        for posture_and_clothing_create in posture_and_clothing_create_list:
+            self.create(obj_in=posture_and_clothing_create)
+        return True
+
 def get_posture_and_clothing_crud_service(repo: PostureAndClothingRepository = Depends(get_posture_and_clothing_repository)) -> PostureAndClothingCRUDService:
     return PostureAndClothingCRUDService(repo=repo)
 

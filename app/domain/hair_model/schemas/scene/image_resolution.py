@@ -10,6 +10,7 @@ class ImageResolutionCreate(BaseModel):
     aspect_width: int
     aspect_height: int
     image_s3_key: str
+    order: int
 
 class ImageResolutionUpdate(BaseModel):
     title: Optional[str]
@@ -19,6 +20,7 @@ class ImageResolutionUpdate(BaseModel):
     aspect_width: Optional[int]
     aspect_height: Optional[int]
     image_s3_key: Optional[str]
+    order: Optional[int]
 
 class ImageResolutionInDB(BaseModel):
     id: int
@@ -29,6 +31,7 @@ class ImageResolutionInDB(BaseModel):
     aspect_width: int
     aspect_height: int
     image_s3_key: str
+    order: int
 
     class Config:
         from_attributes=True

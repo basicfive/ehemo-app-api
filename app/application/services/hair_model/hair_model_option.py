@@ -1,7 +1,10 @@
 from typing import List
 from fastapi import Depends
+from app.application.services.hair_model.dto.hair_model_option import GenderOption, HairStyleOption, \
+    HairStyleLengthOption, HairDesignColorOption, BackgroundOption, ImageResolutionOption
 from app.domain.hair_model.models.hair import Gender, HairStyle, HairStyleLength, HairDesignColor
 from app.domain.hair_model.models.scene import Background, ImageResolution
+from app.infrastructure.aws.s3_client import S3Client, get_s3_client
 from app.infrastructure.repositories.hair_model.hair_model import GenderRepository, HairStyleRepository, \
     HairStyleLengthRepository, HairDesignRepository, HairDesignColorRepository, get_gender_repository, \
     get_hair_style_repository, get_hair_style_length_repository, get_hair_design_repository, \
@@ -24,7 +27,8 @@ class HairOptionApplicationService:
             hair_design_repo: HairDesignRepository,
             hair_design_color_repo: HairDesignColorRepository,
             background_repo: BackgroundRepository,
-            image_resolution_repo: ImageResolutionRepository
+            image_resolution_repo: ImageResolutionRepository,
+            s3_client: S3Client
     ):
         self.gender_repo = gender_repo
         self.hair_style_repo = hair_style_repo
@@ -33,38 +37,89 @@ class HairOptionApplicationService:
         self.hair_design_color_repo = hair_design_color_repo
         self.background_repo = background_repo
         self.image_resolution_repo = image_resolution_repo
+        self.s3_client = s3_client
 
     # TODO: 리스트 갯수 0인 경우 에러 처리
-    def get_gender_options(self) -> List[GenderInDB]:
+    def get_gender_options(self) -> List[GenderOption]:
         db_gender_list: List[Gender] = self.gender_repo.get_all()
-        return [GenderInDB.model_validate(db_gender) for db_gender in db_gender_list]
+        gender_list: List[GenderInDB] = [GenderInDB.model_validate(db_gender) for db_gender in db_gender_list]
+        return [
+            GenderOption(
+                **gender.model_dump(),
+                presigned_image_url=self.s3_client.create_presigned_url(s3_key=gender.image_s3_key)
+            )
+            for gender in gender_list
+        ]
 
-    def get_hair_style_options(self, gender_id: int) -> List[HairStyleInDB]:
+    def get_hair_style_options(self, gender_id: int) -> List[HairStyleOption]:
         db_hair_style_list: List[HairStyle] = self.hair_style_repo.get_all_by_gender(gender_id=gender_id)
-        return [HairStyleInDB.model_validate(db_hair_style) for db_hair_style in db_hair_style_list]
+        hair_style_list: List[HairStyleInDB] = [HairStyleInDB.model_validate(db_hair_style) for db_hair_style in db_hair_style_list]
+        return [
+            HairStyleOption(
+                **hair_style.model_dump(),
+                presigned_image_url=self.s3_client.create_presigned_url(s3_key=hair_style.image_s3_key)
+            )
+            for hair_style in hair_style_list
+        ]
 
-    def get_hair_style_length_options(self, hair_style_id: int) -> List[HairStyleLengthInDB]:
+    # TODO: 리스트 None 인 경우 에러처리
+    def get_hair_style_length_options(self, hair_style_id: int) -> List[HairStyleLengthOption]:
         db_hair_style_length_list: List[HairStyleLength] = (
-            self.hair_style_length_repo.get_all_by_hair_style(hair_style_id=hair_style_id)
+            self.hair_style_length_repo.get_all_by_hair_style_with_length(hair_style_id=hair_style_id)
         )
-        return [HairStyleLengthInDB.model_validate(db_hair_style_length) for db_hair_style_length in db_hair_style_length_list]
+        return [
+            HairStyleLengthOption(
+                id=db_hair_style_length.id,
+                title=db_hair_style_length.length.title,
+                description=db_hair_style_length.length.description,
+                presigned_image_url=self.s3_client.create_presigned_url(s3_key=db_hair_style_length.image_s3_key),
+                order=db_hair_style_length.length.order,
+                length_id=db_hair_style_length.length_id
+            )
+            for db_hair_style_length in db_hair_style_length_list
+        ]
 
-    def get_hair_design_color_options(self, hair_style_id: int, length_id: int) -> List[HairDesignColorInDB]:
+    def get_hair_design_color_options(self, hair_style_id: int, length_id: int) -> List[HairDesignColorOption]:
         db_hair_design: HairDesignInDB = (
-            self.hair_design_repo.get_all_by_hair_style_and_length(hair_style_id=hair_style_id, length_id=length_id)
+            self.hair_design_repo.get_by_hair_style_and_length(hair_style_id=hair_style_id, length_id=length_id)
         )
         db_hair_design_color_list: List[HairDesignColor] = (
-            self.hair_design_color_repo.get_all_by_hair_design(hair_design_id=db_hair_design.id)
+            self.hair_design_color_repo.get_all_by_hair_design_with_color(hair_design_id=db_hair_design.id)
         )
-        return [HairDesignColorInDB.model_validate(db_hair_design_color) for db_hair_design_color in db_hair_design_color_list]
+        return [
+            HairDesignColorOption(
+                id=db_hair_design_color.id,
+                title=db_hair_design_color.color.title,
+                description=db_hair_design_color.color.description,
+                presigned_image_url=self.s3_client.create_presigned_url(s3_key=db_hair_design_color.image_s3_key),
+                order=db_hair_design_color.color.order,
+                color_id=db_hair_design_color.color_id
+            )
+            for db_hair_design_color in db_hair_design_color_list
+        ]
 
-    def get_background_options(self) -> List[BackgroundInDB]:
+    def get_background_options(self) -> List[BackgroundOption]:
         db_background_list: List[Background] = self.background_repo.get_all()
-        return [BackgroundInDB.model_validate(db_background) for db_background in db_background_list]
+        background_list: List[BackgroundInDB] = [BackgroundInDB.model_validate(db_background) for db_background in db_background_list]
+        return [
+            BackgroundOption(
+                **background.model_dump(),
+                presigned_image_url=self.s3_client.create_presigned_url(s3_key=background.image_s3_key)
+            )
+            for background in background_list
+        ]
 
-    def get_image_resolution_options(self) -> List[ImageResolutionInDB]:
+    def get_image_resolution_options(self) -> List[ImageResolutionOption]:
         db_image_resolution_list: List[ImageResolution] = self.image_resolution_repo.get_all()
-        return [ImageResolutionInDB.model_validate(db_image_resolution) for db_image_resolution in db_image_resolution_list]
+        image_resolution_list: List[ImageResolutionInDB] = [ImageResolutionInDB.model_validate(db_image_resolution) for db_image_resolution in db_image_resolution_list]
+        return [
+            ImageResolutionOption(
+                **image_resolution.model_dump(),
+                presigned_image_url=self.s3_client.create_presigned_url(s3_key=image_resolution.image_s3_key)
+            )
+            for image_resolution in image_resolution_list
+        ]
+
 
 def get_hair_option_application_service(
         gender_repo: GenderRepository = Depends(get_gender_repository),
@@ -74,6 +129,7 @@ def get_hair_option_application_service(
         hair_design_color_repo: HairDesignColorRepository = Depends(get_hair_design_color_repository),
         background_repo: BackgroundRepository = Depends(get_background_repository),
         image_resolution_repo: ImageResolutionRepository = Depends(get_image_resolution_repository),
+        s3_client: S3Client = Depends(get_s3_client)
 ) -> HairOptionApplicationService:
     return HairOptionApplicationService(
         gender_repo=gender_repo,
@@ -82,5 +138,6 @@ def get_hair_option_application_service(
         hair_design_repo=hair_design_repo,
         hair_design_color_repo=hair_design_color_repo,
         background_repo=background_repo,
-        image_resolution_repo=image_resolution_repo
+        image_resolution_repo=image_resolution_repo,
+        s3_client=s3_client
     )
