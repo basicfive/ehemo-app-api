@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 import logging
 
-from app.core.db import Base, engine
+from app.core.db.base import Base, engine
 from app.core.config import settings
 from app.api.v1.api import router
 

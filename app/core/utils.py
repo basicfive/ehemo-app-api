@@ -1,6 +1,7 @@
 from typing import List, Dict, Any
 from sqlalchemy.orm import DeclarativeBase
-from datetime import datetime, date
+from datetime import datetime, date, UTC
+import uuid
 import random
 
 # import os
@@ -27,7 +28,6 @@ import random
 def remove_duplicates_set(lst: List[int]) -> List[int]:
     return list(set(lst))
 
-
 def serialize_datetime(obj):
     if isinstance(obj, (datetime, date)):
         return obj.isoformat()
@@ -46,18 +46,7 @@ def model_list_to_dict(model_list: List[DeclarativeBase]) -> Dict[str, List[Dict
         ]
     }
 
-def create_prompt(
-        gender_prompt: str,
-        length_prompt: str,
-        color_prompt: str,
-        posture_and_clothing_prompt: str,
-        background_prompt: str,
-        lora_model_prompt: str
-) -> str:
-    age: int = random.randint(20, 29)
-    """
-    A 25-year-old Korean woman with blonde long ohwx hair,
-    close-up shot, looking over shoulder, in a cozy cowl-neck sweater, hair falling in soft layers with subtle highlights,
-    against white wall <lora:fx_layered_1-000200:1>
-    """
-    return f"A {age}-year-old Korean {gender_prompt} with {color_prompt} {length_prompt} ohwx hair, {posture_and_clothing_prompt}, against {background_prompt} {lora_model_prompt}"
+def generate_unique_s3_key():
+    now = datetime.now(UTC)
+    unique_id = uuid.uuid4()
+    return f"{now.strftime('%Y%m%d_%H%M%S')}_{str(unique_id)}"
