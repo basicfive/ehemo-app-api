@@ -14,6 +14,7 @@ class GeneratedImage(TimeStampModel):
 class GeneratedImageGroup(TimeStampModel):
     __tablename__ = "generated_image_group"
 
+    rating = Column(Integer, default=0, nullable=False)
     thumbnail_image_s3_key = Column(String(2048), nullable=False)
 
     user_id = Column(Integer, ForeignKey("user.id"), index=True)
