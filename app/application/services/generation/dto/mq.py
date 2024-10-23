@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel
 
 class MQConsumeMessage(BaseModel):
@@ -12,4 +13,7 @@ class MQPublishMessage(BaseModel):
     width: int
     height: int
     image_generation_job_id: int
-    s3_key: str
+    s3_key: Optional[str]
+
+    def to_json(self) -> str:
+        return self.model_dump_json()

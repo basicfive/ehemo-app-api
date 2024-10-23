@@ -12,14 +12,14 @@ class ImageGenerationJobCreate(BaseModel):
     generation_request_id: int
 
 class ImageGenerationJobUpdate(BaseModel):
-    prompt: Optional[str]
-    distilled_cfg_scale: Optional[float]
-    status: Optional[GenerationStatusEnum]
-    s3_key: Optional[str]
-    webui_png_info: Optional[str]
-    width: Optional[int]
-    height: Optional[int]
-    generation_request_id: Optional[int]
+    prompt: Optional[str] = None
+    distilled_cfg_scale: Optional[float] = None
+    status: Optional[GenerationStatusEnum] = None
+    s3_key: Optional[str] = None
+    webui_png_info: Optional[str] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+    generation_request_id: Optional[int] = None
 
 class ImageGenerationJobInDB(BaseModel):
     id: int

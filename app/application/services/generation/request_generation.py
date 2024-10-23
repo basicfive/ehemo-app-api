@@ -6,7 +6,7 @@ from app.application.services.generation.dto.create_generation_request import Cr
 from app.application.services.generation.dto.mq import MQPublishMessage
 from app.core.constants import SINGLE_INFERENCE_IMAGE_CNT, DISTILLED_CFG_SCALE
 from app.core.enums.generation_status import GenerationStatusEnum
-from app.core.utils import generate_unique_s3_key
+from app.core.utils import generate_unique_datatime_uuid_key
 from app.domain.generation.schemas.generation_request import GenerationRequestCreate, GenerationRequestUpdate
 from app.domain.generation.schemas.image_generation_job import ImageGenerationJobCreate, ImageGenerationJobInDB, \
     ImageGenerationJobUpdate
@@ -34,13 +34,13 @@ class RequestGenerationApplicationService:
             hair_model_query_service: HairModelQueryService,
             generation_request_repo: GenerationRequestRepository,
             image_generation_job_repo: ImageGenerationJobRepository,
-            # rabbit_mq_service: RabbitMQService
+            rabbit_mq_service: RabbitMQService
     ):
         self.user_repo = user_repo
         self.hair_model_query_service = hair_model_query_service
         self.generation_request_repo = generation_request_repo
         self.image_generation_job_repo = image_generation_job_repo
-        # self.rabbit_mq_service = rabbit_mq_service
+        self.rabbit_mq_service = rabbit_mq_service
 
     def create_generation_request(
             self,
@@ -161,38 +161,34 @@ class RequestGenerationApplicationService:
             )
             image_generation_job_list.append(ImageGenerationJobInDB.model_validate(db_image_generation_job))
 
+        # MQ 요청 보내기
         for image_generation_job in image_generation_job_list:
-            print(image_generation_job.model_dump_json(indent=2))
+            message = MQPublishMessage(
+                **image_generation_job.model_dump(),
+                image_generation_job_id=image_generation_job.id,
+            )
+            message.s3_key = generate_unique_datatime_uuid_key()
+            self.rabbit_mq_service.publish(message=message)
+            self.image_generation_job_repo.update(
+                obj_id=image_generation_job.id,
+                obj_in=ImageGenerationJobUpdate(status=GenerationStatusEnum.PROCESSING)
+            )
 
-        return 10
-
-        # # MQ 요청 보내기
-        # for image_generation_job in image_generation_job_list:
-        #     message = MQPublishMessage(
-        #         **image_generation_job.model_dump(),
-        #         image_generation_job_id=image_generation_job.id,
-        #         s3_key=generate_unique_s3_key()
-        #     )
-        #     self.rabbit_mq_service.publish(message=message)
-        #     self.image_generation_job_repo.update(
-        #         obj_id=image_generation_job.id,
-        #         obj_in=ImageGenerationJobUpdate(status=GenerationStatusEnum.PROCESSING)
-        #     )
-        #
-        # message_count, consumer_count = self.rabbit_mq_service.get_queue_info()
-        # return calculate_generation_sec(image_count=message_count, processor_count=consumer_count)
+        message_count, consumer_count = self.rabbit_mq_service.get_queue_info()
+        return calculate_generation_sec(image_count=message_count, processor_count=consumer_count)
 
 def get_request_generation_application_service(
         user_repo: UserRepository = Depends(get_user_repository),
         hair_model_query_service: HairModelQueryService = Depends(get_hair_model_query_service),
         generation_request_repo: GenerationRequestRepository = Depends(get_generation_request_repository),
         image_generation_job_repo: ImageGenerationJobRepository = Depends(get_image_generation_job_repository),
-        # rabbit_mq_service: RabbitMQService = Depends(get_rabbit_mq_service)
+        rabbit_mq_service: RabbitMQService = Depends(get_rabbit_mq_service)
 ) -> RequestGenerationApplicationService:
     return RequestGenerationApplicationService(
         user_repo=user_repo,
         hair_model_query_service=hair_model_query_service,
         generation_request_repo=generation_request_repo,
         image_generation_job_repo=image_generation_job_repo,
-        # rabbit_mq_service=rabbit_mq_service
+        rabbit_mq_service=rabbit_mq_service
     )
+
