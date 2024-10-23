@@ -19,6 +19,8 @@ from app.domain.hair_model.schemas.hair.color import ColorInDB
 from app.domain.hair_model.schemas.scene.background import BackgroundInDB
 from app.domain.hair_model.schemas.scene.image_resolution import ImageResolutionInDB
 from app.domain.hair_model.services.hair_model_prompt import create_prompts
+from app.domain.user.models.user import User
+from app.domain.user.schemas.user import UserInDB
 from app.infrastructure.mq.rabbit_mq_service import RabbitMQService, get_rabbit_mq_service
 from app.infrastructure.repositories.generation.generation import GenerationRequestRepository, \
     ImageGenerationJobRepository, get_generation_request_repository, get_image_generation_job_repository
@@ -70,9 +72,11 @@ class RequestGenerationApplicationService:
             )
         )
 
+        user: User = self.user_repo.get(obj_id=request.user_id)
+
         return CreateGenerationRequestResponse(
             generation_request_id=generation_request.id,
-            user=self.user_repo.get(obj_id=request.user_id),
+            user=UserInDB.model_validate(user),
             gender=GenderInDB.model_validate(hair_model_details.gender),
             hair_style=HairStyleInDB.model_validate(hair_model_details.hair_style),
             length=LengthInDB.model_validate(hair_model_details.length),
