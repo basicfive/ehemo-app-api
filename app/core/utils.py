@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from sqlalchemy.orm import DeclarativeBase
 from datetime import datetime, date, UTC
 import uuid
@@ -34,7 +34,7 @@ def generate_unique_datatime_uuid_key() -> str:
     unique_id = uuid.uuid4()
     return f"{now.strftime('%Y%m%d_%H%M%S')}_{str(unique_id)}"
 
-def concatenate_images_horizontally(image_urls: List[str]):
+def concatenate_images_horizontally(image_urls: List[str]) -> Tuple[bytes, str]:
     """
     이미지 URL 리스트를 받아서 이미지들을 가로로 연결하여 바이트 스트림으로 반환
 

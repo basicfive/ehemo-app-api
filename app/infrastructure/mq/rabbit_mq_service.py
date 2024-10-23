@@ -155,18 +155,11 @@ class RabbitMQService:
                 if not self.connection or not self.connection.is_open:
                     self.connection = BlockingConnection(self._get_connection_params())
                     self.channel = self.connection.channel()
-                    # 필요한 큐와 익스체인지 설정
-                    self._setup_queues()
             except (StreamLostError, AMQPConnectionError) as e:
                 logging.error(f"RabbitMQ connection error: {e}")
                 # 연결 실패시 기존 연결 정리
                 self.cleanup()
                 raise
-
-    def _setup_queues(self):
-        """큐와 익스체인지 설정"""
-        # 여기에 필요한 큐, 익스체인지 설정 코드
-        pass
 
     def cleanup(self):
         """연결 정리"""

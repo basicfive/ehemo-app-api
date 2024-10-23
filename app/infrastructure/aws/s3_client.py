@@ -47,12 +47,12 @@ class S3Client:
             logging.error(f"Error creating presigned URL: {e}")
             return None
 
-    def upload_to_s3(self, object_name, image_data, image_format='JPEG'):
+    def upload_to_s3(self, key, image_data, image_format='JPEG'):
         """
         이미지 데이터를 S3에 업로드
 
         Args:
-            object_name (str): S3에 저장될 객체 이름 (경로 포함)
+            key (str): S3에 저장될 객체 이름 (경로 포함)
             image_data (bytes): 업로드할 이미지 바이트 데이터
             image_format (str): 이미지 형식 (기본값: 'JPEG')
 
@@ -62,7 +62,7 @@ class S3Client:
         try:
             self.s3_client.put_object(
                 Bucket=self.bucket_name,
-                Key=object_name,
+                Key=key,
                 Body=image_data,
                 ContentType=f'image/{image_format.lower()}'
             )
