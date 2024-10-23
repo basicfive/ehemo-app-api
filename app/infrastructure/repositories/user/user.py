@@ -12,7 +12,7 @@ class UserRepository(CRUDRepository[User, UserCreate, UserUpdate]):
         self.db = db
 
     def get_user_by_email(self, email: str):
-        return self.db.query(User).filter(User.email.is_(email)).first()
+        return self.db.query(User).filter(User.email == email).first()
 
 def get_user_repository(db: Session = Depends(get_db)):
     return UserRepository(db=db)

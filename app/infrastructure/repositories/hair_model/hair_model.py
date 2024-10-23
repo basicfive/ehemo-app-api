@@ -87,11 +87,11 @@ class SpecificColorRepository(CRUDRepository[SpecificColor, SpecificColorCreate,
         self.db = db
 
     def get_all_by_color(self, color_id: int) -> List[SpecificColor]:
-        stmt = select(SpecificColor).where(SpecificColor.color_id.is_(color_id))
+        stmt = select(SpecificColor).where(SpecificColor.color_id == color_id)
         return list(self.db.scalars(stmt).all())
 
     def get_all_by_color_limit(self, color_id: int, limit: int = 10) -> List[SpecificColor]:
-        stmt = select(SpecificColor).where(SpecificColor.color_id.is_(color_id)).limit(limit)
+        stmt = select(SpecificColor).where(SpecificColor.color_id == color_id).limit(limit)
         return list(self.db.scalars(stmt).all())
 
 def get_specific_color_repository(db: Session = Depends(get_db)) -> SpecificColorRepository:

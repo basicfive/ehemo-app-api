@@ -34,13 +34,13 @@ class RequestGenerationApplicationService:
             hair_model_query_service: HairModelQueryService,
             generation_request_repo: GenerationRequestRepository,
             image_generation_job_repo: ImageGenerationJobRepository,
-            rabbit_mq_service: RabbitMQService
+            # rabbit_mq_service: RabbitMQService
     ):
         self.user_repo = user_repo
         self.hair_model_query_service = hair_model_query_service
         self.generation_request_repo = generation_request_repo
         self.image_generation_job_repo = image_generation_job_repo
-        self.rabbit_mq_service = rabbit_mq_service
+        # self.rabbit_mq_service = rabbit_mq_service
 
     def create_generation_request(
             self,
@@ -132,7 +132,8 @@ class RequestGenerationApplicationService:
         posture_and_clothing_list=self.hair_model_query_service.get_random_posture_and_clothing(limit=SINGLE_INFERENCE_IMAGE_CNT)
 
         # null length 수정 - hs 기본 길이로 변경한다.
-        hair_model_details.length = self.hair_model_query_service.get_length_by_hair_style(hair_style_id=hair_model_details.hair_style.id)
+        if not hair_model_details.hair_style.has_length_option:
+            hair_model_details.length = self.hair_model_query_service.get_length_by_hair_style(hair_style_id=hair_model_details.hair_style.id)
 
         prompt_list: List[str] = create_prompts(
             length=hair_model_details.length,
@@ -186,12 +187,12 @@ def get_request_generation_application_service(
         hair_model_query_service: HairModelQueryService = Depends(get_hair_model_query_service),
         generation_request_repo: GenerationRequestRepository = Depends(get_generation_request_repository),
         image_generation_job_repo: ImageGenerationJobRepository = Depends(get_image_generation_job_repository),
-        rabbit_mq_service: RabbitMQService = Depends(get_rabbit_mq_service)
+        # rabbit_mq_service: RabbitMQService = Depends(get_rabbit_mq_service)
 ) -> RequestGenerationApplicationService:
     return RequestGenerationApplicationService(
         user_repo=user_repo,
         hair_model_query_service=hair_model_query_service,
         generation_request_repo=generation_request_repo,
         image_generation_job_repo=image_generation_job_repo,
-        rabbit_mq_service=rabbit_mq_service
+        # rabbit_mq_service=rabbit_mq_service
     )

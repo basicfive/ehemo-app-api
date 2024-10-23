@@ -34,11 +34,11 @@ class HairModelDetails:
             background: Background,
             image_resolution: ImageResolution,
     ):
-        self.gender=gender,
-        self.hair_style=hair_style,
-        self.length=length,
-        self.color=color,
-        self.specific_color_list=specific_color_list,
-        self.lora_model=lora_model,
-        self.background=background,
+        self.gender=gender
+        self.hair_style=hair_style
+        self.length=length
+        self.color=color
+        self.specific_color_list=specific_color_list
+        self.lora_model=lora_model
+        self.background=background
         self.image_resolution=image_resolution
