@@ -1,12 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, status
-from app.api.v1.endpoints.prod.generation.dto import HairStyleOptionRequest, HairStyleLengthOptionRequest, HairDesignColorOptionRequest
 from app.application.services.hair_model.dto.hair_model_option import GenderOption, HairStyleOption, \
     HairStyleLengthOption, HairDesignColorOption
-from app.domain.hair_model.schemas.hair.gender import GenderInDB
-from app.domain.hair_model.schemas.hair.hair_design_color import HairDesignColorInDB
-from app.domain.hair_model.schemas.hair.hair_style import HairStyleInDB
-from app.domain.hair_model.schemas.hair.hair_style_length import HairStyleLengthInDB
 from app.application.services.hair_model.hair_model_option import HairOptionApplicationService, \
     get_hair_option_application_service
 

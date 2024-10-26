@@ -9,7 +9,8 @@ def calculate_generation_sec(image_count: int, processor_count: int) -> int:
     if processor_count == 0:
         # TODO: 에러처리
         return -1
-    return int(SINGLE_IMAGE_INFERENCE_SEC * image_count / processor_count)
+    # ((이미지 1개 생성 시간) * (현재 mq queue 에 존재하는 요청 수 + 추론 서버 수(현재처리 중))) / (추론 서버 수)
+    return int(SINGLE_IMAGE_INFERENCE_SEC * (image_count + processor_count) / processor_count)
 
 def are_all_image_generation_jobs_complete(image_generation_job_list: List[ImageGenerationJob]):
     for image_generation_job in image_generation_job_list:

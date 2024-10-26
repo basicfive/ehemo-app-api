@@ -27,3 +27,6 @@ class CreateGenerationRequestResponse(BaseModel):
     color: ColorInDB
     background: BackgroundInDB
     image_resolution: ImageResolutionInDB
+
+class StartGenerationResponse(BaseModel):
+    generation_sec: int

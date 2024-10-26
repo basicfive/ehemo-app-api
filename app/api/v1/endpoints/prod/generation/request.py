@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends
 
-from app.api.v1.endpoints.prod.generation.dto import StartGenerationRequest, StartGenerationResponse
-from app.application.services.generation.dto.create_generation_request import CreateGenerationRequestRequest, \
-    CreateGenerationRequestResponse
+from app.application.services.generation.dto.generation_request import CreateGenerationRequestRequest, \
+    CreateGenerationRequestResponse, StartGenerationResponse
 from app.application.services.generation.request_generation import RequestGenerationApplicationService, \
     get_request_generation_application_service
 
@@ -22,5 +21,4 @@ async def start_generation(
         generation_request_id: int,
         service: RequestGenerationApplicationService = Depends(get_request_generation_application_service)
 ) -> StartGenerationResponse:
-    generation_sec: int = await service.start_generation(generation_request_id)
-    return StartGenerationResponse(generation_sec=generation_sec)
+    return await service.start_generation(generation_request_id)

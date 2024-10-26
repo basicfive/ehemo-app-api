@@ -1,10 +1,10 @@
 from typing import List
 from fastapi import Depends
 from app.application.query.hair_model_query import HairModelQueryService, HairModelDetails, get_hair_model_query_service
-from app.application.services.generation.dto.create_generation_request import CreateGenerationRequestRequest, \
-    CreateGenerationRequestResponse
+from app.application.services.generation.dto.generation_request import CreateGenerationRequestRequest, \
+    CreateGenerationRequestResponse, StartGenerationResponse
 from app.application.services.generation.dto.mq import MQPublishMessage
-from app.core.constants import SINGLE_INFERENCE_IMAGE_CNT, DISTILLED_CFG_SCALE
+from app.core.constants import SINGLE_INFERENCE_IMAGE_CNT, DISTILLED_CFG_SCALE, GENERATED_IMAGE_S3KEY_PREFIX
 from app.core.enums.generation_status import GenerationStatusEnum
 from app.core.utils import generate_unique_datatime_uuid_key
 from app.domain.generation.schemas.generation_request import GenerationRequestCreate, GenerationRequestUpdate
@@ -106,7 +106,7 @@ class RequestGenerationApplicationService:
         # )
 
 
-    async def start_generation(self, generation_request_id: int):
+    async def start_generation(self, generation_request_id: int) -> StartGenerationResponse:
         """
         1. 사용자 토큰 validation을 진행한다. - 토큰이 충분하지 않은 경우 에러 처리
         2. image_generation_job n개 생성한다.
@@ -149,6 +149,7 @@ class RequestGenerationApplicationService:
         # TODO: 에러처리
         image_generation_job_list: List[ImageGenerationJobInDB] = []
         for prompt in prompt_list:
+            s3_key = generate_unique_datatime_uuid_key(prefix=GENERATED_IMAGE_S3KEY_PREFIX)
             db_image_generation_job = self.image_generation_job_repo.create(
                 obj_in=ImageGenerationJobCreate(
                     prompt=prompt,
@@ -156,7 +157,7 @@ class RequestGenerationApplicationService:
                     width=hair_model_details.image_resolution.width,
                     height=hair_model_details.image_resolution.height,
                     generation_request_id=generation_request_id,
-                    s3_key=generate_unique_datatime_uuid_key()
+                    s3_key=s3_key
                 )
             )
             image_generation_job_list.append(ImageGenerationJobInDB.model_validate(db_image_generation_job))
@@ -172,9 +173,11 @@ class RequestGenerationApplicationService:
                 obj_id=image_generation_job.id,
                 obj_in=ImageGenerationJobUpdate(status=GenerationStatusEnum.PROCESSING)
             )
-
         message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
-        return calculate_generation_sec(image_count=message_count, processor_count=consumer_count)
+
+        return StartGenerationResponse(
+            generation_sec=calculate_generation_sec(image_count=message_count, processor_count=consumer_count)
+        )
 
 def get_request_generation_application_service(
         user_repo: UserRepository = Depends(get_user_repository),
