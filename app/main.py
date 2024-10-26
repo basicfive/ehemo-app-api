@@ -1,9 +1,9 @@
-import threading
+import asyncio
 
 from fastapi import FastAPI
 import logging
 
-from app.application.services.generation.manage_generation import handle_massage
+from app.application.services.generation.manage_generation import handle_message
 from app.core.db.base import Base, engine
 from app.core.config import settings
 from app.api.v1.api import router
@@ -14,25 +14,16 @@ Base.metadata.create_all(bind=engine)
 
 logging.basicConfig(level=logging.INFO)
 
-# @asynccontextmanager
-# async def lifespan(app: FastAPI):
-#     initialize_rabbit_mq(handle_massage)
-#     yield
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.rabbit_mq = RabbitMQService()
+    rabbit_mq_service = RabbitMQService()
+    await rabbit_mq_service.connect()
 
-    # 컨슈머 스레드 시작
-    def start_consumer():
-        app.state.rabbit_mq.consume(handle_massage)
-
-    consumer_thread = threading.Thread(target=start_consumer, daemon=True)
-    consumer_thread.start()
-
-    yield
-
-    app.state.rabbit_mq.cleanup()
+    await rabbit_mq_service.consume(handle_message)
+    try:
+        yield
+    finally:
+        await rabbit_mq_service.close()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

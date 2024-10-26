@@ -106,7 +106,7 @@ class RequestGenerationApplicationService:
         # )
 
 
-    def start_generation(self, generation_request_id: int):
+    async def start_generation(self, generation_request_id: int):
         """
         1. 사용자 토큰 validation을 진행한다. - 토큰이 충분하지 않은 경우 에러 처리
         2. image_generation_job n개 생성한다.
@@ -116,7 +116,6 @@ class RequestGenerationApplicationService:
         """
         generation_request = self.generation_request_repo.get(generation_request_id)
         user = self.user_repo.get(generation_request.user_id)
-
         if not user.has_enough_token():
             # TODO 커스텀 에러
             raise ValueError("사용자 토큰 없음")
@@ -156,7 +155,8 @@ class RequestGenerationApplicationService:
                     distilled_cfg_scale=DISTILLED_CFG_SCALE,
                     width=hair_model_details.image_resolution.width,
                     height=hair_model_details.image_resolution.height,
-                    generation_request_id=generation_request_id
+                    generation_request_id=generation_request_id,
+                    s3_key=generate_unique_datatime_uuid_key()
                 )
             )
             image_generation_job_list.append(ImageGenerationJobInDB.model_validate(db_image_generation_job))
@@ -167,14 +167,13 @@ class RequestGenerationApplicationService:
                 **image_generation_job.model_dump(),
                 image_generation_job_id=image_generation_job.id,
             )
-            message.s3_key = generate_unique_datatime_uuid_key()
-            self.rabbit_mq_service.publish(message=message)
+            await self.rabbit_mq_service.publish(message=message)
             self.image_generation_job_repo.update(
                 obj_id=image_generation_job.id,
                 obj_in=ImageGenerationJobUpdate(status=GenerationStatusEnum.PROCESSING)
             )
 
-        message_count, consumer_count = self.rabbit_mq_service.get_queue_info()
+        message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
         return calculate_generation_sec(image_count=message_count, processor_count=consumer_count)
 
 def get_request_generation_application_service(

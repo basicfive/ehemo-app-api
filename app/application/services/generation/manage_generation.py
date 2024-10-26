@@ -16,8 +16,6 @@ from app.infrastructure.fcm.fcm_service import FCMService
 from app.infrastructure.repositories.generation.generation import GenerationRequestRepository, \
     ImageGenerationJobRepository, GeneratedImageRepository, GeneratedImageGroupRepository
 
-
-
 def update_image_generation_job(
         image_generation_job: ImageGenerationJob,
         webui_png_info: str,
@@ -82,7 +80,6 @@ def create_generated_images(
             user_id=user_id,
             s3_key=image_generation_job.s3_key,
             webui_png_info=image_generation_job.webui_png_info,
-            generation_request_id=generation_request_id,
             generated_image_group_id=generated_image_group.id,
             image_generation_job_id=image_generation_job.id
         )
@@ -92,7 +89,7 @@ def create_generated_images(
     return generated_image_list
 
 
-def handle_massage(channel, method, props, body):
+def handle_message(body):
     db = next(get_db())
 
     generation_request_repo = GenerationRequestRepository(db=db)
@@ -112,7 +109,7 @@ def handle_massage(channel, method, props, body):
     """
 
     # 이거 만일 이 함수 실행 여부에 의존하면, 에러 발생해서 메시지 처리 실패했는데 계속 consume 하는 거로 되려나.
-    channel.basic_ack(delivery_tag=method.delivery_tag)
+    # channel.basic_ack(delivery_tag=method.delivery_tag)
 
     data_dict = json.loads(body)
     message = MQConsumeMessage(**data_dict)
@@ -143,7 +140,4 @@ def handle_massage(channel, method, props, body):
     )
 
     # 4. 클라이언트에 fcm 보내기
-
-
-
 

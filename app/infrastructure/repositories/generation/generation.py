@@ -37,7 +37,7 @@ class GeneratedImageRepository(CRUDRepository[GeneratedImage, GeneratedImageCrea
         super().__init__(model=GeneratedImage, db=db)
 
     def get_all_by_generate_image_group(self, generated_image_group_id: int) -> List[GeneratedImage]:
-        stmt = select(GeneratedImage).where(GeneratedImage.id == generated_image_group_id)
+        stmt = select(GeneratedImage).where(GeneratedImage.generated_image_group_id == generated_image_group_id)
         return list(self.db.scalars(stmt).all())
 
 def get_generated_image_repository(db: Session = Depends(get_db)) -> GeneratedImageRepository:

@@ -15,5 +15,5 @@ class MQPublishMessage(BaseModel):
     image_generation_job_id: int
     s3_key: Optional[str]
 
-    def to_json(self) -> str:
-        return self.model_dump_json()
+    def to_json(self) -> bytes:
+        return self.model_dump_json().encode('utf-8')

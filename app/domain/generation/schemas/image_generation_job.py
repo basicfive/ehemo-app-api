@@ -10,6 +10,7 @@ class ImageGenerationJobCreate(BaseModel):
     width: int
     height: int
     generation_request_id: int
+    s3_key: str
 
 class ImageGenerationJobUpdate(BaseModel):
     prompt: Optional[str] = None
@@ -25,7 +26,7 @@ class ImageGenerationJobInDB(BaseModel):
     id: int
     prompt: str
     status: GenerationStatusEnum
-    s3_key: Optional[str]
+    s3_key: str
     webui_png_info: Optional[str]
     distilled_cfg_scale: float
     width: int

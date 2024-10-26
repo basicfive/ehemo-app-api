@@ -18,9 +18,9 @@ def create_generation_request(
     return service.create_generation_request(request)
 
 @router.post("/start")
-def start_generation(
+async def start_generation(
         generation_request_id: int,
         service: RequestGenerationApplicationService = Depends(get_request_generation_application_service)
 ) -> StartGenerationResponse:
-    generation_sec: int = service.start_generation(generation_request_id)
+    generation_sec: int = await service.start_generation(generation_request_id)
     return StartGenerationResponse(generation_sec=generation_sec)
