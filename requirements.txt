@@ -13,3 +13,4 @@ certifi~=2024.8.30
 pillow
 aio_pika
 tenacity
+PyJWT
