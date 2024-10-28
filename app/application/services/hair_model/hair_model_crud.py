@@ -24,7 +24,7 @@ from app.domain.hair_model.models.scene import Background, PostureAndClothing, I
 from app.domain.hair_model.schemas.scene.background import BackgroundInDB, BackgroundCreate
 from app.domain.hair_model.schemas.scene.image_resolution import ImageResolutionInDB, ImageResolutionCreate, ImageResolutionUpdate
 from app.domain.hair_model.schemas.scene.posture_and_clothing import PostureAndClothingInDB, PostureAndClothingCreate, PostureAndClothingUpdate
-from app.application.services.base_service import CRUDService
+from app.application.services.crud_service import CRUDService
 
 
 

@@ -1,5 +1,0 @@
-SINGLE_INFERENCE_IMAGE_CNT: int = 2
-DISTILLED_CFG_SCALE: float = 2.0
-SINGLE_IMAGE_INFERENCE_SEC: int = 30
-GENERATED_IMAGE_S3KEY_PREFIX: str = "generated_image/"
-GENERATED_IMAGE_GROUP_S3KEY_PREFIX: str = "generated_image_group_thumbnail/"

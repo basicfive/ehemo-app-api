@@ -3,24 +3,23 @@ import ssl
 import logging
 from urllib.parse import quote
 
-from dotenv import load_dotenv
 from typing import Optional, AsyncGenerator, Callable
 from aio_pika import connect_robust, Message, Connection, Channel
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.application.services.generation.dto.mq import MQPublishMessage
 from app.core.decorators import log_errors
-from app.core.config import settings
+from app.core.config import rabbit_mq_setting
 
 class RabbitMQService:
     def __init__(
             self,
-            hostname = settings.RABBITMQ_HOST,
-            vhost = settings.RABBITMQ_VHOST,
-            username = settings.RABBITMQ_USERNAME,
-            password = settings.RABBITMQ_PASSWORD,
-            publish_queue = settings.RABBITMQ_PUBLISH_QUEUE,
-            consume_queue = settings.RABBITMQ_CONSUME_QUEU,
+            hostname: str = rabbit_mq_setting.RABBITMQ_HOST,
+            vhost: str = rabbit_mq_setting.RABBITMQ_VHOST,
+            username: str = rabbit_mq_setting.RABBITMQ_USERNAME,
+            password: str = rabbit_mq_setting.RABBITMQ_PASSWORD,
+            publish_queue: str = rabbit_mq_setting.RABBITMQ_PUBLISH_QUEUE,
+            consume_queue: str = rabbit_mq_setting.RABBITMQ_CONSUME_QUEUE
     ):
         self.publish_queue = publish_queue
         self.consume_queue = consume_queue

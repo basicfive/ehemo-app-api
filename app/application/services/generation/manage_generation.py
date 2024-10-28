@@ -2,7 +2,7 @@ import json
 from typing import List
 
 from app.application.services.generation.dto.mq import MQConsumeMessage
-from app.core.constants import GENERATED_IMAGE_GROUP_S3KEY_PREFIX
+from app.core.config import aws_s3_setting
 from app.core.db.base import get_db
 from app.core.enums.generation_status import GenerationStatusEnum
 from app.core.utils import generate_unique_datatime_uuid_key, concatenate_images_horizontally, compress_and_resize_image
@@ -12,7 +12,7 @@ from app.domain.generation.schemas.generated_image import GeneratedImageCreate
 from app.domain.generation.schemas.generated_image_group import GeneratedImageGroupCreate
 from app.domain.generation.schemas.image_generation_job import ImageGenerationJobUpdate
 from app.domain.generation.services.generation_domain_service import are_all_image_generation_jobs_complete
-from app.infrastructure.aws.s3_client import S3Client, get_s3_client
+from app.infrastructure.s3.s3_client import S3Client, get_s3_client
 from app.infrastructure.fcm.fcm_service import FCMService
 from app.infrastructure.repositories.generation.generation import GenerationRequestRepository, \
     ImageGenerationJobRepository, GeneratedImageRepository, GeneratedImageGroupRepository
@@ -66,7 +66,7 @@ def create_generated_images(
     ]
     img_byte_arr, image_format = concatenate_images_horizontally(image_presigned_url_list)
     # 이미지 그룹 썸네일 이미지 s3 키 할당
-    thumbnail_image_s3_key = generate_unique_datatime_uuid_key(prefix=GENERATED_IMAGE_GROUP_S3KEY_PREFIX)
+    thumbnail_image_s3_key = generate_unique_datatime_uuid_key(prefix=aws_s3_setting.GENERATED_IMAGE_GROUP_S3KEY_PREFIX)
     # 이미지 리사이징, 압축
     compressed_image_bytes, image_format = compress_and_resize_image(image_bytes=img_byte_arr)
     # s3 업로드

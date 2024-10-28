@@ -4,7 +4,7 @@ import logging
 import functools
 from typing import Callable, Optional
 
-from app.core.errors.exceptions import ResourceNotFoundException, ParentKeyNotFoundException
+from app.core.errors.http_exceptions import ResourceNotFoundException
 
 T = TypeVar('T')
 
@@ -17,14 +17,6 @@ def handle_not_found(func: Callable[..., T]) -> Callable[..., T]:
             raise ResourceNotFoundException()
     return cast(Callable[..., T], wrapper)
 
-def handle_parent_not_found(func: Callable[..., T]) -> Callable[..., T]:
-    @wraps(func)
-    def wrapper(*args, **kwargs) -> T:
-        try:
-            return func(*args, **kwargs)
-        except ValueError:
-            raise ParentKeyNotFoundException()
-    return cast(Callable[..., T], wrapper)
 
 def log_errors(error_message: Optional[str] = None, logger=None):
     """

@@ -8,6 +8,7 @@ from app.application.services.hair_model.hair_model_option import HairOptionAppl
 router = APIRouter()
 
 #/api/v1/prod/generation/
+
 @router.get("/gender-options", response_model=List[GenderOption], status_code=status.HTTP_200_OK)
 def get_gender_options(
         service: HairOptionApplicationService = Depends(get_hair_option_application_service)

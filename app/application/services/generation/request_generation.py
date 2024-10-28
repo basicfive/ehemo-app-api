@@ -4,7 +4,7 @@ from app.application.query.hair_model_query import HairModelQueryService, HairMo
 from app.application.services.generation.dto.generation_request import CreateGenerationRequestRequest, \
     CreateGenerationRequestResponse, StartGenerationResponse
 from app.application.services.generation.dto.mq import MQPublishMessage
-from app.core.constants import SINGLE_INFERENCE_IMAGE_CNT, DISTILLED_CFG_SCALE, GENERATED_IMAGE_S3KEY_PREFIX
+from app.core.config import image_generation_setting, aws_s3_setting
 from app.core.enums.generation_status import GenerationStatusEnum
 from app.core.utils import generate_unique_datatime_uuid_key
 from app.domain.generation.schemas.generation_request import GenerationRequestCreate, GenerationRequestUpdate
@@ -128,7 +128,7 @@ class RequestGenerationApplicationService:
                 image_resolution_id=generation_request.image_resolution_id
             )
         )
-        posture_and_clothing_list=self.hair_model_query_service.get_random_posture_and_clothing(limit=SINGLE_INFERENCE_IMAGE_CNT)
+        posture_and_clothing_list=self.hair_model_query_service.get_random_posture_and_clothing(limit=image_generation_setting.SINGLE_INFERENCE_IMAGE_CNT)
 
         # null length 수정 - hs 기본 길이로 변경한다.
         if not hair_model_details.hair_style.has_length_option:
@@ -141,7 +141,7 @@ class RequestGenerationApplicationService:
             lora_model=hair_model_details.lora_model,
             specific_color_list=hair_model_details.specific_color_list,
             posture_and_clothing_list=posture_and_clothing_list,
-            count=SINGLE_INFERENCE_IMAGE_CNT
+            count=image_generation_setting.SINGLE_INFERENCE_IMAGE_CNT
         )
 
         # image_generation_job 10개 생성
@@ -149,11 +149,11 @@ class RequestGenerationApplicationService:
         # TODO: 에러처리
         image_generation_job_list: List[ImageGenerationJobInDB] = []
         for prompt in prompt_list:
-            s3_key = generate_unique_datatime_uuid_key(prefix=GENERATED_IMAGE_S3KEY_PREFIX)
+            s3_key = generate_unique_datatime_uuid_key(prefix=aws_s3_setting.GENERATED_IMAGE_S3KEY_PREFIX)
             db_image_generation_job = self.image_generation_job_repo.create(
                 obj_in=ImageGenerationJobCreate(
                     prompt=prompt,
-                    distilled_cfg_scale=DISTILLED_CFG_SCALE,
+                    distilled_cfg_scale=image_generation_setting.DISTILLED_CFG_SCALE,
                     width=hair_model_details.image_resolution.width,
                     height=hair_model_details.image_resolution.height,
                     generation_request_id=generation_request_id,

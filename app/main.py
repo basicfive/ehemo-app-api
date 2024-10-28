@@ -5,7 +5,7 @@ import logging
 
 from app.application.services.generation.manage_generation import handle_message
 from app.core.db.base import Base, engine
-from app.core.config import settings
+from app.core.config import base_settings
 from app.api.v1.api import router
 from app.infrastructure.mq.rabbit_mq_service import RabbitMQService
 from contextlib import asynccontextmanager
@@ -26,12 +26,12 @@ async def lifespan(app: FastAPI):
         await rabbit_mq_service.close()
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    title=base_settings.PROJECT_NAME,
+    openapi_url=f"{base_settings.API_V1_STR}/openapi.json",
     lifespan=lifespan
 )
 
-app.include_router(router, prefix=settings.API_V1_STR)
+app.include_router(router, prefix=base_settings.API_V1_STR)
 
 @app.get("/health")
 def health_check():

@@ -4,7 +4,7 @@ from app.application.services.hair_model.dto.hair_model_option import GenderOpti
     HairStyleLengthOption, HairDesignColorOption, BackgroundOption, ImageResolutionOption
 from app.domain.hair_model.models.hair import Gender, HairStyle, HairStyleLength, HairDesignColor
 from app.domain.hair_model.models.scene import Background, ImageResolution
-from app.infrastructure.aws.s3_client import S3Client, get_s3_client
+from app.infrastructure.s3.s3_client import S3Client, get_s3_client
 from app.infrastructure.repositories.hair_model.hair_model import GenderRepository, HairStyleRepository, \
     HairStyleLengthRepository, HairDesignRepository, HairDesignColorRepository, get_gender_repository, \
     get_hair_style_repository, get_hair_style_length_repository, get_hair_design_repository, \

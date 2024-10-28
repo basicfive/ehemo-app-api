@@ -5,13 +5,16 @@ import boto3
 from botocore.exceptions import ClientError
 from botocore.client import Config
 
+from app.core.config import aws_s3_setting
+
+
 class S3Client:
     def __init__(
             self,
-            aws_access_key_id: str,
-            aws_secret_access_key: str,
-            region_name: str,
-            bucket_name: str
+            aws_access_key_id: str = aws_s3_setting.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key: str = aws_s3_setting.AWS_SECRET_ACCESS_KEY,
+            region_name: str = aws_s3_setting.REGION_NAME,
+            bucket_name: str = aws_s3_setting.BUCKET_NAME
     ):
         self.aws_access_key_id = aws_access_key_id
         self.aws_secret_access_key = aws_secret_access_key
@@ -73,9 +76,4 @@ class S3Client:
             return False
 
 def get_s3_client() -> S3Client:
-    return S3Client(
-        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        region_name=os.getenv("REGION_NAME"),
-        bucket_name=os.getenv("BUCKET_NAME")
-    )
+    return S3Client()

@@ -5,7 +5,7 @@ from app.application.services.image.dto.generated_image import GeneratedImageDat
 from app.domain.generation.models.image import GeneratedImageGroup, GeneratedImage
 from app.domain.generation.schemas.generated_image import GeneratedImageInDB
 from app.domain.generation.schemas.generated_image_group import GeneratedImageGroupInDB
-from app.infrastructure.aws.s3_client import S3Client, get_s3_client
+from app.infrastructure.s3.s3_client import S3Client, get_s3_client
 from app.infrastructure.repositories.generation.generation import GeneratedImageRepository, \
     GeneratedImageGroupRepository, get_generated_image_repository, get_generated_image_group_repository
 
