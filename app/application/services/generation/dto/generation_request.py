@@ -10,7 +10,6 @@ from app.domain.hair_model.schemas.scene.image_resolution import ImageResolution
 from app.domain.user.schemas.user import UserInDB
 
 class CreateGenerationRequestRequest(BaseModel):
-    user_id: int
     gender_id: int
     hair_style_id: int
     length_id: Optional[int]
@@ -20,7 +19,6 @@ class CreateGenerationRequestRequest(BaseModel):
 
 class CreateGenerationRequestResponse(BaseModel):
     generation_request_id: int
-    user: UserInDB
     gender: GenderInDB
     hair_style: HairStyleInDB
     length: Optional[LengthInDB]

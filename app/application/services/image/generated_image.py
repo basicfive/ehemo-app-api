@@ -2,6 +2,7 @@ from typing import List
 from fastapi import Depends
 
 from app.application.services.image.dto.generated_image import GeneratedImageData, GeneratedImageGroupData
+from app.core.errors.http_exceptions import ForbiddenException
 from app.domain.generation.models.image import GeneratedImageGroup, GeneratedImage
 from app.domain.generation.schemas.generated_image import GeneratedImageInDB
 from app.domain.generation.schemas.generated_image_group import GeneratedImageGroupInDB
@@ -10,12 +11,6 @@ from app.infrastructure.repositories.generation.generation import GeneratedImage
     GeneratedImageGroupRepository, get_generated_image_repository, get_generated_image_group_repository
 
 class GeneratedImageApplicationService:
-    """
-    TODO: CRUD를 안하는데 너무 이름을 제너럴하게 지은듯.
-    ㄴ 근데 또 생성된 이미지 그룹 단위로 삭제 가능하게 할거잖아.
-    생성된 이미지 조회용 서비스
-    * mq 로부터 생성 결과 받아서 이미지 생성하는 로직은 generation_request 에서 관리
-    """
     def __init__(
             self,
             generated_image_repo: GeneratedImageRepository,
@@ -26,7 +21,13 @@ class GeneratedImageApplicationService:
         self.generated_image_group_repo = generated_image_group_repo
         self.s3_client = s3_client
 
-    def get_generated_image_list_by_image_group(self, generated_image_group_id: int) -> List[GeneratedImageData]:
+    def get_generated_image_list_by_image_group(self, generated_image_group_id: int, user_id: int) -> List[GeneratedImageData]:
+
+        # 검증 로직 - 해당 image group이 user의 것이 맞는가?
+        db_generated_image_group: GeneratedImageGroup = self.generated_image_group_repo.get(generated_image_group_id)
+        if db_generated_image_group.user_id != user_id:
+            raise ForbiddenException()
+
         db_generated_image_list: List[GeneratedImage] = self.generated_image_repo.get_all_by_generate_image_group(generated_image_group_id)
 
         generated_image_response: List[GeneratedImageData] = []
@@ -41,6 +42,7 @@ class GeneratedImageApplicationService:
         return generated_image_response
 
     # pagination 이 적절히 필요할수도.
+    # TODO: 날짜별로 정렬해서 전달해야함.
     def get_generated_image_group_list_by_user(self, user_id: int) -> List[GeneratedImageGroupData]:
         db_generated_image_group_list: List[GeneratedImageGroup] = self.generated_image_group_repo.get_all_by_user(user_id)
 

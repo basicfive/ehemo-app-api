@@ -4,9 +4,11 @@ from sqlalchemy.exc import NoResultFound
 from app.application.services.user.dto.auth import UserInfo, TokenResponse
 from app.domain.user.schemas.user import UserCreate
 from app.domain.user.services.auth import AuthTokenService, get_auth_token_service
+from app.infrastructure.auth.social_client.apple_auth_client import get_apple_auth_client
 from app.infrastructure.auth.social_client.dto.auth_data import AuthInfo
 from app.infrastructure.auth.social_client.google_auth_client import GoogleAuthClient, get_google_auth_client
 from app.infrastructure.auth.redis_service import RedisService, get_redis_service
+from app.infrastructure.auth.social_client.kakao_auth_client import get_kakao_auth_client
 from app.infrastructure.auth.social_client.social_auth_client import SocialAuthClient
 from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
 from app.domain.user.models.user import User
@@ -30,7 +32,14 @@ class UserAuthApplicationService:
         user_info = UserInfo(**auth_info.model_dump())
         user: User = self._get_or_create_user(user_info)
 
+        """
+        TODO: 토큰 생성과 refresh 토큰 저장이 구분되어있음.
+        도메인이 repo를 갖지 못하도록 해서 발생하는 문제
+        애플리케이션에서 refresh token 의 저장까지 고려해야한다.
+        """
         access_token, refresh_token = self.auth_token_service.create_tokens(user.id)
+        self.redis_service.save_refresh_token(user.id, refresh_token)
+
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token
@@ -46,6 +55,8 @@ class UserAuthApplicationService:
         user: User = self._get_or_create_user(user_info)
 
         access_token, refresh_token = self.auth_token_service.create_tokens(user.id)
+        self.redis_service.save_refresh_token(user.id, refresh_token)
+
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token
@@ -90,3 +101,40 @@ def get_google_user_auth_application_service(
         auth_token_service=auth_token_service,
         social_auth_client=social_auth_client
     )
+
+def get_kakao_user_auth_application_service(
+        user_repo: UserRepository = Depends(get_user_repository),
+        redis_service: RedisService = Depends(get_redis_service),
+        auth_token_service: AuthTokenService = Depends(get_auth_token_service),
+        social_auth_client: SocialAuthClient = Depends(get_kakao_auth_client)
+) -> UserAuthApplicationService:
+    return UserAuthApplicationService(
+        user_repo=user_repo,
+        redis_service=redis_service,
+        auth_token_service=auth_token_service,
+        social_auth_client=social_auth_client
+    )
+
+def get_apple_user_auth_application_service(
+        user_repo: UserRepository = Depends(get_user_repository),
+        redis_service: RedisService = Depends(get_redis_service),
+        auth_token_service: AuthTokenService = Depends(get_auth_token_service),
+        social_auth_client: SocialAuthClient = Depends(get_apple_auth_client)
+) -> UserAuthApplicationService:
+    return UserAuthApplicationService(
+        user_repo=user_repo,
+        redis_service=redis_service,
+        auth_token_service=auth_token_service,
+        social_auth_client=social_auth_client
+    )
+
+
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+security = HTTPBearer()
+
+def validate_user_token(
+        credentials: HTTPAuthorizationCredentials = Depends(security),
+        auth_token_service: AuthTokenService = Depends(get_auth_token_service)
+):
+    token = credentials.credentials
+    return auth_token_service.validate_access_token(token)

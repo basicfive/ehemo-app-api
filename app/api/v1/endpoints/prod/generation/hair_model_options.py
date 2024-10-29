@@ -4,6 +4,7 @@ from app.application.services.hair_model.dto.hair_model_option import GenderOpti
     HairStyleLengthOption, HairDesignColorOption
 from app.application.services.hair_model.hair_model_option import HairOptionApplicationService, \
     get_hair_option_application_service
+from app.application.services.user.user_auth import validate_user_token
 
 router = APIRouter()
 
@@ -11,6 +12,7 @@ router = APIRouter()
 
 @router.get("/gender-options", response_model=List[GenderOption], status_code=status.HTTP_200_OK)
 def get_gender_options(
+        _: int = Depends(validate_user_token),
         service: HairOptionApplicationService = Depends(get_hair_option_application_service)
 ) -> List[GenderOption]:
     return service.get_gender_options()
@@ -18,6 +20,7 @@ def get_gender_options(
 @router.get("/hairstyle-options", response_model=List[HairStyleOption], status_code=status.HTTP_200_OK)
 def get_hair_style_options(
         gender_id: int,
+        _: int = Depends(validate_user_token),
         service: HairOptionApplicationService = Depends(get_hair_option_application_service)
 ) -> List[HairStyleOption]:
     return service.get_hair_style_options(gender_id=gender_id)
@@ -25,6 +28,7 @@ def get_hair_style_options(
 @router.get("/hairstyle-length-options", response_model=List[HairStyleLengthOption], status_code=status.HTTP_200_OK)
 def get_hair_style_length_options(
         hair_style_id: int,
+        _: int = Depends(validate_user_token),
         service: HairOptionApplicationService = Depends(get_hair_option_application_service)
 ) -> List[HairStyleLengthOption]:
     return service.get_hair_style_length_options(hair_style_id)
@@ -33,6 +37,7 @@ def get_hair_style_length_options(
 def get_hair_design_color_options(
         hair_style_id: int,
         length_id: Optional[int] = None,
+        _: int = Depends(validate_user_token),
         service: HairOptionApplicationService = Depends(get_hair_option_application_service)
 ) -> List[HairDesignColorOption]:
     return service.get_hair_design_color_options(hair_style_id=hair_style_id, length_id=length_id)

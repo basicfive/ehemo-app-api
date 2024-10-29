@@ -1,16 +1,36 @@
 from fastapi import HTTPException
 
-class ResourceNotFoundException(HTTPException):
-    def __init__(self, detail: str = "Not Found"):
-        super().__init__(status_code=404, detail=detail)
+class CustomHttpException(HTTPException):
+    def __init__(
+            self,
+            status_code: int,
+            error_code: str,
+            message: str,
+            context: str
+    ):
+        super().__init__(
+            status_code=status_code,
+            detail={
+                "error_code": error_code,
+                "message": message,
+                "context": context
+            }
+        )
 
-class UnauthorizedException(HTTPException):
-    def __init__(self, detail: str = "Unauthorized"):
-        super().__init__(status_code=401, detail=detail)
+class ResourceNotFoundException(CustomHttpException):
+    def __init__(self, context: str = None):
+        super().__init__(404, "Not Found", "Requested resource is not found", context)
 
-class SocialAuthException(HTTPException):
-    def __init__(self, detail: str = "Unauthorized"):
-        super().__init__(status_code=401, detail=detail)
+class UnauthorizedException(CustomHttpException):
+    def __init__(self, context: str = None):
+        super().__init__(401, "Unauthorized", "Access Unauthorized", context)
 
+class SocialAuthException(CustomHttpException):
+    def __init__(self, context: str = None):
+        super().__init__(401, "Unauthorized", "Oauth error", context)
+
+class ForbiddenException(CustomHttpException):
+    def __init__(self, context: str = None):
+        super().__init__(403, "Forbidden", "Forbidden request", context)
 
 

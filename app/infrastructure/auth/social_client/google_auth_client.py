@@ -1,8 +1,11 @@
 import requests
+import jwt
 from urllib.parse import urlencode
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
 
 from app.core.errors.http_exceptions import SocialAuthException
-from app.core.config import base_settings, oauth_setting
+from app.core.config import oauth_setting
 from app.infrastructure.auth.social_client.dto.auth_data import AuthInfo
 from app.infrastructure.auth.social_client.social_auth_client import SocialAuthClient
 
@@ -25,45 +28,35 @@ class GoogleAuthClient(SocialAuthClient):
 
     @staticmethod
     def verify_mobile_token(id_token: str) -> AuthInfo:
-        response = requests.get(
-            f"https://oauth2.googleapis.com/tokeninfo",
-            params={"id_token": id_token}
-        )
+        try:
+            decoded_info = google_id_token.verify_oauth2_token(
+                id_token,
+                google_requests.Request(),
+                oauth_setting.GOOGLE_CLIENT_ID
+            )
 
-        if response.status_code != 200:
-            raise SocialAuthException("Invalid Google token")
+            return AuthInfo(
+                provider="google",
+                social_id=decoded_info["sub"],
+                email=decoded_info["email"]
+            )
 
-        data = response.json()
-
-        if data["aud"] != base_settings.GOOGLE_CLIENT_ID:
-            raise SocialAuthException("Invalid client ID")
-
-        return AuthInfo(
-            provider="google",
-            social_id=data["sub"],
-            email=data["email"]
-        )
+        except ValueError:
+            raise SocialAuthException("구글 소셜 로그인 중 에러 발생")
 
     @staticmethod
     def verify_web_token(code: str) -> AuthInfo:
-        access_token: str = GoogleAuthClient._get_web_token(code=code)
-        response = requests.get(
-            "https://www.googleapis.com/oauth2/v3/userinfo",
-            headers={"Authorization": f"Bearer {access_token}"}
-        )
-        if response.status_code != 200:
-            raise SocialAuthException("Invalid access token")
-
-        data = response.json()
-
+        id_token: str = GoogleAuthClient._get_web_id_token(code=code)
+        # 웹 토큰은 signature 검증 생략
+        decoded_info = jwt.decode(id_token, options={"verify_signature": False})
         return AuthInfo(
             provider="google",
-            social_id=data["sub"],
-            email=data["email"]
+            social_id=decoded_info["sub"],
+            email=decoded_info["email"]
         )
 
     @staticmethod
-    def _get_web_token(code: str) -> str:
+    def _get_web_id_token(code: str) -> str:
         response = requests.post(
             "https://oauth2.googleapis.com/token",
             data={
@@ -74,7 +67,7 @@ class GoogleAuthClient(SocialAuthClient):
                 "grant_type": "authorization_code"
             }
         )
-        return response.json()["access_token"]
+        return response.json()["id_token"]
 
 
 def get_google_auth_client() -> GoogleAuthClient:

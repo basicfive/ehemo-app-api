@@ -17,10 +17,10 @@ class RedisService:
         return refresh_token
 
     def validate_refresh_token(self, refresh_token: str) -> int:
-        user_id_bytes: bytes = self._redis.get(f"refresh_token:{refresh_token}")
-        if not user_id_bytes:
+        user_id_str: str = self._redis.get(f"refresh_token:{refresh_token}")
+        if not user_id_str:
             raise HTTPException(status_code=401, detail="Invalid refresh token")
-        return int(user_id_bytes.decode())
+        return int(user_id_str)
 
     def revoke_refresh_token(self, refresh_token: str) -> None:
         self._redis.delete(f"refresh_token:{refresh_token}")

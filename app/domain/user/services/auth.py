@@ -22,10 +22,10 @@ class AuthTokenService:
         return access_token, refresh_token
 
     @staticmethod
-    def validate_access_token(token: str) -> str:
+    def validate_access_token(token: str) -> int:
         try:
             payload: dict = jwt.decode(token, jwt_setting.JWT_SECRET_KEY, algorithms=["HS256"])
-            return payload["sub"]
+            return int(payload["sub"])
         except jwt.InvalidTokenError:
             raise UnauthorizedException()
 

@@ -6,6 +6,7 @@ from app.application.services.generation.dto.generation_request import CreateGen
 from app.application.services.generation.dto.mq import MQPublishMessage
 from app.core.config import image_generation_setting, aws_s3_setting
 from app.core.enums.generation_status import GenerationStatusEnum
+from app.core.errors.http_exceptions import ForbiddenException
 from app.core.utils import generate_unique_datatime_uuid_key
 from app.domain.generation.schemas.generation_request import GenerationRequestCreate, GenerationRequestUpdate
 from app.domain.generation.schemas.image_generation_job import ImageGenerationJobCreate, ImageGenerationJobInDB, \
@@ -44,7 +45,8 @@ class RequestGenerationApplicationService:
 
     def create_generation_request(
             self,
-            request: CreateGenerationRequestRequest
+            request: CreateGenerationRequestRequest,
+            user_id: int
     ) -> CreateGenerationRequestResponse:
 
         # TODO: DB 접근마다 에러처리
@@ -57,7 +59,7 @@ class RequestGenerationApplicationService:
         )
         generation_request = self.generation_request_repo.create(
             obj_in=GenerationRequestCreate(
-                user_id=request.user_id,
+                user_id=user_id,
                 hair_variant_model_id=hair_variant_model.id,
                 background_id=request.background_id,
                 image_resolution_id=request.image_resolution_id
@@ -72,11 +74,8 @@ class RequestGenerationApplicationService:
             )
         )
 
-        user: User = self.user_repo.get(obj_id=request.user_id)
-
         return CreateGenerationRequestResponse(
             generation_request_id=generation_request.id,
-            user=UserInDB.model_validate(user),
             gender=GenderInDB.model_validate(hair_model_details.gender),
             hair_style=HairStyleInDB.model_validate(hair_model_details.hair_style),
             length=LengthInDB.model_validate(hair_model_details.length),
@@ -86,7 +85,12 @@ class RequestGenerationApplicationService:
         )
 
     # TODO: 수정 사항 반영하는 코드는 어떻게 깔끔하게 짤지 다시 생각해보자.
-    def update_generation_request(self, generation_request_id: int, generation_request_update: GenerationRequestUpdate):
+    def update_generation_request(
+            self,
+            generation_request_id: int,
+            generation_request_update: GenerationRequestUpdate,
+            user_id: int
+    ):
         pass
         # generation_request:GenerationRequest = self.generation_request_repo.update(
         #     obj_id=generation_request_id,
@@ -105,17 +109,19 @@ class RequestGenerationApplicationService:
         #     **hair_model_details.model_dump()
         # )
 
-
-    async def start_generation(self, generation_request_id: int) -> StartGenerationResponse:
+    async def start_generation(self, generation_request_id: int, user_id: int) -> StartGenerationResponse:
         """
         1. 사용자 토큰 validation을 진행한다. - 토큰이 충분하지 않은 경우 에러 처리
         2. image_generation_job n개 생성한다.
         3. 각각을 사용해서 mq 서버에 생성 요청을 보낸다.
-        :param generation_request_id:
-        :return:
         """
+
         generation_request = self.generation_request_repo.get(generation_request_id)
-        user = self.user_repo.get(generation_request.user_id)
+        if generation_request.user_id != user_id:
+            raise ForbiddenException()
+
+        user = self.user_repo.get(user_id)
+
         if not user.has_enough_token():
             # TODO 커스텀 에러
             raise ValueError("사용자 토큰 없음")
@@ -174,6 +180,9 @@ class RequestGenerationApplicationService:
                 obj_in=ImageGenerationJobUpdate(status=GenerationStatusEnum.PROCESSING)
             )
         message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
+
+        # TODO: 사용자 토큰 감소
+
 
         return StartGenerationResponse(
             generation_sec=calculate_generation_sec(image_count=message_count, processor_count=consumer_count)
