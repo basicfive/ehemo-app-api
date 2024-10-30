@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import Depends
 
-from app.application.services.image.dto.generated_image import GeneratedImageData, GeneratedImageGroupData
+from app.application.services.image.dto.query import GeneratedImageData, GeneratedImageGroupData
 from app.core.errors.http_exceptions import ForbiddenException
 from app.domain.generation.models.image import GeneratedImageGroup, GeneratedImage
 from app.domain.generation.schemas.generated_image import GeneratedImageInDB
@@ -58,7 +58,7 @@ class ImageQueryApplicationService:
         return generated_image_group_response
 
 
-def get_generated_image_application_service(
+def get_image_query_application_service(
         generated_image_repo: GeneratedImageRepository = Depends(get_generated_image_repository),
         generated_image_group_repo: GeneratedImageGroupRepository = Depends(get_generated_image_group_repository),
         s3_client: S3Client = Depends(get_s3_client)

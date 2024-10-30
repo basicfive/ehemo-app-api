@@ -1,7 +1,7 @@
 from typing import List
 
 from fastapi import Depends
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.core.db.base import get_db
@@ -37,8 +37,18 @@ class GeneratedImageRepository(CRUDRepository[GeneratedImage, GeneratedImageCrea
         super().__init__(model=GeneratedImage, db=db)
 
     def get_all_by_generate_image_group(self, generated_image_group_id: int) -> List[GeneratedImage]:
-        stmt = select(GeneratedImage).where(GeneratedImage.generated_image_group_id == generated_image_group_id)
+        stmt = select(GeneratedImage).where(
+            GeneratedImage.generated_image_group_id == generated_image_group_id,
+            GeneratedImage.deleted == False
+        )
         return list(self.db.scalars(stmt).all())
+
+    def soft_delete_all_in(self, id_list: List[int]) -> bool:
+        stmt = update(GeneratedImage).where(GeneratedImage.id.in_(id_list)).values(deleted=True)
+        self.db.execute(stmt)
+        self.db.commit()
+        return True
+
 
 def get_generated_image_repository(db: Session = Depends(get_db)) -> GeneratedImageRepository:
     return GeneratedImageRepository(db=db)
@@ -48,13 +58,25 @@ class GeneratedImageGroupRepository(CRUDRepository[GeneratedImageGroup, Generate
         super().__init__(model=GeneratedImageGroup, db=db)
 
     def get_all_by_user(self, user_id: int) -> List[GeneratedImageGroup]:
-        stmt = select(GeneratedImageGroup).where(GeneratedImageGroup.user_id == user_id)
+        stmt = select(GeneratedImageGroup).where(
+            GeneratedImageGroup.user_id == user_id,
+            GeneratedImageGroup.deleted == False
+        )
         return list(self.db.scalars(stmt).all())
 
     def get_by_generation_request(self, generation_request_id: int) -> GeneratedImageGroup:
-        stmt = select(GeneratedImageGroup).where(GeneratedImageGroup.generation_request_id == generation_request_id)
+        stmt = select(GeneratedImageGroup).where(
+            GeneratedImageGroup.generation_request_id == generation_request_id,
+            GeneratedImageGroup.deleted == False
+        )
         result = self.db.execute(stmt)
         return result.scalar_one()
+
+    def soft_delete(self, generated_image_group_id: int) -> bool:
+        stmt = update(GeneratedImageGroup).where(GeneratedImageGroup.id == generated_image_group_id).values(deleted=True)
+        self.db.execute(stmt)
+        self.db.commit()
+        return True
 
 def get_generated_image_group_repository(db: Session = Depends(get_db)) -> GeneratedImageGroupRepository:
     return GeneratedImageGroupRepository(db=db)

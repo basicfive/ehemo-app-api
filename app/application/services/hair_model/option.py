@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import Depends
-from app.application.services.hair_model.dto.hair_model_option import GenderOption, HairStyleOption, \
+from app.application.services.hair_model.dto.option import GenderOption, HairStyleOption, \
     HairStyleLengthOption, HairDesignColorOption, BackgroundOption, ImageResolutionOption
 from app.domain.hair_model.models.hair import Gender, HairStyle, HairStyleLength, HairDesignColor
 from app.domain.hair_model.models.scene import Background, ImageResolution
@@ -18,7 +18,7 @@ from app.domain.hair_model.schemas.hair.hair_style_length import HairStyleLength
 from app.domain.hair_model.schemas.scene.background import BackgroundInDB
 from app.domain.hair_model.schemas.scene.image_resolution import ImageResolutionInDB
 
-class HairOptionApplicationService:
+class HairModelOptionApplicationService:
     def __init__(
             self,
             gender_repo: GenderRepository,
@@ -121,7 +121,7 @@ class HairOptionApplicationService:
         ]
 
 
-def get_hair_option_application_service(
+def get_hair_model_option_application_service(
         gender_repo: GenderRepository = Depends(get_gender_repository),
         hair_style_repo: HairStyleRepository = Depends(get_hair_style_repository),
         hair_style_length_repo: HairStyleLengthRepository = Depends(get_hair_style_length_repository),
@@ -130,8 +130,8 @@ def get_hair_option_application_service(
         background_repo: BackgroundRepository = Depends(get_background_repository),
         image_resolution_repo: ImageResolutionRepository = Depends(get_image_resolution_repository),
         s3_client: S3Client = Depends(get_s3_client)
-) -> HairOptionApplicationService:
-    return HairOptionApplicationService(
+) -> HairModelOptionApplicationService:
+    return HairModelOptionApplicationService(
         gender_repo=gender_repo,
         hair_style_repo=hair_style_repo,
         hair_style_length_repo=hair_style_length_repo,

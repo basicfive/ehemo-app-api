@@ -3,7 +3,7 @@ from fastapi.params import Depends
 from fastapi import Form
 
 from app.application.services.user.dto.auth import TokenResponse
-from app.application.services.user.user_auth import UserAuthApplicationService, \
+from app.application.services.user.auth import UserAuthApplicationService, \
     get_google_user_auth_application_service, get_kakao_user_auth_application_service, \
     get_apple_user_auth_application_service
 

@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import Depends
 from app.application.query.hair_model_query import HairModelQueryService, HairModelDetails, get_hair_model_query_service
-from app.application.services.generation.dto.generation_request import CreateGenerationRequestRequest, \
+from app.application.services.generation.dto.request import CreateGenerationRequestRequest, \
     CreateGenerationRequestResponse, StartGenerationResponse
 from app.application.services.generation.dto.mq import MQPublishMessage
 from app.core.config import image_generation_setting, aws_s3_setting

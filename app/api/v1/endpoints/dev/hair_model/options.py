@@ -9,7 +9,7 @@ from app.domain.hair_model.schemas.hair.hair_style_length import HairStyleLength
 from app.domain.hair_model.schemas.hair.hair_variant_model import HairVariantModelInDB, HairVariantModelCreate
 from app.domain.hair_model.schemas.hair.length import LengthInDB, LengthCreate
 from app.domain.hair_model.schemas.hair.lora_model import LoRAModelInDB, LoRAModelCreate
-from app.application.services.hair_model.hair_model_crud import GenderCRUDService, HairStyleCRUDService, \
+from app.application.services.hair_model.crud import GenderCRUDService, HairStyleCRUDService, \
     LengthCRUDService, ColorCRUDService, SpecificColorCRUDService, \
     HairStyleLengthCRUDService, HairDesignCRUDService, HairDesignColorCRUDService, LoRAModelCRUDService, \
     HairVariantModelCRUDService, get_gender_crud_service, get_hair_style_crud_service, get_length_crud_service, \
@@ -20,7 +20,7 @@ from app.application.services.hair_model.hair_model_crud import GenderCRUDServic
 from app.domain.hair_model.schemas.scene.background import BackgroundInDB, BackgroundCreate
 from app.domain.hair_model.schemas.scene.image_resolution import ImageResolutionInDB, ImageResolutionCreate
 from app.domain.hair_model.schemas.scene.posture_and_clothing import PostureAndClothingInDB, PostureAndClothingCreate
-from app.application.services.hair_model.hair_model_crud import BackgroundCRUDService, PostureAndClothingCRUDService, ImageResolutionCRUDService
+from app.application.services.hair_model.crud import BackgroundCRUDService, PostureAndClothingCRUDService, ImageResolutionCRUDService
 
 router = APIRouter()
 # api/v1/dev/hair-model
