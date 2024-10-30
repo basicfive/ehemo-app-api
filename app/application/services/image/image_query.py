@@ -10,7 +10,7 @@ from app.infrastructure.s3.s3_client import S3Client, get_s3_client
 from app.infrastructure.repositories.generation.generation import GeneratedImageRepository, \
     GeneratedImageGroupRepository, get_generated_image_repository, get_generated_image_group_repository
 
-class GeneratedImageApplicationService:
+class ImageQueryApplicationService:
     def __init__(
             self,
             generated_image_repo: GeneratedImageRepository,
@@ -62,8 +62,8 @@ def get_generated_image_application_service(
         generated_image_repo: GeneratedImageRepository = Depends(get_generated_image_repository),
         generated_image_group_repo: GeneratedImageGroupRepository = Depends(get_generated_image_group_repository),
         s3_client: S3Client = Depends(get_s3_client)
-) -> GeneratedImageApplicationService:
-    return GeneratedImageApplicationService(
+) -> ImageQueryApplicationService:
+    return ImageQueryApplicationService(
         generated_image_repo=generated_image_repo,
         generated_image_group_repo=generated_image_group_repo,
         s3_client=s3_client

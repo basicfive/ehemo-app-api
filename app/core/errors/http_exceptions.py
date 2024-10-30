@@ -33,4 +33,8 @@ class ForbiddenException(CustomHttpException):
     def __init__(self, context: str = None):
         super().__init__(403, "Forbidden", "Forbidden request", context)
 
+class ValueException(CustomHttpException):
+    def __init__(self, context: str = None):
+        super().__init__(400, "Bad Request", "Request value is incorrect", context)
+
 
