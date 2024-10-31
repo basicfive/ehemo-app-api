@@ -3,10 +3,10 @@ import asyncio
 from fastapi import FastAPI
 import logging
 
-from app.application.services.generation.manage import handle_message
 from app.core.db.base import Base, engine
 from app.core.config import base_settings
 from app.api.v1.api import router
+from app.core.lifecycle import LifespanServices
 from app.infrastructure.mq.rabbit_mq_service import RabbitMQService
 from contextlib import asynccontextmanager
 
@@ -16,14 +16,15 @@ logging.basicConfig(level=logging.INFO)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    rabbit_mq_service = RabbitMQService()
-    await rabbit_mq_service.connect()
+    services = LifespanServices()
+    await services.initialize()
 
-    await rabbit_mq_service.consume(handle_message)
+    app.state.services = services
+
     try:
         yield
     finally:
-        await rabbit_mq_service.close()
+        await services.cleanup()
 
 app = FastAPI(
     title=base_settings.PROJECT_NAME,

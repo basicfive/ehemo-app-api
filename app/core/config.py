@@ -59,6 +59,7 @@ class ImageGenerationSetting(BaseModel):
     DISTILLED_CFG_SCALE: float = 2.0
     SINGLE_IMAGE_INFERENCE_SEC: int = 30
     ETA_BUFFER_MULTIPLIER: float = 1.5
+    MAX_RETRIES: int = 1
 
 
 base_settings = BaseSetting()

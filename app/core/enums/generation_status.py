@@ -5,3 +5,8 @@ class GenerationStatusEnum(Enum):
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
+
+class NotificationStatus(Enum):
+    PENDING = "pending"
+    SUCCESS_NOTIFIED = "success_notified"
+    FAILURE_NOTIFIED = "failure_notified"

@@ -1,21 +1,25 @@
 import json
+import logging
 from typing import List
 
 from app.application.services.generation.dto.mq import MQConsumeMessage
 from app.core.config import aws_s3_setting
 from app.core.db.base import get_db
-from app.core.enums.generation_status import GenerationStatusEnum
+from app.core.enums.generation_status import GenerationStatusEnum, NotificationStatus
 from app.core.utils import generate_unique_datatime_uuid_key, concatenate_images_horizontally, compress_and_resize_image
 from app.domain.generation.models.generation import ImageGenerationJob
 from app.domain.generation.models.image import GeneratedImageGroup, GeneratedImage
 from app.domain.generation.schemas.generated_image import GeneratedImageCreate
 from app.domain.generation.schemas.generated_image_group import GeneratedImageGroupCreate
+from app.domain.generation.schemas.generation_request import GenerationRequestUpdate
 from app.domain.generation.schemas.image_generation_job import ImageGenerationJobUpdate
 from app.domain.generation.services.generation_domain_service import are_all_image_generation_jobs_complete
 from app.infrastructure.s3.s3_client import S3Client, get_s3_client
 from app.infrastructure.fcm.fcm_service import FCMService
 from app.infrastructure.repositories.generation.generation import GenerationRequestRepository, \
     ImageGenerationJobRepository, GeneratedImageRepository, GeneratedImageGroupRepository
+
+logger = logging.getLogger()
 
 def update_image_generation_job(
         image_generation_job: ImageGenerationJob,
@@ -120,6 +124,8 @@ def handle_message(body):
     data_dict = json.loads(body)
     message = MQConsumeMessage(**data_dict)
 
+    logger.info(f"[MQ] Consumed Job ID: {message.image_generation_job_id}. DETAILS: {message.to_str()}")
+
     image_generation_job: ImageGenerationJob = image_generation_job_repo.get(message.image_generation_job_id)
     update_image_generation_job(
         image_generation_job,
@@ -146,4 +152,11 @@ def handle_message(body):
     )
 
     # 4. 클라이언트에 fcm 보내기
+
+    # fcm_service.send_notification()
+    generation_request = generation_request_repo.get(image_generation_job.generation_request_id)
+    generation_request_repo.update(
+        obj_id=generation_request.id,
+        obj_in=GenerationRequestUpdate(notification_status=NotificationStatus.SUCCESS_NOTIFIED)
+    )
 

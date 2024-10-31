@@ -10,6 +10,9 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from app.application.services.generation.dto.mq import MQPublishMessage
 from app.core.decorators import log_errors
 from app.core.config import rabbit_mq_setting
+from app.core.enums.message_priority import MessagePriority
+
+logger = logging.getLogger()
 
 class RabbitMQService:
     def __init__(
@@ -55,7 +58,7 @@ class RabbitMQService:
         await self.connect()
 
     @log_errors("RabbitMQ publish failed")
-    async def publish(self, message: MQPublishMessage, expiration_sec: int):
+    async def publish(self, message: MQPublishMessage, expiration_sec: int, priority: int = MessagePriority.LOW):
         if self.connection.is_closed or self.channel.is_closed:
             await self._reconnect()
 
@@ -63,10 +66,12 @@ class RabbitMQService:
             Message(
                 body=message.to_json(),
                 delivery_mode=2,
-                expiration=expiration_sec
+                expiration=expiration_sec,
+                priority=priority
             ),
             routing_key=self.publish_queue
         )
+        logger.info(f"[MQ] Published Job ID: {message.image_generation_job_id}. DETAILS: {message.to_str()}")
 
     @log_errors("RabbitMQ consume failed")
     async def consume(self, sync_callback: Callable):

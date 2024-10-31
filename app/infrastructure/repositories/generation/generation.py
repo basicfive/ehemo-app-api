@@ -1,10 +1,12 @@
 from typing import List
 
 from fastapi import Depends
-from sqlalchemy import select, update
+from sqlalchemy import select, update, and_
 from sqlalchemy.orm import Session
+from datetime import datetime, UTC
 
 from app.core.db.base import get_db
+from app.core.enums.generation_status import GenerationStatusEnum
 from app.domain.generation.models.generation import GenerationRequest, ImageGenerationJob
 from app.domain.generation.schemas.generated_image_group import GeneratedImageGroupCreate, GeneratedImageGroupUpdate
 from app.infrastructure.repositories.crud_repository import CRUDRepository
@@ -27,6 +29,16 @@ class ImageGenerationJobRepository(CRUDRepository[ImageGenerationJob, ImageGener
 
     def get_all_by_generation_request(self, generation_request_id: int) -> List[ImageGenerationJob]:
         stmt = select(ImageGenerationJob).where(ImageGenerationJob.generation_request_id == generation_request_id)
+        return list(self.db.scalars(stmt).all())
+
+    def get_all_expired_but_to_process_jobs(self) -> List[ImageGenerationJob]:
+        stmt = select(ImageGenerationJob).where(
+            and_(
+                # 아직 처리 중인 작업
+                ImageGenerationJob.status.in_([GenerationStatusEnum.PENDING, GenerationStatusEnum.PROCESSING]),
+                ImageGenerationJob.expires_at < datetime.now(UTC),  # 만료된 작업
+            )
+        ).order_by(ImageGenerationJob.created_at)
         return list(self.db.scalars(stmt).all())
 
 def get_image_generation_job_repository(db: Session = Depends(get_db)) -> ImageGenerationJobRepository:

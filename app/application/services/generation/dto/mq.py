@@ -6,6 +6,10 @@ class MQConsumeMessage(BaseModel):
     webui_png_info: str
     s3_key: str
 
+    def to_str(self) -> str:
+        return self.model_dump_json()
+
+
 class MQPublishMessage(BaseModel):
     generation_request_id: int
     prompt: str
@@ -14,6 +18,9 @@ class MQPublishMessage(BaseModel):
     height: int
     image_generation_job_id: int
     s3_key: Optional[str]
+
+    def to_str(self) -> str:
+        return self.model_dump_json()
 
     def to_json(self) -> bytes:
         return self.model_dump_json().encode('utf-8')

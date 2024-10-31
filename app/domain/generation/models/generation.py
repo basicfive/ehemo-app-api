@@ -1,7 +1,6 @@
 from sqlalchemy import Column, String, Integer, DateTime, Float, Enum, ForeignKey
-from sqlalchemy.sql import func
 
-from app.core.enums.generation_status import GenerationStatusEnum
+from app.core.enums.generation_status import GenerationStatusEnum, NotificationStatus
 from app.core.db.time_stamp_model import TimeStampModel
 
 class GenerationRequest(TimeStampModel):
@@ -12,11 +11,16 @@ class GenerationRequest(TimeStampModel):
     background_id = Column(Integer, ForeignKey("background.id"))
     image_resolution_id = Column(Integer, ForeignKey("image_resolution.id"))
 
+    notification_status = Column(Enum(NotificationStatus), default=NotificationStatus.PENDING, nullable=False)
+
 class ImageGenerationJob(TimeStampModel):
     __tablename__ = "image_generation_job"
     status = Column(Enum(GenerationStatusEnum), default=GenerationStatusEnum.PENDING, nullable=False)
-    requested_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    s3_key = Column(String(1024), nullable=True)
+
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    retry_count = Column(Integer, default=0, nullable=False)
+
+    s3_key = Column(String(1024), nullable=False)
     webui_png_info = Column(String(2048), nullable=True)
 
     prompt = Column(String(1024), nullable=False)
@@ -25,4 +29,3 @@ class ImageGenerationJob(TimeStampModel):
     height = Column(Integer, nullable=False)
 
     generation_request_id = Column(Integer, ForeignKey("generation_request.id"), index=True)
-
