@@ -29,8 +29,7 @@ jobs:
       if: contains(github.ref, 'dev')
       run: |
         touch .env
-        printf "%s" "${{ secrets.DEV_DOTENV }}" > .env
-        echo "${{ secrets.DEV_DOTENV }}" > .env
+        echo '${{ secrets.DEV_DOTENV }}' > .env
       shell: bash
 
     # Build and push Docker image
