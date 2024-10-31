@@ -64,7 +64,7 @@ jobs:
     # Add Github Runner IP to Bastion's security group
     - name: Add IP to bastion security group
       run: |
-        aws ec2 authorize-security-group-ingress --group-id ${{ env.DEV_AWS_BASTION_SG_ID }} --protocol tcp --port 22 --cidr ${{ env.IP }}/32
+        aws ec2 authorize-security-group-ingress --group-id ${{ env.AWS_BASTION_SG_ID }} --protocol tcp --port 22 --cidr ${{ env.IP }}/32
 
     # Setup SSH Config for Bastion Host
     - name: Setup SSH Config
@@ -110,4 +110,4 @@ jobs:
     - name: Remove IP from bastion security group
       if: always()
       run: |
-        aws ec2 revoke-security-group-ingress --group-id ${{ env.DEV_AWS_BASTION_SG_ID }} --protocol tcp --port 22 --cidr ${{ env.IP }}/32
+        aws ec2 revoke-security-group-ingress --group-id ${{ env.AWS_BASTION_SG_ID }} --protocol tcp --port 22 --cidr ${{ env.IP }}/32
