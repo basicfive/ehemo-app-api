@@ -1,133 +1,132 @@
 name: Deploy fastapi server as docker image on private ec2 instance
 
 on:
-  push:
-    branches: [ "dev" ]
+ push:
+   branches: [ "dev" ]
 
 env:
-  DOCKER_IMAGE: ghcr.io/${{ github.actor }}/ehemo-app-api/dev
+ DOCKER_IMAGE: ghcr.io/${{ github.actor }}/ehemo-app-api/dev
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+ build:
+   runs-on: ubuntu-latest
 
-    steps:
-    - uses: actions/checkout@v3
+   steps:
+   - uses: actions/checkout@v3
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+   - name: Set up Docker Buildx
+     uses: docker/setup-buildx-action@v2
 
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GHCR_TOKEN }}
+   - name: Login to GitHub Container Registry
+     uses: docker/login-action@v2
+     with:
+       registry: ghcr.io
+       username: ${{ github.actor }}
+       password: ${{ secrets.GHCR_TOKEN }}
 
-    # Echo Secret File
-    - name: Echo .env
-      if: contains(github.ref, 'dev')
-      run: |
-        touch .env
-        echo '${{ secrets.DEV_DOTENV }}' > .env
-      shell: bash
+   # Echo Secret File
+   - name: Echo .env
+     if: contains(github.ref, 'dev')
+     run: |
+       touch .env
+       echo '${{ secrets.DEV_DOTENV }}' > .env
+     shell: bash
 
-    # Build and push Docker image
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        push: true
-        tags: ${{ env.DOCKER_IMAGE }}:latest
+   # Build and push Docker image
+   - name: Build and push Docker image
+     uses: docker/build-push-action@v4
+     with:
+       context: .
+       push: true
+       tags: ${{ env.DOCKER_IMAGE }}:latest
 
-    - name: Image digest
-      run: echo ${{ steps.docker_build.outputs.digest }}
+   - name: Image digest
+     run: echo ${{ steps.docker_build.outputs.digest }}
 
-    # Get Github Runner IP
-    - name: Get Github action IP
-      run: echo "IP=$(curl -s ifconfig.me)" >> $GITHUB_ENV
+   # Get Github Runner IP
+   - name: Get Github action IP
+     run: echo "IP=$(curl -s ifconfig.me)" >> $GITHUB_ENV
 
-    - name: Setting environment variables
-      if: contains(github.ref, 'dev')
-      run: |
-        echo "AWS_DEFAULT_REGION=${{ secrets.DEV_AWS_REGION }}" >> $GITHUB_ENV
-        echo "AWS_BASTION_SG_ID=${{ secrets.DEV_AWS_BASTION_SG_ID }}" >> $GITHUB_ENV
+   - name: Setting environment variables
+     if: contains(github.ref, 'dev')
+     run: |
+       echo "AWS_DEFAULT_REGION=${{ secrets.DEV_AWS_REGION }}" >> $GITHUB_ENV
+       echo "AWS_BASTION_SG_ID=${{ secrets.DEV_AWS_BASTION_SG_ID }}" >> $GITHUB_ENV
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      if: contains(github.ref, 'dev')
-      with:
-        aws-access-key-id: ${{ secrets.DEV_AWS_ACCESS_KEY }}
-        aws-secret-access-key: ${{ secrets.DEV_AWS_SECRET_KEY }}
-        aws-region: ${{ secrets.DEV_AWS_REGION }}
+   - name: Configure AWS credentials
+     uses: aws-actions/configure-aws-credentials@v4
+     if: contains(github.ref, 'dev')
+     with:
+       aws-access-key-id: ${{ secrets.DEV_AWS_ACCESS_KEY }}
+       aws-secret-access-key: ${{ secrets.DEV_AWS_SECRET_KEY }}
+       aws-region: ${{ secrets.DEV_AWS_REGION }}
 
-    # Add Github Runner IP to Bastion's security group
-    - name: Add IP to bastion security group
-      run: |
-        aws ec2 authorize-security-group-ingress --group-id ${{ env.AWS_BASTION_SG_ID }} --protocol tcp --port 22 --cidr ${{ env.IP }}/32
+   # Add Github Runner IP to Bastion's security group
+   - name: Add IP to bastion security group
+     run: |
+       aws ec2 authorize-security-group-ingress --group-id ${{ env.AWS_BASTION_SG_ID }} --protocol tcp --port 22 --cidr ${{ env.IP }}/32
 
-    # Setup SSH Config for Bastion Host
-    - name: Setup SSH Config
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.DEV_BASTION_SSH_KEY }}" > ~/.ssh/bastion_key
-        echo "${{ secrets.DEV_TARGET_SSH_KEY }}" > ~/.ssh/target_key
-        chmod 400 ~/.ssh/bastion_key
-        chmod 400 ~/.ssh/target_key
-        cat >> ~/.ssh/config << EOF
-        Host bastion
-            HostName ${{ secrets.DEV_BASTION_HOST }}
-            User ${{ secrets.DEV_BASTION_USER }}
-            IdentityFile ~/.ssh/bastion_key
-            StrictHostKeyChecking no
-            
-        Host target
-            HostName ${{ secrets.DEV_TARGET_PRIVATE_IP }}
-            User ${{ secrets.DEV_TARGET_USER }}
-            IdentityFile ~/.ssh/target_key
-            ProxyCommand ssh -W %h:%p bastion
-            StrictHostKeyChecking no
-        EOF
+   # Setup SSH Config for Bastion Host
+   - name: Setup SSH Config
+     run: |
+       mkdir -p ~/.ssh
+       echo "${{ secrets.DEV_BASTION_SSH_KEY }}" > ~/.ssh/bastion_key
+       echo "${{ secrets.DEV_TARGET_SSH_KEY }}" > ~/.ssh/target_key
+       chmod 400 ~/.ssh/bastion_key
+       chmod 400 ~/.ssh/target_key
+       cat >> ~/.ssh/config << EOF
+       Host bastion
+           HostName ${{ secrets.DEV_BASTION_HOST }}
+           User ${{ secrets.DEV_BASTION_USER }}
+           IdentityFile ~/.ssh/bastion_key
+           StrictHostKeyChecking no
+           
+       Host target
+           HostName ${{ secrets.DEV_TARGET_PRIVATE_IP }}
+           User ${{ secrets.DEV_TARGET_USER }}
+           IdentityFile ~/.ssh/target_key
+           ProxyCommand ssh -W %h:%p bastion
+           StrictHostKeyChecking no
+       EOF
 
-    - name: Deploy to Private Server
-      if: contains(github.ref, 'dev')
-      run: |
-        ssh target << 'ENDSSH'
-        echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-        
-        # 기존 컨테이너 정리
-        docker stop ehemo-app-api || true
-        docker rm ehemo-app-api || true
-        
-        # 이전 이미지 제거
-        docker rmi ${{ env.DOCKER_IMAGE }}:latest || true
-        
-        # 새 이미지 pull
-        docker pull ${{ env.DOCKER_IMAGE }}:latest
-        
-        # 컨테이너 실행
-        docker run -d \
-          --name ehemo-app-api \
-          -p 8000:8000 \
-          ${{ env.DOCKER_IMAGE }}:latest
-        
-        # 디버깅을 위한 정보 출력
-        echo "=== Docker Container Status ==="
-        docker ps -a
-        
-        echo "=== Container Logs ==="
-        docker logs ehemo-app-api
-        
-        echo "=== Container Inspection ==="
-        docker inspect ehemo-app-api
-        
-        echo "=== System Status ==="
-        systemctl status docker
-        netstat -tulpn | grep 8000
-        ENDSSH
+   - name: Deploy to Private Server
+     if: contains(github.ref, 'dev')
+     run: |
+       ssh target << 'ENDSSH'
+       echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+       
+       # 기존 컨테이너 정리
+       docker stop ehemo-app-api || true
+       docker rm ehemo-app-api || true
+       docker rmi ${{ env.DOCKER_IMAGE }}:latest || true
+       
+       # 새 이미지 pull
+       docker pull ${{ env.DOCKER_IMAGE }}:latest
+       
+       # 컨테이너 실행 (로그 관련 옵션 추가)
+       docker run -d \
+         --name ehemo-app-api \
+         -p 8000:8000 \
+         --log-driver json-file \
+         --log-opt max-size=10m \
+         ${{ env.DOCKER_IMAGE }}:latest
+       
+       echo "=== Initial Container Logs ==="
+       sleep 3
+       docker logs ehemo-app-api
+       
+       echo "=== Container Status ==="
+       docker ps -a
+       
+       echo "=== Process List Inside Container ==="
+       docker exec ehemo-app-api ps aux
+       
+       echo "=== Redis Status Inside Container ==="
+       docker exec ehemo-app-api redis-cli ping
+       ENDSSH
 
-    # Remove Github runner IP from Bastion's security group
-    - name: Remove IP from bastion security group
-      if: always()
-      run: |
-        aws ec2 revoke-security-group-ingress --group-id ${{ env.AWS_BASTION_SG_ID }} --protocol tcp --port 22 --cidr ${{ env.IP }}/32
+   # Remove Github runner IP from Bastion's security group
+   - name: Remove IP from bastion security group
+     if: always()
+     run: |
+       aws ec2 revoke-security-group-ingress --group-id ${{ env.AWS_BASTION_SG_ID }} --protocol tcp --port 22 --cidr ${{ env.IP }}/32
