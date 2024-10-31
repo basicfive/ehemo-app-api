@@ -4,5 +4,6 @@ __pycache__
 .idea/
 .python-version
 .env.*
-!.env
 .github_secrets
+
+!.env.example
