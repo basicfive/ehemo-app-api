@@ -36,7 +36,7 @@ class AWSS3Setting(BaseSetting):
 class JwtSetting(BaseModel):
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY")
 
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 5
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
 class OAuthSetting(BaseModel):
@@ -58,6 +58,7 @@ class ImageGenerationSetting(BaseModel):
     SINGLE_INFERENCE_IMAGE_CNT: int = 2
     DISTILLED_CFG_SCALE: float = 2.0
     SINGLE_IMAGE_INFERENCE_SEC: int = 30
+    ETA_BUFFER_MULTIPLIER: float = 1.5
 
 
 base_settings = BaseSetting()

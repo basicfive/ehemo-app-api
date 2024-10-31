@@ -7,7 +7,6 @@ from app.domain.hair_model.schemas.hair.length import LengthInDB
 from app.domain.hair_model.schemas.hair.color import ColorInDB
 from app.domain.hair_model.schemas.scene.background import BackgroundInDB
 from app.domain.hair_model.schemas.scene.image_resolution import ImageResolutionInDB
-from app.domain.user.schemas.user import UserInDB
 
 class CreateGenerationRequestRequest(BaseModel):
     gender_id: int
@@ -17,7 +16,15 @@ class CreateGenerationRequestRequest(BaseModel):
     background_id: int
     image_resolution_id: int
 
-class CreateGenerationRequestResponse(BaseModel):
+class UpdateGenerationRequestRequest(BaseModel):
+    gender_id: int
+    hair_style_id: int
+    length_id: Optional[int]
+    color_id: int
+    background_id: int
+    image_resolution_id: int
+
+class GenerationRequestDetails(BaseModel):
     generation_request_id: int
     gender: GenderInDB
     hair_style: HairStyleInDB

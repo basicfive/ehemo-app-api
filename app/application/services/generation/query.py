@@ -2,7 +2,7 @@ from fastapi.params import Depends
 
 from app.application.query.dto.hair_model_details import HairModelDetails
 from app.application.query.hair_model_query import HairModelQueryService, get_hair_model_query_service
-from app.application.services.generation.dto.query import GetGenerationRequestDetailsResponse
+from app.application.services.generation.dto.request import GenerationRequestDetails
 from app.core.errors.http_exceptions import UnauthorizedException
 from app.domain.generation.models.generation import GenerationRequest
 from app.domain.hair_model.schemas.hair.gender import GenderInDB
@@ -24,7 +24,6 @@ class GenerationRequestQueryService:
         self.generation_request_repo = generation_request_repo
         self.hair_model_query_service = hair_model_query_service
 
-
     def get_generated_request_details(self, generation_request_id: int, user_id: int):
         generation_request: GenerationRequest = self.generation_request_repo.get(generation_request_id)
         if generation_request.user_id != user_id:
@@ -35,7 +34,7 @@ class GenerationRequestQueryService:
             background_id=generation_request.background_id,
             image_resolution_id=generation_request.image_resolution_id
         )
-        return GetGenerationRequestDetailsResponse(
+        return GenerationRequestDetails(
             generation_request_id=generation_request.id,
             gender=GenderInDB.model_validate(hair_model_details.gender),
             hair_style=HairStyleInDB.model_validate(hair_model_details.hair_style),

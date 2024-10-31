@@ -55,14 +55,15 @@ class RabbitMQService:
         await self.connect()
 
     @log_errors("RabbitMQ publish failed")
-    async def publish(self, message: MQPublishMessage):
+    async def publish(self, message: MQPublishMessage, expiration_sec: int):
         if self.connection.is_closed or self.channel.is_closed:
             await self._reconnect()
 
         await self.channel.default_exchange.publish(
             Message(
                 body=message.to_json(),
-                delivery_mode=2
+                delivery_mode=2,
+                expiration=expiration_sec
             ),
             routing_key=self.publish_queue
         )
