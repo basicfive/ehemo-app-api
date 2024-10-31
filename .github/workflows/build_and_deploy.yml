@@ -1,0 +1,113 @@
+name: Deploy fastapi server as docker image on private ec2 instance
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  DOCKER_IMAGE: ghcr.io/${{ github.actor }}/dcamp-qr-automation/main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GHCR_TOKEN }}
+
+    # Echo Secret File
+    - name: Echo .env
+      if: contains(github.ref, 'main')
+      run: |
+        touch .env
+        echo "${{ secrets.DOTENV }}" > .env
+      shell: bash
+
+    # Build and push Docker image
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: ${{ env.DOCKER_IMAGE }}:latest
+
+    - name: Image digest
+      run: echo ${{ steps.docker_build.outputs.digest }}
+
+    # Get Github Runner IP
+    - name: Get Github action IP
+      run: echo "IP=$(curl -s ifconfig.me)" >> $GITHUB_ENV
+
+    - name: Setting environment variables
+      if: contains(github.ref, 'main')
+      run: |
+        echo "AWS_DEFAULT_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
+        echo "AWS_BASTION_SG_ID=${{ secrets.AWS_BASTION_SG_ID }}" >> $GITHUB_ENV
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      if: contains(github.ref, 'main')
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    # Add Github Runner IP to Bastion's security group
+    - name: Add IP to bastion security group
+      run: |
+        aws ec2 authorize-security-group-ingress --group-id ${{ env.AWS_BASTION_SG_ID }} --protocol tcp --port 22 --cidr ${{ env.IP }}/32
+
+    # Setup SSH Config for Bastion Host
+    - name: Setup SSH Config
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.BASTION_SSH_KEY }}" > ~/.ssh/bastion_key
+        echo "${{ secrets.TARGET_SSH_KEY }}" > ~/.ssh/target_key
+        chmod 600 ~/.ssh/bastion_key
+        chmod 600 ~/.ssh/target_key
+        cat >> ~/.ssh/config << EOF
+        Host bastion
+            HostName ${{ secrets.BASTION_HOST }}
+            User ${{ secrets.BASTION_USER }}
+            IdentityFile ~/.ssh/bastion_key
+            StrictHostKeyChecking no
+            
+        Host target
+            HostName ${{ secrets.TARGET_PRIVATE_IP }}
+            User ${{ secrets.TARGET_USER }}
+            IdentityFile ~/.ssh/target_key
+            ProxyCommand ssh -W %h:%p bastion
+            StrictHostKeyChecking no
+        EOF
+
+    # Deploy through Bastion Host
+    - name: Deploy to Private Server
+      if: contains(github.ref, 'main')
+      run: |
+        ssh target << 'ENDSSH'
+        echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+        docker stop dcamp_qr || true
+        docker images -q ${{ env.DOCKER_IMAGE }}:latest | grep -q . && docker rmi -f ${{ env.DOCKER_IMAGE }}:latest
+        docker ps -aq -f name=dcamp_qr | grep -q . && docker rm dcamp_qr
+        docker pull ${{ env.DOCKER_IMAGE }}:latest
+        docker run -d \
+          --name dcamp_qr \
+          -p 35721:35721 \
+          ${{ env.DOCKER_IMAGE }}:latest
+        docker ps -a --filter name=dcamp_qr --format "{{.Status}}"
+        ENDSSH
+
+    # Remove Github runner IP from Bastion's security group
+    - name: Remove IP from bastion security group
+      if: always()
+      run: |
+        aws ec2 revoke-security-group-ingress --group-id ${{ env.AWS_BASTION_SG_ID }} --protocol tcp --port 22 --cidr ${{ env.IP }}/32
