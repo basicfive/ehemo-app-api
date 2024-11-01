@@ -42,17 +42,17 @@ class JwtSetting(BaseModel):
 class OAuthSetting(BaseModel):
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET")
-    GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI")
+    GOOGLE_REDIRECT_URI: str = "https://" + os.getenv("SERVICE_DOMAIN") + os.getenv("GOOGLE_REDIRECT_ENDPOINT")
 
     APPLE_CLIENT_ID: str = os.getenv("APPLE_CLIENT_ID")
-    APPLE_REDIRECT_URI: str = os.getenv("APPLE_REDIRECT_URI")
+    APPLE_REDIRECT_URI: str = "https://" + os.getenv("SERVICE_DOMAIN") + os.getenv("APPLE_REDIRECT_ENDPOINT")
     APPLE_PRIVATE_KEY: str = os.getenv("APPLE_PRIVATE_KEY")
     APPLE_TEAM_ID: str = os.getenv("APPLE_TEAM_ID")
     APPLE_KEY_ID: str = os.getenv("APPLE_KEY_ID")
 
-    KAKAO_CLIENT_ID: str = os.getenv("KAKAO_CLIENT_ID")
+    KAKAO_CLIENT_ID: str = os.getenv("SERVICE_DOMAIN") + os.getenv("KAKAO_CLIENT_ID")
     KAKAO_CLIENT_SECRET: str = os.getenv("KAKAO_CLIENT_SECRET")
-    KAKAO_REDIRECT_URI: str = os.getenv("KAKAO_REDIRECT_URI")
+    KAKAO_REDIRECT_URI: str = "https://" + os.getenv("SERVICE_DOMAIN") + os.getenv("KAKAO_REDIRECT_ENDPOINT")
 
 class ImageGenerationSetting(BaseModel):
     SINGLE_INFERENCE_IMAGE_CNT: int = 2
