@@ -10,6 +10,7 @@ from app.domain.generation.models.generation import *
 from app.domain.generation.models.image import *
 from app.domain.hair_model.models.hair import *
 from app.domain.hair_model.models.scene import *
+from app.domain.hair_model.models.model_thumbnail import *
 from app.domain.user.models.user import *
 
 # this is the Alembic Config object, which provides
