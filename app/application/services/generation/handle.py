@@ -15,6 +15,7 @@ from app.domain.generation.schemas.generated_image_group import GeneratedImageGr
 from app.domain.generation.schemas.generation_request import GenerationRequestUpdate
 from app.domain.generation.schemas.image_generation_job import ImageGenerationJobUpdate
 from app.domain.generation.services.generation_domain_service import are_all_image_generation_jobs_complete
+from app.domain.hair_model.models.hair import HairStyle
 from app.infrastructure.repositories.generation.generation import (
     GenerationRequestRepository,
     ImageGenerationJobRepository,
@@ -126,13 +127,18 @@ class MessageHandler:
 
         # 썸네일 이미지 생성 및 업로드
         thumbnail_s3_key = self._create_thumbnail(image_generation_jobs[:3])
+        hair_style: HairStyle = self.hair_model_query_service.get_hair_style_by_hair_variant_model(
+            generation_request.hair_variant_model_id
+        )
+        title: str = hair_style.title
 
         # 이미지 그룹 생성
         image_group = self.generated_image_group_repo.create(
             obj_in=GeneratedImageGroupCreate(
                 user_id=generation_request.user_id,
                 generation_request_id=generation_request_id,
-                thumbnail_image_s3_key=thumbnail_s3_key
+                thumbnail_image_s3_key=thumbnail_s3_key,
+                title=title
             )
         )
 
