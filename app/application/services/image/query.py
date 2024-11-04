@@ -3,22 +3,31 @@ from fastapi import Depends
 
 from app.application.services.image.dto.query import GeneratedImageData, GeneratedImageGroupData
 from app.core.errors.http_exceptions import ForbiddenException
+from app.domain.generation.models.generation import GenerationRequest
 from app.domain.generation.models.image import GeneratedImageGroup, GeneratedImage
 from app.domain.generation.schemas.generated_image import GeneratedImageInDB
 from app.domain.generation.schemas.generated_image_group import GeneratedImageGroupInDB
+from app.domain.hair_model.models.hair import HairStyle
+from app.infrastructure.repositories.hair_model.hair_model import HairStyleRepository
 from app.infrastructure.s3.s3_client import S3Client, get_s3_client
 from app.infrastructure.repositories.generation.generation import GeneratedImageRepository, \
-    GeneratedImageGroupRepository, get_generated_image_repository, get_generated_image_group_repository
+    GeneratedImageGroupRepository, get_generated_image_repository, get_generated_image_group_repository, \
+    GenerationRequestRepository
+
 
 class ImageQueryApplicationService:
     def __init__(
             self,
             generated_image_repo: GeneratedImageRepository,
             generated_image_group_repo: GeneratedImageGroupRepository,
+            hair_style_repo: HairStyleRepository,
+            generation_request_repo: GenerationRequestRepository,
             s3_client: S3Client
     ):
         self.generated_image_repo = generated_image_repo
         self.generated_image_group_repo = generated_image_group_repo
+        self.hair_style_repo = hair_style_repo
+        self.generation_request_repo = generation_request_repo
         self.s3_client = s3_client
 
     def get_generated_image_list_by_image_group(self, generated_image_group_id: int, user_id: int) -> List[GeneratedImageData]:
@@ -57,7 +66,6 @@ class ImageQueryApplicationService:
             )
         return generated_image_group_response
 
-
 def get_image_query_application_service(
         generated_image_repo: GeneratedImageRepository = Depends(get_generated_image_repository),
         generated_image_group_repo: GeneratedImageGroupRepository = Depends(get_generated_image_group_repository),
@@ -67,4 +75,4 @@ def get_image_query_application_service(
         generated_image_repo=generated_image_repo,
         generated_image_group_repo=generated_image_group_repo,
         s3_client=s3_client
-    )
+     )

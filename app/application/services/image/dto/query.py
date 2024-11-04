@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from datetime import datetime
 
 class GeneratedImageData(BaseModel):
     image_url: str
@@ -8,3 +9,6 @@ class GeneratedImageGroupData(BaseModel):
     id: int
     generation_request_id: int
     thumbnail_image_url: str
+    title: int
+    created_at: datetime
+

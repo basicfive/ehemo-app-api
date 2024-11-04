@@ -2,6 +2,7 @@ import json
 import logging
 from typing import List
 
+from app.application.query.hair_model_query import HairModelQueryService
 from app.application.services.generation.dto.mq import MQConsumeMessage
 from app.core.config import aws_s3_setting
 from app.core.db.base import get_db
@@ -55,6 +56,7 @@ def create_generated_images(
         generation_request_repo: GenerationRequestRepository,
         generated_image_repo: GeneratedImageRepository,
         generated_image_group_repo: GeneratedImageGroupRepository,
+        hair_model_query_service: HairModelQueryService,
         s3_client: S3Client
 ) -> List[GeneratedImage]:
     if len(image_generation_job_list) <= 0:

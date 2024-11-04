@@ -1,6 +1,8 @@
 import asyncio
+import logging
 from typing import Optional
 
+from app.application.services.generation.manage import handle_message
 from app.application.services.generation.retry import ImageGenerationRetryService
 from app.core.db.base import SessionLocal
 from app.infrastructure.fcm.fcm_service import FCMService
@@ -11,6 +13,7 @@ from app.infrastructure.repositories.user.user import UserRepository
 
 from app.infrastructure.task.retry import RetryTaskManager
 
+logger = logging.getLogger()
 
 class LifespanServices:
     def __init__(self):
@@ -47,6 +50,21 @@ class LifespanServices:
         )
 
         self.retry_task = asyncio.create_task(retry_manager.start())
+
+        self.consume_task = asyncio.create_task(self._start_consuming())
+
+    async def _start_consuming(self):
+        """RabbitMQ consume 작업을 시작하는 코루틴"""
+        try:
+            await self.mq_service.consume(handle_message)
+            # consume이 시작된 후 계속 실행 상태를 유지하기 위한 무한 대기
+            while True:
+                await asyncio.sleep(3600)  # 1시간마다 한번씩 체크
+        except Exception as e:
+            logger.error(f"Consume task encountered an error: {e}")
+            # 에러 발생시 재시작
+            await asyncio.sleep(5)  # 5초 대기 후 재시작
+            self.consume_task = asyncio.create_task(self._start_consuming())
 
     async def cleanup(self):
         if self.retry_task:

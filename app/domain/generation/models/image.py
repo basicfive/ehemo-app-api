@@ -15,6 +15,7 @@ class GeneratedImage(TimeStampModel):
 class GeneratedImageGroup(TimeStampModel):
     __tablename__ = "generated_image_group"
 
+    title = Column(String(100), nullable=False)
     rating = Column(Integer, default=0, nullable=False)
     thumbnail_image_s3_key = Column(String(2048), nullable=False)
     deleted = Column(Boolean, default=False, nullable=False)

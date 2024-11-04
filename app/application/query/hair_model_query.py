@@ -82,6 +82,10 @@ class HairModelQueryService:
         hair_style: HairStyle = self.hair_style_repo.get(obj_id=hair_style_id)
         return self.length_repo.get(hair_style.length_id)
 
+    def get_hair_style_by_hair_variant_model(self, hair_variant_model_id: int) -> HairStyle:
+        hair_variant_model: HairVariantModel = self.hair_variant_model_repo.get(hair_variant_model_id)
+        return self.hair_style_repo.get(hair_variant_model.hair_style_id)
+
 
 # dependency
 def get_hair_model_query_service(
