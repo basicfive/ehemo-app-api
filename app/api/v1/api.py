@@ -6,6 +6,7 @@ from app.api.v1.endpoints.dev.user import auth as dev_auth
 from app.api.v1.endpoints.prod.generation import request, hair_model_options
 from app.api.v1.endpoints.prod.image import image
 from app.api.v1.endpoints.prod.user import auth as prod_auth
+from app.api.v1.endpoints.prod.user import user_data
 from app.api.v1.endpoints.prod.home import model_thumbnail
 
 router = APIRouter()
@@ -17,4 +18,5 @@ router.include_router(request.router, prefix="/prod/generation", tags=['generati
 router.include_router(hair_model_options.router, prefix="/prod/generation", tags=['generation'])
 router.include_router(image.router, prefix="/prod/image", tags=['image'])
 router.include_router(prod_auth.router, prefix="/prod/user", tags=['user'])
+router.include_router(user_data.router, prefix="/prod/user", tags=['user'])
 router.include_router(model_thumbnail.router, prefix="/prod/home", tags=['home'])
