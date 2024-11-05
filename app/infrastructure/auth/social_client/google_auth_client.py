@@ -1,5 +1,6 @@
 import requests
 import jwt
+import logging
 from urllib.parse import urlencode
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
@@ -29,20 +30,43 @@ class GoogleAuthClient(SocialAuthClient):
     @staticmethod
     def verify_mobile_token(id_token: str) -> AuthInfo:
         try:
-            decoded_info = google_id_token.verify_oauth2_token(
-                id_token,
-                google_requests.Request(),
-                oauth_setting.GOOGLE_APP_CLIENT_ID
-            )
+            logging.info(f"Attempting to verify token: {id_token[:20]}...")  # 토큰 앞부분만 로깅
+            logging.info(f"Using client ID: {oauth_setting.GOOGLE_APP_CLIENT_ID}")
 
-            return AuthInfo(
-                provider="google",
-                social_id=decoded_info["sub"],
-                email=decoded_info["email"]
-            )
+            request = google_requests.Request()
 
-        except ValueError:
-            raise SocialAuthException("구글 소셜 로그인 중 에러 발생")
+            try:
+                decoded_info: Dict[str, Any] = google_id_token.verify_oauth2_token(
+                    id_token,
+                    request,
+                    oauth_setting.GOOGLE_APP_CLIENT_ID
+                )
+
+                logging.info(f"Successfully decoded token info: {decoded_info}")
+
+                return AuthInfo(
+                    provider="google",
+                    social_id=decoded_info["sub"],
+                    email=decoded_info["email"]
+                )
+
+            except ValueError as token_error:
+                logging.error(f"Token verification failed. Error: {str(token_error)}")
+                logging.error(f"Error type: {type(token_error)}")
+
+                # 토큰 디코딩 시도 (검증 없이)
+                try:
+                    import jwt
+                    unverified_decoded = jwt.decode(id_token, options={"verify_signature": False})
+                    logging.info(f"Unverified token contents: {unverified_decoded}")
+                except Exception as jwt_error:
+                    logging.error(f"Failed to decode token without verification: {str(jwt_error)}")
+
+                raise
+
+        except Exception as e:
+            logging.error(f"Unexpected error during verification: {str(e)}", exc_info=True)
+            raise SocialAuthException(f"구글 소셜 로그인 중 에러 발생: {str(e)}")
 
     @staticmethod
     def verify_web_token(code: str) -> AuthInfo:
