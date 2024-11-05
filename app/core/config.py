@@ -40,10 +40,9 @@ class JwtSetting(BaseModel):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
 class OAuthSetting(BaseModel):
-    GOOGLE_APP_CLIENT_ID: str = os.getenv("GOOGLE_APP_CLIENT_ID")
-    GOOGLE_WEB_CLIENT_ID: str = os.getenv("GOOGLE_WEB_CLIENT_ID")
 
-    GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET")
+    FIREBASE_API_KEY: str = os.getenv("FIREBASE_API_KEY")
+    FIREBASE_CREDENTIALS_PATH: str = os.path.join(ROOT_DIR, "firebase-adminsdk.json")
     GOOGLE_REDIRECT_URI: str = "https://" + os.getenv("SERVICE_DOMAIN") + os.getenv("GOOGLE_REDIRECT_ENDPOINT")
 
     APPLE_CLIENT_ID: str = os.getenv("APPLE_CLIENT_ID")

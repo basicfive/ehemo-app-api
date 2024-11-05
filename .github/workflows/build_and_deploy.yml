@@ -32,6 +32,14 @@ jobs:
        echo '${{ secrets.DEV_DOTENV }}' > .env
      shell: bash
 
+   # Echo firebase
+   - name: Echo .env
+     if: contains(github.ref, 'dev')
+     run: |
+       touch firebase-adminsdk.json
+       echo '${{ secrets.FIREBASE_SDK }}' > .env
+     shell: bash
+
    # Build and push Docker image
    - name: Build and push Docker image
      uses: docker/build-push-action@v4

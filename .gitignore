@@ -5,5 +5,6 @@ __pycache__
 .python-version
 .env.*
 .github_secrets
+firebase-adminsdk*.json
 
 !.env.example
