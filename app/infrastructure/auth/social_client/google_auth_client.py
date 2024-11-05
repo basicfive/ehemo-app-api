@@ -16,7 +16,7 @@ class GoogleAuthClient(SocialAuthClient):
         base_url = "https://accounts.google.com/o/oauth2/v2/auth"
 
         params = {
-            "client_id": oauth_setting.GOOGLE_CLIENT_ID,
+            "client_id": oauth_setting.GOOGLE_WEB_CLIENT_ID,
             "redirect_uri": oauth_setting.GOOGLE_REDIRECT_URI,
             "response_type": "code",
             "scope": "openid email",
@@ -32,7 +32,7 @@ class GoogleAuthClient(SocialAuthClient):
             decoded_info = google_id_token.verify_oauth2_token(
                 id_token,
                 google_requests.Request(),
-                oauth_setting.GOOGLE_CLIENT_ID
+                oauth_setting.GOOGLE_APP_CLIENT_ID
             )
 
             return AuthInfo(
@@ -61,7 +61,7 @@ class GoogleAuthClient(SocialAuthClient):
             "https://oauth2.googleapis.com/token",
             data={
                 "code": code,
-                "client_id": oauth_setting.GOOGLE_CLIENT_ID,
+                "client_id": oauth_setting.GOOGLE_WEB_CLIENT_ID,
                 "client_secret": oauth_setting.GOOGLE_CLIENT_SECRET,
                 "redirect_uri": oauth_setting.GOOGLE_REDIRECT_URI,
                 "grant_type": "authorization_code"
