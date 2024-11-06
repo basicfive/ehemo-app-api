@@ -33,7 +33,7 @@ jobs:
      shell: bash
 
    # Echo firebase
-   - name: Echo .env
+   - name: Echo firebase-adminsdk.json
      if: contains(github.ref, 'dev')
      run: |
        touch firebase-adminsdk.json
