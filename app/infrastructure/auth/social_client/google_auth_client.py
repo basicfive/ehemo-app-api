@@ -13,7 +13,7 @@ class GoogleAuthClient(SocialAuthClient):
         """웹 로그인용 Firebase 인증 URL 생성"""
         base_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp"
         params = {
-            "key": oauth_setting.FIREBASE_WEB_API_KEY,
+            "key": oauth_setting.FIREBASE_API_KEY,
             "providerId": "google.com",
             "continueUri": oauth_setting.GOOGLE_REDIRECT_URI
         }
@@ -27,7 +27,7 @@ class GoogleAuthClient(SocialAuthClient):
 
             response = requests.post(
                 "https://identitytoolkit.googleapis.com/v1/accounts:lookup",
-                params={"key": oauth_setting.FIREBASE_WEB_API_KEY},
+                params={"key": oauth_setting.FIREBASE_API_KEY},
                 json={"idToken": id_token}
             )
 
@@ -54,7 +54,7 @@ class GoogleAuthClient(SocialAuthClient):
 
             response = requests.post(
                 "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp",
-                params={"key": oauth_setting.FIREBASE_WEB_API_KEY},
+                params={"key": oauth_setting.FIREBASE_API_KEY},
                 json={
                     "postBody": f"code={code}&providerId=google.com",
                     "requestUri": oauth_setting.GOOGLE_REDIRECT_URI,
