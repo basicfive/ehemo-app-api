@@ -51,7 +51,7 @@ class OAuthSetting(BaseModel):
     APPLE_TEAM_ID: str = os.getenv("APPLE_TEAM_ID")
     APPLE_KEY_ID: str = os.getenv("APPLE_KEY_ID")
 
-    KAKAO_CLIENT_ID: str = os.getenv("SERVICE_DOMAIN") + os.getenv("KAKAO_CLIENT_ID")
+    KAKAO_CLIENT_ID: str = os.getenv("KAKAO_CLIENT_ID")
     KAKAO_CLIENT_SECRET: str = os.getenv("KAKAO_CLIENT_SECRET")
     KAKAO_REDIRECT_URI: str = "https://" + os.getenv("SERVICE_DOMAIN") + os.getenv("KAKAO_REDIRECT_ENDPOINT")
 
