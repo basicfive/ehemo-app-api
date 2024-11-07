@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, status
 from app.application.services.hair_model.dto.option import GenderOption, HairStyleOption, \
-    HairStyleLengthOption, HairDesignColorOption
+    HairStyleLengthOption, HairDesignColorOption, BackgroundOption, ImageResolutionOption
 from app.application.services.hair_model.option import HairModelOptionApplicationService, \
     get_hair_model_option_application_service
 from app.application.services.user.auth import validate_user_token
@@ -41,3 +41,17 @@ def get_hair_design_color_options(
         service: HairModelOptionApplicationService = Depends(get_hair_model_option_application_service)
 ) -> List[HairDesignColorOption]:
     return service.get_hair_design_color_options(hair_style_id=hair_style_id, length_id=length_id)
+
+@router.get("/background-options")
+def get_background_options(
+        _: int = Depends(validate_user_token),
+        service: HairModelOptionApplicationService = Depends(get_hair_model_option_application_service)
+) -> List[BackgroundOption]:
+    return service.get_background_options()
+
+@router.get("/image-resolution-options")
+def get_image_resolution_options(
+        _: int = Depends(validate_user_token),
+        service: HairModelOptionApplicationService = Depends(get_hair_model_option_application_service)
+) -> List[ImageResolutionOption]:
+    return service.get_image_resolution_options()
