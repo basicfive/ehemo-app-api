@@ -47,7 +47,8 @@ class KakaoAuthClient(SocialAuthClient):
                 social_id=decoded_info["sub"],
                 email=decoded_info["email"]
             )
-        except InvalidTokenError:
+        except InvalidTokenError as e:
+            print(e)
             raise SocialAuthException("카카오 소셜 로그인 중 에러 발생")
 
     @staticmethod
