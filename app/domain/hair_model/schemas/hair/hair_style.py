@@ -25,6 +25,7 @@ class HairStyleInDB(BaseModel):
     title: str
     description: str
     image_s3_key: str
+    has_length_option: bool
     gender_id: int
     order: int
 
