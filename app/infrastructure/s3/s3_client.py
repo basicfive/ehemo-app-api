@@ -31,7 +31,7 @@ class S3Client:
     def create_presigned_url(
             self,
             s3_key: str,
-            expiration: int = 600,
+            expiration: int = aws_s3_setting.PRESIGNED_URL_EXPIRATION_SEC,
             http_method: str = 'GET'
     ) -> Optional[str]:
         try:

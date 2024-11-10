@@ -33,6 +33,8 @@ class AWSS3Setting(BaseSetting):
     GENERATED_IMAGE_S3KEY_PREFIX: str = "generated_image/"
     GENERATED_IMAGE_GROUP_S3KEY_PREFIX: str = "generated_image_group_thumbnail/"
 
+    PRESIGNED_URL_EXPIRATION_SEC: int = 3600;
+
 class JwtSetting(BaseModel):
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY")
 
