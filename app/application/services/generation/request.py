@@ -76,12 +76,12 @@ class RequestGenerationApplicationService:
                 image_resolution_id=generation_request.image_resolution_id
             )
         )
-
+        length = LengthInDB.model_validate(hair_model_details.length) if hair_model_details.length else None
         return GenerationRequestDetails(
             generation_request_id=generation_request.id,
             gender=GenderInDB.model_validate(hair_model_details.gender),
             hair_style=HairStyleInDB.model_validate(hair_model_details.hair_style),
-            length=LengthInDB.model_validate(hair_model_details.length),
+            length=length,
             color=ColorInDB.model_validate(hair_model_details.color),
             background=BackgroundInDB.model_validate(hair_model_details.background),
             image_resolution=ImageResolutionInDB.model_validate(hair_model_details.image_resolution)

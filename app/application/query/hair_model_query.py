@@ -64,10 +64,11 @@ class HairModelQueryService:
     ) -> HairModelDetails:
         hair_variant_model: HairVariantModel = self.hair_variant_model_repo.get(hair_variant_model_id)
         specific_color_list: List[SpecificColor] = self.specific_color_repo.get_all_by_color_limit(hair_variant_model.color_id)
+        length = self.length_repo.get(hair_variant_model.length_id) if hair_variant_model.length_id else None
         return HairModelDetails(
             gender=self.gender_repo.get(hair_variant_model.gender_id),
             hair_style=self.hair_style_repo.get(hair_variant_model.hair_style_id),
-            length=self.length_repo.get(hair_variant_model.length_id),
+            length=length,
             color=self.color_repo.get(hair_variant_model.color_id),
             specific_color_list=specific_color_list,
             lora_model=self.lora_model_repo.get(hair_variant_model.lora_model_id),
