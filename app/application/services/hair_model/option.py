@@ -76,12 +76,11 @@ class HairModelOptionApplicationService:
         return sorted(
             [
                 HairStyleLengthOption(
-                    id=db_hair_style_length.id,
+                    id=db_hair_style_length.length_id,
                     title=db_hair_style_length.length.title,
                     description=db_hair_style_length.length.description,
                     presigned_image_url=self.s3_client.create_presigned_url(s3_key=db_hair_style_length.image_s3_key),
                     order=db_hair_style_length.length.order,
-                    length_id=db_hair_style_length.length_id
                 )
                 for db_hair_style_length in db_hair_style_length_list
             ],

@@ -22,7 +22,6 @@ class HairStyleLengthOption(BaseModel):
     description: str
     presigned_image_url: str
     order: int
-    length_id: int
 
 class HairDesignColorOption(BaseModel):
     id: int
