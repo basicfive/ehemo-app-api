@@ -29,7 +29,6 @@ class HairDesignColorOption(BaseModel):
     description: str
     presigned_image_url: str
     order: int
-    color_id: int
 
 class BackgroundOption(BaseModel):
     id: int

@@ -98,12 +98,11 @@ class HairModelOptionApplicationService:
         return sorted(
             [
                 HairDesignColorOption(
-                    id=db_hair_design_color.id,
+                    id=db_hair_design_color.color_id,
                     title=db_hair_design_color.color.title,
                     description=db_hair_design_color.color.description,
                     presigned_image_url=self.s3_client.create_presigned_url(s3_key=db_hair_design_color.image_s3_key),
                     order=db_hair_design_color.color.order,
-                    color_id=db_hair_design_color.color_id
                 )
                 for db_hair_design_color in db_hair_design_color_list
             ],
