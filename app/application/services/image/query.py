@@ -8,11 +8,11 @@ from app.domain.generation.models.image import GeneratedImageGroup, GeneratedIma
 from app.domain.generation.schemas.generated_image import GeneratedImageInDB
 from app.domain.generation.schemas.generated_image_group import GeneratedImageGroupInDB
 from app.domain.hair_model.models.hair import HairStyle
-from app.infrastructure.repositories.hair_model.hair_model import HairStyleRepository
+from app.infrastructure.repositories.hair_model.hair_model import HairStyleRepository, get_hair_style_repository
 from app.infrastructure.s3.s3_client import S3Client, get_s3_client
 from app.infrastructure.repositories.generation.generation import GeneratedImageRepository, \
     GeneratedImageGroupRepository, get_generated_image_repository, get_generated_image_group_repository, \
-    GenerationRequestRepository
+    GenerationRequestRepository, get_generation_request_repository
 
 
 class ImageQueryApplicationService:
@@ -69,10 +69,14 @@ class ImageQueryApplicationService:
 def get_image_query_application_service(
         generated_image_repo: GeneratedImageRepository = Depends(get_generated_image_repository),
         generated_image_group_repo: GeneratedImageGroupRepository = Depends(get_generated_image_group_repository),
+        hair_style_repo: HairStyleRepository = Depends(get_hair_style_repository),
+        generation_request_repo: GenerationRequestRepository = Depends(get_generation_request_repository),
         s3_client: S3Client = Depends(get_s3_client)
 ) -> ImageQueryApplicationService:
     return ImageQueryApplicationService(
         generated_image_repo=generated_image_repo,
         generated_image_group_repo=generated_image_group_repo,
+        hair_style_repo=hair_style_repo,
+        generation_request_repo=generation_request_repo,
         s3_client=s3_client
      )
