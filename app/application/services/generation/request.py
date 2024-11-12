@@ -174,11 +174,25 @@ class RequestGenerationApplicationService:
         # image_generation_job 10개 생성
         # TODO: transaction
         # TODO: 에러처리
+
+        # queue 상태 확인
+        message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
+        if consumer_count < 1:
+            raise NoInferenceConsumerException()
+        message_ttl = calculate_generation_eta_sec(image_count=message_count, processor_count=consumer_count)
+        message_ttl_list: List[int] = []
+        for _ in prompt_list:
+            message_ttl_list.append(message_ttl)
+            message_ttl += calculate_single_generation_sec(processor_count=consumer_count)
+
+
         image_generation_job_list: List[ImageGenerationJobInDB] = []
-        for prompt in prompt_list:
+        for idx, prompt in enumerate(prompt_list):
             s3_key = generate_unique_datatime_uuid_key(prefix=aws_s3_setting.GENERATED_IMAGE_S3KEY_PREFIX)
             db_image_generation_job = self.image_generation_job_repo.create(
                 obj_in=ImageGenerationJobCreate(
+                    retry_count=image_generation_setting.MAX_RETRIES,
+                    expires_at=message_ttl_list[idx],
                     prompt=prompt,
                     distilled_cfg_scale=image_generation_setting.DISTILLED_CFG_SCALE,
                     width=hair_model_details.image_resolution.width,
@@ -189,20 +203,13 @@ class RequestGenerationApplicationService:
             )
             image_generation_job_list.append(ImageGenerationJobInDB.model_validate(db_image_generation_job))
 
-        # queue 상태 확인
-        message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
-        if consumer_count < 1:
-            raise NoInferenceConsumerException()
-        message_ttl = calculate_generation_eta_sec(image_count=message_count, processor_count=consumer_count)
-
         # MQ 요청 보내기
-        for image_generation_job in image_generation_job_list:
+        for idx, image_generation_job in enumerate(image_generation_job_list):
             message = MQPublishMessage(
                 **image_generation_job.model_dump(),
                 image_generation_job_id=image_generation_job.id,
             )
-            await self.rabbit_mq_service.publish(message=message, expiration_sec=message_ttl)
-            message_ttl += calculate_single_generation_sec(processor_count=consumer_count)
+            await self.rabbit_mq_service.publish(message=message, expiration_sec=message_ttl_list[idx])
             self.image_generation_job_repo.update(
                 obj_id=image_generation_job.id,
                 obj_in=ImageGenerationJobUpdate(status=GenerationStatusEnum.PROCESSING)
