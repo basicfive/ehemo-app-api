@@ -1,5 +1,6 @@
 from typing import List
 from fastapi import Depends
+from datetime import datetime, UTC
 
 from app.application.services.image.dto.query import GeneratedImageData, GeneratedImageGroupData
 from app.core.errors.http_exceptions import ForbiddenException
@@ -61,6 +62,7 @@ class ImageQueryApplicationService:
             generated_image_group_response.append(
                 GeneratedImageGroupData(
                     **generated_image_group.model_dump(),
+                    created_at=datetime.now(UTC),
                     thumbnail_image_url=self.s3_client.create_presigned_url(s3_key=generated_image_group.thumbnail_image_s3_key)
                 )
             )
