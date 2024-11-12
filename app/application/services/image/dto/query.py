@@ -9,6 +9,6 @@ class GeneratedImageGroupData(BaseModel):
     id: int
     generation_request_id: int
     thumbnail_image_url: str
-    title: int
+    title: str
     created_at: datetime
 
