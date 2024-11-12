@@ -58,7 +58,7 @@ class OAuthSetting(BaseModel):
     KAKAO_REDIRECT_URI: str = "https://" + os.getenv("SERVICE_DOMAIN") + os.getenv("KAKAO_REDIRECT_ENDPOINT")
 
 class ImageGenerationSetting(BaseModel):
-    SINGLE_INFERENCE_IMAGE_CNT: int = 2
+    SINGLE_INFERENCE_IMAGE_CNT: int = 10
     DISTILLED_CFG_SCALE: float = 2.0
     SINGLE_IMAGE_INFERENCE_SEC: int = 30
     ETA_BUFFER_MULTIPLIER: float = 1.5
