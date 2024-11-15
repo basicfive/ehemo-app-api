@@ -51,8 +51,7 @@ class ImageQueryApplicationService:
             )
         return generated_image_response
 
-    # pagination 이 적절히 필요할수도.
-    # TODO: 날짜별로 정렬해서 전달해야함.
+    # 데이터 많아지면 pagination 이 적절히 필요할수도.
     def get_generated_image_group_list_by_user(self, user_id: int) -> List[GeneratedImageGroupData]:
         db_generated_image_group_list: List[GeneratedImageGroup] = self.generated_image_group_repo.get_all_by_user(user_id)
 
@@ -66,6 +65,7 @@ class ImageQueryApplicationService:
                     thumbnail_image_url=self.s3_client.create_presigned_url(s3_key=generated_image_group.thumbnail_image_s3_key)
                 )
             )
+        generated_image_group_response.sort(key=lambda x: x.created_at, reverse=True)
         return generated_image_group_response
 
 def get_image_query_application_service(
