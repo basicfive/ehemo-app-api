@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from datetime import datetime
 
 class GeneratedImageData(BaseModel):
+    id: int
     image_url: str
     generated_image_group_id: int
 
