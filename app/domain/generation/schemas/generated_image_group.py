@@ -1,5 +1,6 @@
 from typing import Optional
 from pydantic import BaseModel
+from datetime import datetime
 
 class GeneratedImageGroupCreate(BaseModel):
     user_id: int
@@ -22,6 +23,7 @@ class GeneratedImageGroupInDB(BaseModel):
     thumbnail_image_s3_key: str
     rating: int
     title: str
+    created_at: datetime
 
     class Config:
         from_attributes=True
