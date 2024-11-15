@@ -1,6 +1,8 @@
 import logging
 import requests
 from urllib.parse import urlencode
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 
 from app.core.errors.http_exceptions import SocialAuthException
 from app.core.config import oauth_setting
@@ -10,12 +12,15 @@ from app.infrastructure.auth.social_client.social_auth_client import SocialAuthC
 class GoogleAuthClient(SocialAuthClient):
     @staticmethod
     def get_authorization_url() -> str:
-        """웹 로그인용 Firebase 인증 URL 생성"""
-        base_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp"
+        """웹 로그인용 Google OAuth 2.0 인증 URL 생성"""
+        base_url = "https://accounts.google.com/o/oauth2/v2/auth"
         params = {
-            "key": oauth_setting.FIREBASE_API_KEY,
-            "providerId": "google.com",
-            "continueUri": oauth_setting.GOOGLE_REDIRECT_URI
+            "client_id": oauth_setting.GOOGLE_CLIENT_ID,
+            "redirect_uri": oauth_setting.GOOGLE_REDIRECT_URI,
+            "response_type": "code",
+            "scope": "openid email",
+            "access_type": "offline",
+            "prompt": "consent"
         }
         return f"{base_url}?{urlencode(params)}"
 
@@ -48,32 +53,47 @@ class GoogleAuthClient(SocialAuthClient):
 
     @staticmethod
     def verify_web_token(code: str) -> AuthInfo:
-        """Firebase 웹 인증 코드 검증"""
+        """Google OAuth 2.0 인증 코드 검증 및 사용자 정보 획득"""
         try:
-            logging.info("Attempting to verify Firebase web token...")
+            logging.info("Attempting to verify Google OAuth 2.0 token...")
 
-            response = requests.post(
-                "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp",
-                params={"key": oauth_setting.FIREBASE_API_KEY},
-                json={
-                    "postBody": f"code={code}&providerId=google.com",
-                    "requestUri": oauth_setting.GOOGLE_REDIRECT_URI,
-                    "returnIdpCredential": True,
-                    "returnSecureToken": True
+            # 토큰 교환 요청
+            token_response = requests.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "code": code,
+                    "client_id": oauth_setting.GOOGLE_CLIENT_ID,
+                    "client_secret": oauth_setting.GOOGLE_CLIENT_SECRET,
+                    "redirect_uri": oauth_setting.GOOGLE_REDIRECT_URI,
+                    "grant_type": "authorization_code"
                 }
             )
 
-            if "error" in response.json():
-                raise ValueError(response.json()["error"]["message"])
+            token_response.raise_for_status()
+            token_data = token_response.json()
+            id_token_str = token_data.get("id_token")
 
-            data = response.json()
+            if not id_token_str:
+                raise ValueError("Failed to obtain id_token")
 
-            return AuthInfo(
-                provider="google",
-                social_id=data["localId"],
-                email=data["email"]
+            # id_token 검증 및 디코딩
+            request_adapter = google_requests.Request()
+            decoded_token = id_token.verify_oauth2_token(
+                id_token_str,
+                request_adapter,
+                oauth_setting.GOOGLE_CLIENT_ID
             )
 
+            # 필요한 정보 추출
+            return AuthInfo(
+                provider="google",
+                social_id=decoded_token["sub"],
+                email=decoded_token["email"]
+            )
+
+        except ValueError as ve:
+            logging.error(f"Invalid token: {str(ve)}")
+            raise SocialAuthException("구글 웹 로그인 중 유효하지 않은 토큰 발생")
         except Exception as e:
             logging.error(f"Web token verification failed: {str(e)}")
             raise SocialAuthException("구글 웹 로그인 중 에러 발생")
