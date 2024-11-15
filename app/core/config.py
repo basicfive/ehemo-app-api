@@ -45,7 +45,7 @@ class OAuthSetting(BaseModel):
     # google web
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET")
-    GOOGLE_REDIRECT_URI: str = "https://" + os.getenv("SERVICE_DOMAIN") + os.getenv("GOOGLE_REDIRECT_ENDPOINT")
+    GOOGLE_REDIRECT_URI: str = "http://localhost:8000" + os.getenv("GOOGLE_REDIRECT_ENDPOINT")
 
     # google mobile (firebase)
     FIREBASE_API_KEY: str = os.getenv("FIREBASE_API_KEY")
@@ -61,7 +61,6 @@ class OAuthSetting(BaseModel):
     # kakao mobile
     KAKAO_CLIENT_ID: str = os.getenv("KAKAO_CLIENT_ID")
     KAKAO_CLIENT_SECRET: str = os.getenv("KAKAO_CLIENT_SECRET")
-    KAKAO_REDIRECT_URI: str = "https://" + os.getenv("SERVICE_DOMAIN") + os.getenv("KAKAO_REDIRECT_ENDPOINT")
 
 class ImageGenerationSetting(BaseModel):
     SINGLE_INFERENCE_IMAGE_CNT: int = 10

@@ -22,6 +22,7 @@ class GoogleAuthClient(SocialAuthClient):
             "access_type": "offline",
             "prompt": "consent"
         }
+        print(oauth_setting.GOOGLE_REDIRECT_URI)
         return f"{base_url}?{urlencode(params)}"
 
     @staticmethod
@@ -55,8 +56,6 @@ class GoogleAuthClient(SocialAuthClient):
     def verify_web_token(code: str) -> AuthInfo:
         """Google OAuth 2.0 인증 코드 검증 및 사용자 정보 획득"""
         try:
-            logging.info("Attempting to verify Google OAuth 2.0 token...")
-
             # 토큰 교환 요청
             token_response = requests.post(
                 "https://oauth2.googleapis.com/token",
@@ -74,9 +73,9 @@ class GoogleAuthClient(SocialAuthClient):
             id_token_str = token_data.get("id_token")
 
             if not id_token_str:
+                logging.error("id_token missing from response")
                 raise ValueError("Failed to obtain id_token")
 
-            # id_token 검증 및 디코딩
             request_adapter = google_requests.Request()
             decoded_token = id_token.verify_oauth2_token(
                 id_token_str,
@@ -84,7 +83,6 @@ class GoogleAuthClient(SocialAuthClient):
                 oauth_setting.GOOGLE_CLIENT_ID
             )
 
-            # 필요한 정보 추출
             return AuthInfo(
                 provider="google",
                 social_id=decoded_token["sub"],
@@ -94,6 +92,9 @@ class GoogleAuthClient(SocialAuthClient):
         except ValueError as ve:
             logging.error(f"Invalid token: {str(ve)}")
             raise SocialAuthException("구글 웹 로그인 중 유효하지 않은 토큰 발생")
+        except requests.exceptions.RequestException as re:
+            logging.error(f"Request failed: {str(re)}")
+            raise SocialAuthException("구글 API 요청 중 에러 발생")
         except Exception as e:
             logging.error(f"Web token verification failed: {str(e)}")
             raise SocialAuthException("구글 웹 로그인 중 에러 발생")
