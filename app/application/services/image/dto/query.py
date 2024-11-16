@@ -5,6 +5,8 @@ class GeneratedImageData(BaseModel):
     id: int
     image_url: str
     generated_image_group_id: int
+    width: int
+    height: int
 
 class GeneratedImageGroupData(BaseModel):
     id: int
