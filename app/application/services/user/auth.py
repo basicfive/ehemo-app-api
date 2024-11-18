@@ -66,6 +66,8 @@ class UserAuthApplicationService:
         self.redis_service.revoke_refresh_token(refresh_token)
         return True
 
+    # FIXME: Atomic 하지 않음. 같은 user 의 동시 요청 시, redis 에 같은 user_id 의 여러 refresh token 이 저장됨.
+    # 우선 앱 쪽에서 같은 user 의 refresh token 요청은 동기적으로 처리하는 것으로 해결, 추후 하단 코드 개선.
     def refresh_tokens(self, refresh_token: str) -> TokenResponse:
         all_refresh_tokens = self.redis_service.get_all_refresh_tokens()
 

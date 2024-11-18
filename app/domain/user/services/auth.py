@@ -6,7 +6,7 @@ import jwt
 from app.core.config import jwt_setting
 from app.core.errors.http_exceptions import UnauthorizedException
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 class AuthTokenService:
     @staticmethod
@@ -15,7 +15,6 @@ class AuthTokenService:
             expire_minutes: int = jwt_setting.ACCESS_TOKEN_EXPIRE_MINUTES
     ) -> tuple[str, str]:
         exp = datetime.now(UTC) + timedelta(minutes=expire_minutes)
-        print(f"exp: {exp}")
         access_token = jwt.encode(
             {"sub": str(user_id), "exp": exp},
             jwt_setting.JWT_SECRET_KEY,

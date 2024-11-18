@@ -22,7 +22,6 @@ class GoogleAuthClient(SocialAuthClient):
             "access_type": "offline",
             "prompt": "consent"
         }
-        print(oauth_setting.GOOGLE_REDIRECT_URI)
         return f"{base_url}?{urlencode(params)}"
 
     @staticmethod
