@@ -27,7 +27,6 @@ class RedisService:
         self._redis.delete(f"refresh_token:{refresh_token}")
 
     def get_all_refresh_tokens(self) -> list[tuple[str, str]]:
-        # refresh_token:* 패턴으로 모든 refresh 토큰 키를 찾습니다
         all_tokens = []
         cursor = 0
         pattern = "refresh_token:*"
@@ -35,16 +34,20 @@ class RedisService:
         while True:
             cursor, keys = self._redis.scan(cursor, pattern, count=100)
             for key in keys:
-                # 키에서 실제 토큰 값 추출 (refresh_token: 제거)
-                token = key.decode('utf-8').split(':')[1]
-                user_id = self._redis.get(key).decode('utf-8')
+                # key가 이미 문자열인 경우와 bytes인 경우를 모두 처리
+                token_key = key.decode('utf-8') if isinstance(key, bytes) else key
+                token = token_key.split(':')[1]
+
+                # value도 마찬가지로 bytes와 문자열 케이스 모두 처리
+                value = self._redis.get(key)
+                user_id = value.decode('utf-8') if isinstance(value, bytes) else value
+
                 all_tokens.append((token, user_id))
 
             if cursor == 0:
                 break
 
         return all_tokens
-
 
 def get_redis_service(
         redis_client: Redis = Depends(get_redis_client)
