@@ -38,7 +38,7 @@ class AWSS3Setting(BaseSetting):
 class JwtSetting(BaseModel):
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY")
 
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
 class OAuthSetting(BaseModel):
