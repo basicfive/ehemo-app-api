@@ -67,30 +67,12 @@ class UserAuthApplicationService:
         return True
 
     def refresh_tokens(self, refresh_token: str) -> TokenResponse:
-        from datetime import datetime
         all_refresh_tokens = self.redis_service.get_all_refresh_tokens()
 
         print(f"\n===== Current Active Sessions =====")
         for token, user_id in all_refresh_tokens:
             print(f"\nUser ID: {user_id}")
             print(f"Refresh Token: {token}")
-
-            # 해당 유저의 가장 최근 access token 가져오기
-            try:
-                access_token, _ = self.auth_token_service.create_tokens(int(user_id))
-                decoded_token = self.auth_token_service.decode_jwt_token(access_token)
-
-                if "exp" in decoded_token:
-                    exp_timestamp = decoded_token["exp"]
-                    exp_datetime = datetime.fromtimestamp(exp_timestamp)
-                    time_until_exp = exp_datetime - datetime.now()
-
-                    print(f"Access Token Expires at: {exp_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
-                    print(f"Time until expiration: {time_until_exp}")
-
-            except Exception as e:
-                print(f"Error decoding access token: {str(e)}")
-
         print(f"\n================================")
 
         user_id = self.redis_service.validate_refresh_token(refresh_token)
