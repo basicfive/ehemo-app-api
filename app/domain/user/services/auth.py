@@ -29,5 +29,12 @@ class AuthTokenService:
         except jwt.InvalidTokenError:
             raise UnauthorizedException()
 
+    @staticmethod
+    def decode_jwt_token(token: str) -> dict:
+        try:
+            return jwt.decode(token, jwt_setting.JWT_SECRET_KEY, algorithms=["HS256"])
+        except jwt.InvalidTokenError:
+            return {"error": "Invalid token"}
+
 def get_auth_token_service() -> AuthTokenService:
     return AuthTokenService()
