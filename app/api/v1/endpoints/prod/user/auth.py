@@ -36,7 +36,6 @@ def logout(
         service: UserAuthApplicationService = Depends(get_google_user_auth_application_service)
 ) -> bool:
     return service.logout(refresh_token)
-
 @router.post("/auth/refresh_tokens", response_model=TokenResponse, status_code=status.HTTP_200_OK)
 def refresh_tokens(
         refresh_token: str,

@@ -67,6 +67,9 @@ class UserAuthApplicationService:
         return True
 
     def refresh_tokens(self, refresh_token: str) -> TokenResponse:
+        all_refresh_tokens = self.redis_service.get_all_refresh_tokens()
+        print("Current refresh tokens in Redis:", all_refresh_tokens)
+
         user_id = self.redis_service.validate_refresh_token(refresh_token)
 
         access_token, new_refresh_token = self.auth_token_service.create_tokens(user_id)
