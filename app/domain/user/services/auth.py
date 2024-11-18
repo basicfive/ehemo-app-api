@@ -17,7 +17,8 @@ class AuthTokenService:
         exp = datetime.now(UTC) + timedelta(minutes=expire_minutes)
         print(f"exp: {exp}")
         access_token = jwt.encode(
-            {"sub": str(user_id), "exp": exp},
+            # {"sub": str(user_id), "exp": exp},
+            {"sub": user_id, "exp": exp},
             jwt_setting.JWT_SECRET_KEY,
             algorithm="HS256"
         )
