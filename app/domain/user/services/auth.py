@@ -18,7 +18,7 @@ class AuthTokenService:
         print(f"exp: {exp}")
         access_token = jwt.encode(
             # {"sub": str(user_id), "exp": exp},
-            {"sub": user_id, "exp": exp},
+            {"sub": user_id, "exp": exp}, # 과거에는 이럼에도 동작을 했었음
             jwt_setting.JWT_SECRET_KEY,
             algorithm="HS256"
         )
@@ -57,13 +57,6 @@ class AuthTokenService:
         except jwt.InvalidTokenError as e:
             logger.error("Invalid token error: %s", str(e))
             raise UnauthorizedException("Invalid token.")
-
-    @staticmethod
-    def decode_jwt_token(token: str) -> dict:
-        try:
-            return jwt.decode(token, jwt_setting.JWT_SECRET_KEY, algorithms=["HS256"])
-        except jwt.InvalidTokenError:
-            return {"error": "Invalid token"}
 
 def get_auth_token_service() -> AuthTokenService:
     return AuthTokenService()
