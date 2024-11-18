@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, UTC, timedelta
 from uuid import uuid4
 import jwt
@@ -5,6 +6,7 @@ import jwt
 from app.core.config import jwt_setting
 from app.core.errors.http_exceptions import UnauthorizedException
 
+logger = logging.getLogger(__name__)
 
 class AuthTokenService:
     @staticmethod
@@ -25,10 +27,35 @@ class AuthTokenService:
     @staticmethod
     def validate_access_token(token: str) -> int:
         try:
-            payload: dict = jwt.decode(token, jwt_setting.JWT_SECRET_KEY, algorithms=["HS256"])
-            return int(payload["sub"])
-        except jwt.InvalidTokenError:
-            raise UnauthorizedException()
+            logger.info("Validating access token.")
+            # Decode JWT
+            payload: dict = jwt.decode(
+                token,
+                jwt_setting.JWT_SECRET_KEY,
+                algorithms=["HS256"]
+            )
+            logger.info("Token successfully decoded. Payload: %s", payload)
+
+            # Return the user ID from the token
+            user_id = int(payload["sub"])
+            logger.info("Extracted user ID: %d", user_id)
+            return user_id
+
+        except jwt.ExpiredSignatureError:
+            logger.error("The token has expired.")
+            raise UnauthorizedException("Token has expired.")
+
+        except jwt.DecodeError:
+            logger.error("Failed to decode token. Token might be invalid: %s", token)
+            raise UnauthorizedException("Invalid token.")
+
+        except KeyError:
+            logger.error("Token payload does not contain 'sub'. Payload: %s", payload)
+            raise UnauthorizedException("Malformed token payload.")
+
+        except jwt.InvalidTokenError as e:
+            logger.error("Invalid token error: %s", str(e))
+            raise UnauthorizedException("Invalid token.")
 
     @staticmethod
     def decode_jwt_token(token: str) -> dict:
