@@ -155,7 +155,7 @@ class RequestGenerationApplicationService:
                 image_resolution_id=generation_request.image_resolution_id
             )
         )
-        posture_and_clothing_list=self.hair_model_query_service.get_random_posture_and_clothing(limit=image_generation_setting.SINGLE_INFERENCE_IMAGE_CNT)
+        posture_and_clothing_list=self.hair_model_query_service.get_random_posture_and_clothing(limit=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST)
 
         # null length 수정 - hs 기본 길이로 변경한다.
         if not hair_model_details.hair_style.has_length_option:
@@ -168,7 +168,7 @@ class RequestGenerationApplicationService:
             lora_model=hair_model_details.lora_model,
             specific_color_list=hair_model_details.specific_color_list,
             posture_and_clothing_list=posture_and_clothing_list,
-            count=image_generation_setting.SINGLE_INFERENCE_IMAGE_CNT
+            count=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST
         )
 
         # image_generation_job 10개 생성
@@ -221,7 +221,8 @@ class RequestGenerationApplicationService:
         self.user_repo.update(obj_id=user.id, obj_in=UserUpdate(token=user.token - 1))
 
         return StartGenerationResponse(
-            generation_sec=calculate_generation_eta_sec(image_count=message_count, processor_count=consumer_count)
+            generation_sec=calculate_generation_eta_sec(image_count=message_count, processor_count=consumer_count),
+            generated_image_cnt_per_request=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST
         )
 
 def get_request_generation_application_service(

@@ -35,3 +35,4 @@ class GenerationRequestDetails(BaseModel):
 
 class StartGenerationResponse(BaseModel):
     generation_sec: int
+    generated_image_cnt_per_request: int
