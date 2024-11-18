@@ -204,21 +204,23 @@ class RequestGenerationApplicationService:
             image_generation_job_list.append(ImageGenerationJobInDB.model_validate(db_image_generation_job))
 
         # MQ 요청 보내기
-        for idx, image_generation_job in enumerate(image_generation_job_list):
-            message = MQPublishMessage(
-                **image_generation_job.model_dump(),
-                image_generation_job_id=image_generation_job.id,
-            )
-            await self.rabbit_mq_service.publish(message=message, expiration_sec=message_ttl_list[idx])
-            self.image_generation_job_repo.update(
-                obj_id=image_generation_job.id,
-                obj_in=ImageGenerationJobUpdate(status=GenerationStatusEnum.PROCESSING)
-            )
+        # for idx, image_generation_job in enumerate(image_generation_job_list):
+        #     message = MQPublishMessage(
+        #         **image_generation_job.model_dump(),
+        #         image_generation_job_id=image_generation_job.id,
+        #     )
+        #     await self.rabbit_mq_service.publish(message=message, expiration_sec=message_ttl_list[idx])
+        #     self.image_generation_job_repo.update(
+        #         obj_id=image_generation_job.id,
+        #         obj_in=ImageGenerationJobUpdate(status=GenerationStatusEnum.PROCESSING)
+        #     )
 
         message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
 
         # 사용자 토큰 감소
-        self.user_repo.update(obj_id=user.id, obj_in=UserUpdate(token=user.token - 1))
+        updated_user : User = self.user_repo.update(obj_id=user.id, obj_in=UserUpdate(token=user.token - 1))
+        print(f"current user token : {user.token}")
+        print(f"updated user token : {updated_user.token}")
 
         return StartGenerationResponse(
             generation_sec=calculate_generation_eta_sec(image_count=message_count, processor_count=consumer_count),
