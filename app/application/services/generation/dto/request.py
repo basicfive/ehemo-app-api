@@ -33,6 +33,7 @@ class GenerationRequestDetails(BaseModel):
     background: BackgroundInDB
     image_resolution: ImageResolutionInDB
 
-class StartGenerationResponse(BaseModel):
+class GenerationRequestResponse(BaseModel):
+    generation_request_id: int
     generation_sec: int
     generated_image_cnt_per_request: int

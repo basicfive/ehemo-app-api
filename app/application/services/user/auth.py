@@ -6,7 +6,7 @@ from app.domain.user.schemas.user import UserCreate
 from app.domain.user.services.auth import AuthTokenService, get_auth_token_service
 from app.infrastructure.auth.social_client.apple_auth_client import get_apple_auth_client
 from app.infrastructure.auth.social_client.dto.auth_data import AuthInfo
-from app.infrastructure.auth.social_client.google_auth_client import GoogleAuthClient, get_google_auth_client
+from app.infrastructure.auth.social_client.google_auth_client import get_google_auth_client
 from app.infrastructure.auth.redis_service import RedisService, get_redis_service
 from app.infrastructure.auth.social_client.kakao_auth_client import get_kakao_auth_client
 from app.infrastructure.auth.social_client.social_auth_client import SocialAuthClient

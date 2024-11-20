@@ -2,7 +2,7 @@ from typing import List
 from fastapi import Depends
 from app.application.query.hair_model_query import HairModelQueryService, HairModelDetails, get_hair_model_query_service
 from app.application.services.generation.dto.request import CreateGenerationRequestRequest, \
-    GenerationRequestDetails, StartGenerationResponse, UpdateGenerationRequestRequest
+    GenerationRequestDetails, GenerationRequestResponse, UpdateGenerationRequestRequest
 from app.application.services.generation.dto.mq import MQPublishMessage
 from app.core.config import image_generation_setting, aws_s3_setting
 from app.core.enums.generation_status import GenerationStatusEnum
@@ -46,11 +46,20 @@ class RequestGenerationApplicationService:
         self.image_generation_job_repo = image_generation_job_repo
         self.rabbit_mq_service = rabbit_mq_service
 
-    def create_generation_request(
+    # TODO: 사용자의 이미 생성 진행 중인 요청이 있으면 생성 처리 안되도록 검증하는 로직
+    async def request_generation(
             self,
             request: CreateGenerationRequestRequest,
             user_id: int
-    ) -> GenerationRequestDetails:
+    ) -> GenerationRequestResponse:
+        generation_request: GenerationRequest = self._create_generation_request(request, user_id)
+        return await self._start_generation(generation_request, user_id)
+
+    def _create_generation_request(
+            self,
+            request: CreateGenerationRequestRequest,
+            user_id: int
+    ) -> GenerationRequest:
 
         # TODO: DB 접근마다 에러처리
         hair_variant_model: HairVariantModel = (
@@ -60,7 +69,7 @@ class RequestGenerationApplicationService:
                 color_id=request.color_id,
             )
         )
-        generation_request = self.generation_request_repo.create(
+        return self.generation_request_repo.create(
             obj_in=GenerationRequestCreate(
                 user_id=user_id,
                 hair_variant_model_id=hair_variant_model.id,
@@ -69,75 +78,16 @@ class RequestGenerationApplicationService:
             )
         )
 
-        hair_model_details: HairModelDetails = (
-            self.hair_model_query_service.get_hair_model_details(
-                hair_variant_model_id=generation_request.hair_variant_model_id,
-                background_id=generation_request.background_id,
-                image_resolution_id=generation_request.image_resolution_id
-            )
-        )
-        length = LengthInDB.model_validate(hair_model_details.length) if hair_model_details.length else None
-        return GenerationRequestDetails(
-            generation_request_id=generation_request.id,
-            gender=GenderInDB.model_validate(hair_model_details.gender),
-            hair_style=HairStyleInDB.model_validate(hair_model_details.hair_style),
-            length=length,
-            color=ColorInDB.model_validate(hair_model_details.color),
-            background=BackgroundInDB.model_validate(hair_model_details.background),
-            image_resolution=ImageResolutionInDB.model_validate(hair_model_details.image_resolution)
-        )
-
-    # TODO: 수정 사항 반영하는 코드는 어떻게 깔끔하게 짤지 다시 생각해보자.
-    def update_generation_request(
+    async def _start_generation(
             self,
-            generation_request_id: int,
-            request: UpdateGenerationRequestRequest,
+            generation_request: GenerationRequest,
             user_id: int
-    ):
-        generation_request: GenerationRequest = self.generation_request_repo.get(generation_request_id)
-        if generation_request.user_id != user_id:
-            raise UnauthorizedException()
-
-        hair_variant_model: HairVariantModel = (
-            self.hair_model_query_service.get_hair_variant_model_by_hair_style_length_color(
-                hair_style_id=request.hair_style_id,
-                length_id=request.length_id,
-                color_id=request.color_id,
-            )
-        )
-        updated_generation_request: GenerationRequest = self.generation_request_repo.update(
-            obj_id=generation_request_id,
-            obj_in=GenerationRequestUpdate(
-                hair_variant_model_id=hair_variant_model.id,
-                background_id=request.background_id,
-                image_resolution_id=request.image_resolution_id
-            )
-        )
-        hair_model_details: HairModelDetails = (
-            self.hair_model_query_service.get_hair_model_details(
-                hair_variant_model_id=updated_generation_request.hair_variant_model_id,
-                background_id=updated_generation_request.background_id,
-                image_resolution_id=updated_generation_request.image_resolution_id
-            )
-        )
-        return GenerationRequestDetails(
-            generation_request_id=updated_generation_request.id,
-            gender=GenderInDB.model_validate(hair_model_details.gender),
-            hair_style=HairStyleInDB.model_validate(hair_model_details.hair_style),
-            length=LengthInDB.model_validate(hair_model_details.length),
-            color=ColorInDB.model_validate(hair_model_details.color),
-            background=BackgroundInDB.model_validate(hair_model_details.background),
-            image_resolution=ImageResolutionInDB.model_validate(hair_model_details.image_resolution)
-        )
-
-    async def start_generation(self, generation_request_id: int, user_id: int) -> StartGenerationResponse:
+    ) -> GenerationRequestResponse:
         """
         1. 사용자 토큰 validation을 진행한다. - 토큰이 충분하지 않은 경우 에러 처리
         2. image_generation_job n개 생성한다.
         3. 각각을 사용해서 mq 서버에 생성 요청을 보낸다.
         """
-
-        generation_request = self.generation_request_repo.get(generation_request_id)
         if generation_request.user_id != user_id:
             raise ForbiddenException()
 
@@ -197,7 +147,7 @@ class RequestGenerationApplicationService:
                     distilled_cfg_scale=image_generation_setting.DISTILLED_CFG_SCALE,
                     width=hair_model_details.image_resolution.width,
                     height=hair_model_details.image_resolution.height,
-                    generation_request_id=generation_request_id,
+                    generation_request_id=generation_request.id,
                     s3_key=s3_key
                 )
             )
@@ -218,14 +168,58 @@ class RequestGenerationApplicationService:
         message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
 
         # 사용자 토큰 감소
-        updated_user : User = self.user_repo.update(obj_id=user.id, obj_in=UserUpdate(token=user.token - 1))
-        print(f"current user token : {user.token}")
-        print(f"updated user token : {updated_user.token}")
+        self.user_repo.update(obj_id=user.id, obj_in=UserUpdate(token=user.token - 1))
 
-        return StartGenerationResponse(
+        return GenerationRequestResponse(
+            generation_request_id=generation_request.id,
             generation_sec=calculate_generation_eta_sec(image_count=message_count, processor_count=consumer_count),
             generated_image_cnt_per_request=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST
         )
+
+
+    # TODO: 수정 사항 반영하는 코드는 어떻게 깔끔하게 짤지 다시 생각해보자.
+    # def update_generation_request(
+    #         self,
+    #         generation_request_id: int,
+    #         request: UpdateGenerationRequestRequest,
+    #         user_id: int
+    # ):
+    #     generation_request: GenerationRequest = self.generation_request_repo.get(generation_request_id)
+    #     if generation_request.user_id != user_id:
+    #         raise UnauthorizedException()
+    #
+    #     hair_variant_model: HairVariantModel = (
+    #         self.hair_model_query_service.get_hair_variant_model_by_hair_style_length_color(
+    #             hair_style_id=request.hair_style_id,
+    #             length_id=request.length_id,
+    #             color_id=request.color_id,
+    #         )
+    #     )
+    #     updated_generation_request: GenerationRequest = self.generation_request_repo.update(
+    #         obj_id=generation_request_id,
+    #         obj_in=GenerationRequestUpdate(
+    #             hair_variant_model_id=hair_variant_model.id,
+    #             background_id=request.background_id,
+    #             image_resolution_id=request.image_resolution_id
+    #         )
+    #     )
+    #     hair_model_details: HairModelDetails = (
+    #         self.hair_model_query_service.get_hair_model_details(
+    #             hair_variant_model_id=updated_generation_request.hair_variant_model_id,
+    #             background_id=updated_generation_request.background_id,
+    #             image_resolution_id=updated_generation_request.image_resolution_id
+    #         )
+    #     )
+    #     return GenerationRequestDetails(
+    #         generation_request_id=updated_generation_request.id,
+    #         gender=GenderInDB.model_validate(hair_model_details.gender),
+    #         hair_style=HairStyleInDB.model_validate(hair_model_details.hair_style),
+    #         length=LengthInDB.model_validate(hair_model_details.length),
+    #         color=ColorInDB.model_validate(hair_model_details.color),
+    #         background=BackgroundInDB.model_validate(hair_model_details.background),
+    #         image_resolution=ImageResolutionInDB.model_validate(hair_model_details.image_resolution)
+    #     )
+
 
 def get_request_generation_application_service(
         user_repo: UserRepository = Depends(get_user_repository),

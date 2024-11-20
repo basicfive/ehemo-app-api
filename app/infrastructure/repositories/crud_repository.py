@@ -64,6 +64,8 @@ class CRUDRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         for field in update_data:
             setattr(db_obj, field, update_data[field])
 
+        print(db_obj.token) ### 추가한 부분
+
         self.db.add(db_obj)
         self.db.commit()
         self.db.refresh(db_obj)
