@@ -183,7 +183,7 @@ class RequestGenerationApplicationService:
 
         return GenerationRequestResponse(
             generation_request_id=generation_request.id,
-            generation_sec=calculate_generation_eta_sec(image_count=message_count, processor_count=consumer_count),
+            remaining_sec=calculate_generation_eta_sec(image_count=message_count, processor_count=consumer_count),
             generated_image_cnt_per_request=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST
         )
 
