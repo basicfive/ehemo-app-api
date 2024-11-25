@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 
+from app.application.services.generation.dto.query import GenerationRequestStatusResponse
 from app.application.services.generation.dto.request import CreateGenerationRequestRequest, \
     GenerationRequestDetails, GenerationRequestResponse, UpdateGenerationRequestRequest
 from app.application.services.generation.query import GenerationRequestQueryService, \
@@ -27,6 +28,14 @@ def get_generation_request_details(
         service: GenerationRequestQueryService = Depends(get_generation_request_query_service)
 ) -> GenerationRequestDetails:
     return service.get_generated_request_details(generation_request_id, user_id)
+
+@router.get("/{generation_request_id}/status")
+def get_generation_request_status(
+        generation_request_id: int,
+        user_id: int = Depends(validate_user_token),
+        service: GenerationRequestQueryService = Depends(get_generation_request_query_service)
+) -> GenerationRequestStatusResponse:
+    return service.get_generation_request_status(generation_request_id, user_id)
 
 # @router.post("")
 # def create_generation_request(

@@ -1,14 +1,14 @@
 from enum import Enum
 
 class GenerationStatusEnum(Enum):
-    PENDING = "pending"
-    PROCESSING = "processing"
-    COMPLETED = "completed"
-    FAILED = "failed"
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
 
 class GenerationResultEnum(Enum):
-    PENDING = "pending"
-    SUCCEED = "succeed"
-    FAILED = "failed"
-    CANCELED = "canceled"
+    PENDING = "PENDING"
+    SUCCEED = "SUCCEED"
+    FAILED = "FAILED"
+    CANCELED = "CANCELED"
 
