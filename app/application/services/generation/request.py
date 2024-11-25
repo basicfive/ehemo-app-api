@@ -53,7 +53,7 @@ class RequestGenerationApplicationService:
             user_id: int
     ) -> GenerationRequestResponse:
         if self._is_during_generation(user_id):
-            ConcurrentGenerationRequestError(context="Image generation already in progress.")
+            raise ConcurrentGenerationRequestError(context="Image generation already in progress.")
         generation_request: GenerationRequest = self._create_generation_request(request, user_id)
         return await self._start_generation(generation_request, user_id)
 
