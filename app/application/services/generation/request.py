@@ -47,17 +47,33 @@ class RequestGenerationApplicationService:
         self.image_generation_job_repo = image_generation_job_repo
         self.rabbit_mq_service = rabbit_mq_service
 
+    # TODO: DB 접근마다 에러처리 / TRANSACTION
+    def cancel_generation(
+            self,
+            generation_request_id: int,
+            user_id: int,
+    ):
+        generation_request: GenerationRequest = self.generation_request_repo.get(generation_request_id)
+        if generation_request.user_id != user_id:
+            raise UnauthorizedException()
+        self.generation_request_repo.update(
+            obj_id=generation_request.id,
+            obj_in=GenerationRequestUpdate(
+                generation_result=GenerationResultEnum.CANCELED
+            )
+        )
+
     async def request_generation(
             self,
             request: CreateGenerationRequestRequest,
             user_id: int
     ) -> GenerationRequestResponse:
-        if self._is_during_generation(user_id):
+        if self._is_generation_in_progress(user_id):
             raise ConcurrentGenerationRequestError(context="Image generation already in progress.")
         generation_request: GenerationRequest = self._create_generation_request(request, user_id)
         return await self._start_generation(generation_request, user_id)
 
-    def _is_during_generation(self, user_id: int) -> bool:
+    def _is_generation_in_progress(self, user_id: int) -> bool:
         latest_generation_request: GenerationRequest = (
             self.generation_request_repo.get_latest_generation_request_by_user(user_id=user_id)
         )
@@ -72,7 +88,6 @@ class RequestGenerationApplicationService:
             user_id: int
     ) -> GenerationRequest:
 
-        # TODO: DB 접근마다 에러처리
         hair_variant_model: HairVariantModel = (
             self.hair_model_query_service.get_hair_variant_model_by_hair_style_length_color(
                 hair_style_id=request.hair_style_id,
@@ -138,8 +153,8 @@ class RequestGenerationApplicationService:
 
         # queue 상태 확인
         message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
-        # if consumer_count < 1:
-        #     raise NoInferenceConsumerException()
+        if consumer_count < 1:
+            raise NoInferenceConsumerException()
         message_ttl = calculate_generation_eta_sec(image_count=message_count, processor_count=consumer_count)
         message_ttl_list: List[int] = []
         for _ in prompt_list:

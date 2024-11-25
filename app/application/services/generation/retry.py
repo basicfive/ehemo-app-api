@@ -66,7 +66,7 @@ class ImageGenerationRetryService:
 
                 # 아직 fcm 에러를 보내지 않았다면, fcm 전송 후 generation request 업데이트
                 generation_request: GenerationRequest = self.generation_request_repo.get(expired_job.generation_request_id)
-                if generation_request.notification_status == GenerationResultEnum.PENDING:
+                if generation_request.generation_result == GenerationResultEnum.PENDING:
 
                     # self.fcm_service.send_notification()
 

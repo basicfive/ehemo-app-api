@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 
 from app.application.services.generation.dto.query import GenerationRequestStatusResponse
 from app.application.services.generation.dto.request import CreateGenerationRequestRequest, \
@@ -13,7 +13,7 @@ router = APIRouter()
 
 # api/v1/prod/generation/
 
-@router.post("")
+@router.post("", response_model=GenerationRequestResponse, status_code=status.HTTP_200_OK)
 async def request_generation(
         request: CreateGenerationRequestRequest,
         user_id: int = Depends(validate_user_token),
@@ -21,7 +21,15 @@ async def request_generation(
 ) -> GenerationRequestResponse:
     return await service.request_generation(request, user_id)
 
-@router.get("/{generation_request_id}/details")
+@router.post("/{generation_request_id}/cancel", status_code=status.HTTP_200_OK)
+def cancel_generation(
+        generation_request_id: int,
+        user_id: int = Depends(validate_user_token),
+        service: RequestGenerationApplicationService = Depends(get_request_generation_application_service)
+):
+    service.cancel_generation(generation_request_id, user_id)
+
+@router.get("/{generation_request_id}/details", response_model=GenerationRequestDetails, status_code=status.HTTP_200_OK)
 def get_generation_request_details(
         generation_request_id: int,
         user_id: int = Depends(validate_user_token),
@@ -29,7 +37,7 @@ def get_generation_request_details(
 ) -> GenerationRequestDetails:
     return service.get_generated_request_details(generation_request_id, user_id)
 
-@router.get("/{generation_request_id}/status")
+@router.get("/{generation_request_id}/status", response_model=GenerationRequestStatusResponse, status_code=status.HTTP_200_OK)
 def get_generation_request_status(
         generation_request_id: int,
         user_id: int = Depends(validate_user_token),

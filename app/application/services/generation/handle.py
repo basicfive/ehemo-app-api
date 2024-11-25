@@ -8,7 +8,7 @@ from app.core.config import aws_s3_setting
 from app.core.container import DependencyContainer
 from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
 from app.core.utils import generate_unique_datatime_uuid_key, concatenate_images_horizontally, compress_and_resize_image
-from app.domain.generation.models.generation import ImageGenerationJob
+from app.domain.generation.models.generation import ImageGenerationJob, GenerationRequest
 from app.domain.generation.models.image import GeneratedImage
 from app.domain.generation.schemas.generated_image import GeneratedImageCreate
 from app.domain.generation.schemas.generated_image_group import GeneratedImageGroupCreate
@@ -84,11 +84,18 @@ class MessageHandler:
         return image_generation_job
 
     def _should_create_image_group(self, job: ImageGenerationJob) -> bool:
-        """이미지 그룹 생성 조건 확인"""
+        """
+        이미지 그룹 생성 조건 확인
+        1. 모든 job 이 완료되었는가.
+        2. generation request 가 cancel 되지 않았는가.
+        """
         image_generation_jobs = self.image_generation_job_repo.get_all_by_generation_request(
             generation_request_id=job.generation_request_id
         )
-        return are_all_image_generation_jobs_complete(image_generation_jobs)
+        if are_all_image_generation_jobs_complete(image_generation_jobs):
+            generation_request: GenerationRequest = self.generation_request_repo.get(job.generation_request_id)
+            return generation_request.generation_result == GenerationResultEnum.PENDING
+        return False
 
     def _create_and_notify_image_group(self, job: ImageGenerationJob) -> None:
         """이미지 그룹 생성 및 알림 처리"""
