@@ -35,5 +35,5 @@ class GenerationRequestDetails(BaseModel):
 
 class GenerationRequestResponse(BaseModel):
     generation_request_id: int
-    generation_sec: int
+    remaining_sec: int
     generated_image_cnt_per_request: int
