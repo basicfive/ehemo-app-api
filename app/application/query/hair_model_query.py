@@ -76,8 +76,8 @@ class HairModelQueryService:
             image_resolution=self.image_resolution_repo.get(image_resolution_id)
         )
 
-    def get_random_posture_and_clothing(self, limit: int) -> List[PostureAndClothing]:
-        return self.posture_and_clothing_repo.get_random_records(limit=limit)
+    def get_random_posture_and_clothing(self, gender_id: int, limit: int) -> List[PostureAndClothing]:
+        return self.posture_and_clothing_repo.get_random_records_in_gender(gender_id=gender_id, limit=limit)
 
     def get_length_by_hair_style(self, hair_style_id: int) -> Length:
         hair_style: HairStyle = self.hair_style_repo.get(obj_id=hair_style_id)

@@ -131,7 +131,10 @@ class RequestGenerationApplicationService:
                 image_resolution_id=generation_request.image_resolution_id
             )
         )
-        posture_and_clothing_list=self.hair_model_query_service.get_random_posture_and_clothing(limit=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST)
+        posture_and_clothing_list=self.hair_model_query_service.get_random_posture_and_clothing(
+            gender_id=hair_model_details.gender.id,
+            limit=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST
+        )
 
         # null length 수정 - hs 기본 길이로 변경한다.
         if not hair_model_details.hair_style.has_length_option:

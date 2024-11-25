@@ -278,8 +278,8 @@ class PostureAndClothingRepository(CRUDRepository[PostureAndClothing, PostureAnd
         super().__init__(model=PostureAndClothing, db=db)
         self.db = db
 
-    def get_random_records(self, limit: int = 10) -> List[PostureAndClothing]:
-        stmt = select(PostureAndClothing).order_by(func.random()).limit(limit)
+    def get_random_records_in_gender(self, gender_id: int, limit: int = 10) -> List[PostureAndClothing]:
+        stmt = select(PostureAndClothing).where(PostureAndClothing.gender_id == gender_id).order_by(func.random()).limit(limit)
         return list(self.db.scalars(stmt).all())
 
 def get_posture_and_clothing_repository(db: Session = Depends(get_db)) -> PostureAndClothingRepository:
