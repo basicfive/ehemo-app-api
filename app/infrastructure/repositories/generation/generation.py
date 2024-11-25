@@ -20,6 +20,15 @@ class GenerationRequestRepository(CRUDRepository[GenerationRequest, GenerationRe
     def __init__(self, db: Session):
         super().__init__(model=GenerationRequest, db=db)
 
+    def get_latest_generation_request_by_user(self, user_id: int) -> GenerationRequest:
+        stmt = (
+            select(GenerationRequest)
+            .where(GenerationRequest.user_id == user_id)
+            .order_by(GenerationRequest.updated_at.desc())
+            .limit(1)
+        )
+        return self.db.execute(stmt).scalar_one_or_none()
+
 def get_generation_request_repository(db: Session = Depends(get_db)) -> GenerationRequestRepository:
     return GenerationRequestRepository(db=db)
 

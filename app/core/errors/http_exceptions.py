@@ -37,3 +37,7 @@ class ValueException(CustomHttpException):
     def __init__(self, context: str = None):
         super().__init__(400, "Bad Request", "Request value is incorrect", context)
 
+class ConcurrentGenerationRequestError(CustomHttpException):
+    def __init__(self, context: str = None):
+        super().__init__(409, "Conflict", "Resource Conflict", context)
+

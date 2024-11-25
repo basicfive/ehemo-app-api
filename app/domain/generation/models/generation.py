@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Integer, DateTime, Float, Enum, ForeignKey
 
-from app.core.enums.generation_status import GenerationStatusEnum, NotificationStatus
+from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
 from app.core.db.time_stamp_model import TimeStampModel
 
 class GenerationRequest(TimeStampModel):
@@ -11,7 +11,7 @@ class GenerationRequest(TimeStampModel):
     background_id = Column(Integer, ForeignKey("background.id"))
     image_resolution_id = Column(Integer, ForeignKey("image_resolution.id"))
 
-    notification_status = Column(Enum(NotificationStatus), default=NotificationStatus.PENDING, nullable=False)
+    generation_result = Column(Enum(GenerationResultEnum), default=GenerationResultEnum.PENDING, nullable=False)
 
 class ImageGenerationJob(TimeStampModel):
     __tablename__ = "image_generation_job"

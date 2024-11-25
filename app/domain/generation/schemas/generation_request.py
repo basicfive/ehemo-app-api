@@ -2,7 +2,7 @@
 from pydantic import BaseModel
 from typing_extensions import Optional
 
-from app.core.enums.generation_status import NotificationStatus
+from app.core.enums.generation_status import GenerationResultEnum
 
 
 class GenerationRequestInDB(BaseModel):
@@ -11,7 +11,7 @@ class GenerationRequestInDB(BaseModel):
     hair_variant_model_id: int
     background_id: int
     image_resolution_id: int
-    notification_status: NotificationStatus
+    generation_result: GenerationResultEnum
 
     class Config:
         from_attributes=True
@@ -26,6 +26,6 @@ class GenerationRequestUpdate(BaseModel):
     hair_variant_model_id: Optional[int] = None
     background_id: Optional[int] = None
     image_resolution_id: Optional[int] = None
-    notification_status: Optional[NotificationStatus] = None
+    generation_result: Optional[GenerationResultEnum] = None
 
 

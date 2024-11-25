@@ -6,7 +6,7 @@ from app.application.query.hair_model_query import HairModelQueryService
 from app.application.services.generation.dto.mq import MQConsumeMessage
 from app.core.config import aws_s3_setting
 from app.core.container import DependencyContainer
-from app.core.enums.generation_status import GenerationStatusEnum, NotificationStatus
+from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
 from app.core.utils import generate_unique_datatime_uuid_key, concatenate_images_horizontally, compress_and_resize_image
 from app.domain.generation.models.generation import ImageGenerationJob
 from app.domain.generation.models.image import GeneratedImage
@@ -107,7 +107,7 @@ class MessageHandler:
         self.generation_request_repo.update(
             obj_id=generation_request.id,
             obj_in=GenerationRequestUpdate(
-                notification_status=NotificationStatus.SUCCESS_NOTIFIED
+                notification_status=GenerationResultEnum.SUCCEED
             )
         )
 

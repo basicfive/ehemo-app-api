@@ -1,3 +1,4 @@
+from lib2to3.fixes.fix_input import context
 from typing import List
 from fastapi import Depends
 from app.application.query.hair_model_query import HairModelQueryService, HairModelDetails, get_hair_model_query_service
@@ -5,9 +6,9 @@ from app.application.services.generation.dto.request import CreateGenerationRequ
     GenerationRequestDetails, GenerationRequestResponse, UpdateGenerationRequestRequest
 from app.application.services.generation.dto.mq import MQPublishMessage
 from app.core.config import image_generation_setting, aws_s3_setting
-from app.core.enums.generation_status import GenerationStatusEnum
+from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
 from app.core.errors.exceptions import NoInferenceConsumerException
-from app.core.errors.http_exceptions import ForbiddenException, UnauthorizedException
+from app.core.errors.http_exceptions import ForbiddenException, UnauthorizedException, ConcurrentGenerationRequestError
 from app.core.utils import generate_unique_datatime_uuid_key
 from app.domain.generation.models.generation import GenerationRequest
 from app.domain.generation.schemas.generation_request import GenerationRequestCreate, GenerationRequestUpdate
@@ -46,14 +47,24 @@ class RequestGenerationApplicationService:
         self.image_generation_job_repo = image_generation_job_repo
         self.rabbit_mq_service = rabbit_mq_service
 
-    # TODO: 사용자의 이미 생성 진행 중인 요청이 있으면 생성 처리 안되도록 검증하는 로직
     async def request_generation(
             self,
             request: CreateGenerationRequestRequest,
             user_id: int
     ) -> GenerationRequestResponse:
+        if self._is_during_generation(user_id):
+            ConcurrentGenerationRequestError(context="Image generation already in progress.")
         generation_request: GenerationRequest = self._create_generation_request(request, user_id)
         return await self._start_generation(generation_request, user_id)
+
+    def _is_during_generation(self, user_id: int) -> bool:
+        latest_generation_request: GenerationRequest = (
+            self.generation_request_repo.get_latest_generation_request_by_user(user_id=user_id)
+        )
+        if latest_generation_request is None or \
+                latest_generation_request.generation_result != GenerationResultEnum.PENDING:
+            return True
+        return False
 
     def _create_generation_request(
             self,
@@ -127,8 +138,8 @@ class RequestGenerationApplicationService:
 
         # queue 상태 확인
         message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
-        if consumer_count < 1:
-            raise NoInferenceConsumerException()
+        # if consumer_count < 1:
+        #     raise NoInferenceConsumerException()
         message_ttl = calculate_generation_eta_sec(image_count=message_count, processor_count=consumer_count)
         message_ttl_list: List[int] = []
         for _ in prompt_list:

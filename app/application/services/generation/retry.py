@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, UTC
 from typing import List
 
 from app.application.services.generation.dto.mq import MQPublishMessage
-from app.core.enums.generation_status import GenerationStatusEnum, NotificationStatus
+from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
 from app.core.enums.message_priority import MessagePriority
 from app.core.errors.exceptions import NoInferenceConsumerException
 from app.domain.generation.models.generation import ImageGenerationJob, GenerationRequest
@@ -66,7 +66,7 @@ class ImageGenerationRetryService:
 
                 # 아직 fcm 에러를 보내지 않았다면, fcm 전송 후 generation request 업데이트
                 generation_request: GenerationRequest = self.generation_request_repo.get(expired_job.generation_request_id)
-                if generation_request.notification_status == NotificationStatus.PENDING:
+                if generation_request.notification_status == GenerationResultEnum.PENDING:
 
                     # self.fcm_service.send_notification()
 
@@ -76,7 +76,7 @@ class ImageGenerationRetryService:
 
                     self.generation_request_repo.update(
                         obj_id=generation_request.id,
-                        obj_in=GenerationRequestUpdate(notification_status=NotificationStatus.FAILURE_NOTIFIED)
+                        obj_in=GenerationRequestUpdate(notification_status=GenerationResultEnum.FAILED)
                     )
                 continue
 
