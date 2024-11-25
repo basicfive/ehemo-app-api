@@ -61,18 +61,10 @@ class RequestGenerationApplicationService:
         latest_generation_request: GenerationRequest = (
             self.generation_request_repo.get_latest_generation_request_by_user(user_id=user_id)
         )
-        if latest_generation_request is None:
-            return True
-        if latest_generation_request.generation_result != GenerationResultEnum.PENDING:
-            print(latest_generation_request.generation_result)
-            return True
-        print(latest_generation_request.generation_result)
-        return False
-
-        # if latest_generation_request is None or \
-        #         latest_generation_request.generation_result != GenerationResultEnum.PENDING:
-        #     return True
-        # return False
+        if latest_generation_request is None or \
+                latest_generation_request.generation_result != GenerationResultEnum.PENDING:
+            return False
+        return True
 
     def _create_generation_request(
             self,
