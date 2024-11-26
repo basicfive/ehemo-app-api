@@ -1,4 +1,5 @@
 from typing import List
+from datetime import datetime, UTC
 
 from app.core.config import image_generation_setting
 from app.core.enums.generation_status import GenerationStatusEnum
@@ -38,4 +39,15 @@ def are_all_image_generation_jobs_complete(image_generation_job_list: List[Image
         if image_generation_job.status != GenerationStatusEnum.COMPLETED:
             return False
     return True
+
+def calculate_remaining_generation_sec(image_generation_job_list: List[ImageGenerationJob]) -> int:
+
+    # 가장 늦은 expires_at 찾기
+    latest_expire = max(job.expires_at for job in image_generation_job_list)
+
+    # 현재 UTC 시간과의 차이 계산
+    time_difference = latest_expire - datetime.now(UTC)
+
+    # 음수가 되면(만료시간이 지났으면) 0 반환, 아니면 초 단위로 변환하여 반환
+    return max(0, int(time_difference.total_seconds()))
 
