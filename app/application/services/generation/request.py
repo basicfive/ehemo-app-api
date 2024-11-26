@@ -1,4 +1,3 @@
-from lib2to3.fixes.fix_input import context
 from typing import List
 from fastapi import Depends
 from app.application.query.hair_model_query import HairModelQueryService, HairModelDetails, get_hair_model_query_service
@@ -30,6 +29,7 @@ from app.infrastructure.mq.rabbit_mq_service import RabbitMQService, get_rabbit_
 from app.infrastructure.repositories.generation.generation import GenerationRequestRepository, \
     ImageGenerationJobRepository, get_generation_request_repository, get_image_generation_job_repository
 from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
+from datetime import datetime, UTC, timedelta
 
 
 class RequestGenerationApplicationService:
@@ -171,7 +171,7 @@ class RequestGenerationApplicationService:
             db_image_generation_job = self.image_generation_job_repo.create(
                 obj_in=ImageGenerationJobCreate(
                     retry_count=image_generation_setting.MAX_RETRIES,
-                    expires_at=message_ttl_list[idx],
+                    expires_at=datetime.now(UTC)+ timedelta(seconds=message_ttl_list[idx]),
                     prompt=prompt,
                     distilled_cfg_scale=image_generation_setting.DISTILLED_CFG_SCALE,
                     width=hair_model_details.image_resolution.width,

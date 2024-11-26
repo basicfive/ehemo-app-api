@@ -114,9 +114,11 @@ class MessageHandler:
         self.generation_request_repo.update(
             obj_id=generation_request.id,
             obj_in=GenerationRequestUpdate(
-                notification_status=GenerationResultEnum.SUCCEED
+                generation_result=GenerationResultEnum.SUCCEED
             )
         )
+
+        print(f"generation result : {generation_request.generation_result}")
 
         # FCM 알림 전송
         # self.container.fcm_service.send_notification()

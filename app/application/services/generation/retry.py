@@ -76,7 +76,7 @@ class ImageGenerationRetryService:
 
                     self.generation_request_repo.update(
                         obj_id=generation_request.id,
-                        obj_in=GenerationRequestUpdate(notification_status=GenerationResultEnum.FAILED)
+                        obj_in=GenerationRequestUpdate(generation_result=GenerationResultEnum.FAILED)
                     )
                 continue
 
