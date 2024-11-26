@@ -11,7 +11,7 @@ router = APIRouter()
 
 # /api/v1/prod/image/
 
-@router.get("/images")
+@router.get("/images/by-group")
 def get_image_by_group(
         generated_image_group_id: int,
         user_id: int = Depends(validate_user_token),
@@ -19,6 +19,17 @@ def get_image_by_group(
 ) -> List[GeneratedImageData]:
     return service.get_generated_image_list_by_image_group(
         generated_image_group_id=generated_image_group_id,
+        user_id=user_id
+    )
+
+@router.get("/images/by-request")
+def get_image_by_request(
+        generation_request_id: int,
+        user_id: int = Depends(validate_user_token),
+        service: ImageQueryApplicationService = Depends(get_image_query_application_service)
+) -> List[GeneratedImageData]:
+    return service.get_generated_image_list_by_generation_request(
+        generation_request_id=generation_request_id,
         user_id=user_id
     )
 

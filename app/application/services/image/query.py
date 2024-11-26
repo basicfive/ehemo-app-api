@@ -58,6 +58,16 @@ class ImageQueryApplicationService:
             )
         return generated_image_response
 
+    # TODO: 이 asset 이 user 의 소유가 맞는지 validation 하는 과정이 호출하는 위의 함수에 의존하고 있다.
+    # validation 중복을 없애기 위해서 일단은 이렇게 하지만, 개선이 필요한 구조임.
+    def get_generated_image_list_by_generation_request(self, generation_request_id: int, user_id: int) -> List[GeneratedImageData]:
+        generated_image_group: GeneratedImageGroup = self.generated_image_group_repo.get_by_generation_request(generation_request_id)
+
+        return self.get_generated_image_list_by_image_group(
+            generated_image_group_id=generated_image_group.id,
+            user_id=user_id
+        )
+
     # 데이터 많아지면 pagination 이 적절히 필요할수도.
     def get_generated_image_group_list_by_user(self, user_id: int) -> List[GeneratedImageGroupData]:
         db_generated_image_group_list: List[GeneratedImageGroup] = self.generated_image_group_repo.get_all_by_user(user_id)
@@ -73,6 +83,7 @@ class ImageQueryApplicationService:
             )
         generated_image_group_response.sort(key=lambda x: x.created_at, reverse=True)
         return generated_image_group_response
+
 
 def get_image_query_application_service(
         generated_image_repo: GeneratedImageRepository = Depends(get_generated_image_repository),
