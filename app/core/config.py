@@ -63,7 +63,7 @@ class OAuthSetting(BaseModel):
     KAKAO_CLIENT_SECRET: str = os.getenv("KAKAO_CLIENT_SECRET")
 
 class ImageGenerationSetting(BaseModel):
-    GENERATED_IMAGE_CNT_PER_REQUEST: int = 1
+    GENERATED_IMAGE_CNT_PER_REQUEST: int = 10
     DISTILLED_CFG_SCALE: float = 2.0
     SINGLE_IMAGE_INFERENCE_SEC: int = 20
     ETA_BUFFER_MULTIPLIER: float = 1.2
