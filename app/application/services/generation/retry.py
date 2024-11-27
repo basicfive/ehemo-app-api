@@ -9,8 +9,7 @@ from app.core.errors.exceptions import NoInferenceConsumerException
 from app.domain.generation.models.generation import ImageGenerationJob, GenerationRequest
 from app.domain.generation.schemas.generation_request import GenerationRequestUpdate
 from app.domain.generation.schemas.image_generation_job import ImageGenerationJobUpdate, ImageGenerationJobInDB
-from app.domain.generation.services.generation_domain_service import estimate_normal_priority_message_wait_sec, \
-    estimate_high_priority_message_wait_sec, calculate_retry_message_ttl_sec
+from app.domain.generation.services.generation_domain_service import estimate_high_priority_message_wait_sec, calculate_retry_message_ttl_sec
 from app.domain.user.models.user import User
 from app.domain.user.schemas.user import UserUpdate
 from app.infrastructure.fcm.fcm_service import FCMService

@@ -12,9 +12,7 @@ from app.infrastructure.repositories.hair_model.hair_model import GenderReposito
     ImageResolutionRepository
 from app.domain.hair_model.schemas.hair.gender import GenderInDB
 from app.domain.hair_model.schemas.hair.hair_design import HairDesignInDB
-from app.domain.hair_model.schemas.hair.hair_design_color import HairDesignColorInDB
 from app.domain.hair_model.schemas.hair.hair_style import HairStyleInDB
-from app.domain.hair_model.schemas.hair.hair_style_length import HairStyleLengthInDB
 from app.domain.hair_model.schemas.scene.background import BackgroundInDB
 from app.domain.hair_model.schemas.scene.image_resolution import ImageResolutionInDB
 

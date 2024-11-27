@@ -5,21 +5,6 @@ from functools import lru_cache
 from app.infrastructure.s3.s3_client import S3Client
 from app.infrastructure.fcm.fcm_service import FCMService
 
-from app.infrastructure.repositories.hair_model.hair_model import (
-    HairVariantModelRepository,
-    ColorRepository,
-    SpecificColorRepository,
-    LengthRepository,
-    HairStyleRepository,
-    GenderRepository,
-    BackgroundRepository,
-    ImageResolutionRepository,
-    LoRAModelRepository,
-    PostureAndClothingRepository
-)
-from app.application.query.hair_model_query import HairModelQueryService
-
-
 class DependencyContainer:
     """의존성 관리를 위한 컨테이너 클래스"""
 
@@ -49,23 +34,6 @@ class DependencyContainer:
         if FCMService not in self._instances:
             self._instances[FCMService] = FCMService()
         return self._instances[FCMService]
-
-    @property
-    def hair_model_query_service(self) -> HairModelQueryService:
-        if HairModelQueryService not in self._instances:
-            self._instances[HairModelQueryService] = HairModelQueryService(
-                hair_variant_model_repo=self.get_repository(HairVariantModelRepository),
-                color_repo=self.get_repository(ColorRepository),
-                specific_color_repo=self.get_repository(SpecificColorRepository),
-                length_repo=self.get_repository(LengthRepository),
-                hair_style_repo=self.get_repository(HairStyleRepository),
-                gender_repo=self.get_repository(GenderRepository),
-                background_repo=self.get_repository(BackgroundRepository),
-                image_resolution_repo=self.get_repository(ImageResolutionRepository),
-                lora_model_repo=self.get_repository(LoRAModelRepository),
-                posture_and_clothing_repo=self.get_repository(PostureAndClothingRepository)
-            )
-        return self._instances[HairModelQueryService]
 
     def cleanup(self):
         """리소스 정리"""

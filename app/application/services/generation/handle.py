@@ -2,7 +2,6 @@ import json
 import logging
 from typing import List
 
-from app.application.query.hair_model_query import HairModelQueryService
 from app.application.services.generation.dto.mq import MQConsumeMessage
 from app.core.config import aws_s3_setting
 from app.core.container import DependencyContainer
@@ -14,7 +13,7 @@ from app.domain.generation.schemas.generated_image import GeneratedImageCreate
 from app.domain.generation.schemas.generated_image_group import GeneratedImageGroupCreate
 from app.domain.generation.schemas.generation_request import GenerationRequestUpdate
 from app.domain.generation.schemas.image_generation_job import ImageGenerationJobUpdate
-from app.domain.generation.services.generation_domain_service import are_all_image_generation_jobs_complete
+from app.domain.generation.services.generation_domain_service import should_create_image_group
 from app.domain.hair_model.models.hair import HairStyle
 from app.infrastructure.repositories.generation.generation import (
     GenerationRequestRepository,
@@ -48,9 +47,6 @@ class MessageHandler:
     def generated_image_group_repo(self) -> GeneratedImageGroupRepository:
         return self.container.get_repository(GeneratedImageGroupRepository)
 
-    @property
-    def hair_model_query_service(self) -> HairModelQueryService:
-        return self.container.hair_model_query_service
 
     def handle_message(self, body: bytes) -> None:
         """메시지 처리의 메인 엔트리포인트"""
@@ -60,94 +56,74 @@ class MessageHandler:
 
             logger.info(f"[MQ] Consumed Job ID: {message.image_generation_job_id}. DETAILS: {message.to_str()}")
 
-            image_generation_job = self._process_generation_job(message)
+            image_generation_job = self._update_generation_job(message)
 
-            if self._should_create_image_group(image_generation_job):
-                self._create_and_notify_image_group(image_generation_job)
+            generation_request = self.generation_request_repo.get(image_generation_job.generation_request_id)
+            image_generation_job_list = self.image_generation_job_repo.get_all_by_generation_request(
+                generation_request_id=image_generation_job.generation_request_id
+            )
+            if should_create_image_group(generation_request, image_generation_job_list):
+                self._create_and_notify_image_group(generation_request.id, image_generation_job_list)
 
         except Exception as e:
             logger.error(f"Error processing message: {e}", exc_info=True)
             raise
 
-    def _process_generation_job(self, message: MQConsumeMessage) -> ImageGenerationJob:
-        """이미지 생성 작업 처리"""
-        image_generation_job = self.image_generation_job_repo.get(message.image_generation_job_id)
-
-        self.image_generation_job_repo.update(
-            obj_id=image_generation_job.id,
+    def _update_generation_job(self, message: MQConsumeMessage) -> ImageGenerationJob:
+        return self.image_generation_job_repo.update(
+            obj_id=message.image_generation_job_id,
             obj_in=ImageGenerationJobUpdate(
                 webui_png_info=message.webui_png_info,
                 status=GenerationStatusEnum.COMPLETED
             )
         )
 
-        return image_generation_job
-
-    def _should_create_image_group(self, job: ImageGenerationJob) -> bool:
-        """
-        이미지 그룹 생성 조건 확인
-        1. 모든 job 이 완료되었는가.
-        2. generation request 가 cancel 되지 않았는가.
-        """
-        image_generation_jobs = self.image_generation_job_repo.get_all_by_generation_request(
-            generation_request_id=job.generation_request_id
-        )
-        if are_all_image_generation_jobs_complete(image_generation_jobs):
-            generation_request: GenerationRequest = self.generation_request_repo.get(job.generation_request_id)
-            return generation_request.generation_result == GenerationResultEnum.PENDING
-        return False
-
-    def _create_and_notify_image_group(self, job: ImageGenerationJob) -> None:
+    def _create_and_notify_image_group(
+            self,
+            generation_request_id: int,
+            image_generation_jobs: List[ImageGenerationJob]
+    ) -> None:
         """이미지 그룹 생성 및 알림 처리"""
-        image_generation_jobs = self.image_generation_job_repo.get_all_by_generation_request(
-            generation_request_id=job.generation_request_id
-        )
 
-        # 이미지 그룹 생성
-        generated_images = self._create_generated_images(
+        generation_request_with_relation = self.generation_request_repo.get_with_all_relations(generation_request_id)
+
+        # 이미지 및 그룹 생성
+        self._create_generated_images(
+            generation_request_with_relation,
             image_generation_jobs,
-            job.generation_request_id
         )
 
         # 알림 상태 업데이트
-        generation_request = self.generation_request_repo.get(job.generation_request_id)
         self.generation_request_repo.update(
-            obj_id=generation_request.id,
+            obj_id=generation_request_with_relation.id,
             obj_in=GenerationRequestUpdate(
                 generation_result=GenerationResultEnum.SUCCEED
             )
         )
 
-        print(f"generation result : {generation_request.generation_result}")
+        print(f"generation result : {generation_request_with_relation.generation_result}")
 
         # FCM 알림 전송
         # self.container.fcm_service.send_notification()
 
     def _create_generated_images(
             self,
+            generation_request_with_relation: GenerationRequest,
             image_generation_jobs: List[ImageGenerationJob],
-            generation_request_id: int
     ) -> List[GeneratedImage]:
         """생성된 이미지 처리 및 저장"""
-        if not image_generation_jobs:
-            raise ValueError("No image generation jobs provided")
-
-        generation_request = self.generation_request_repo.get(generation_request_id)
 
         # 썸네일 이미지 생성 및 업로드
         thumbnail_s3_key = self._create_thumbnail(image_generation_jobs[:3])
-        hair_style: HairStyle = self.hair_model_query_service.get_hair_style_by_hair_variant_model(
-            generation_request.hair_variant_model_id
-        )
-        title: str = hair_style.title
+        hair_style: HairStyle = generation_request_with_relation.hair_variant_model.hair_style
 
         # 이미지 그룹 생성
         image_group = self.generated_image_group_repo.create(
             obj_in=GeneratedImageGroupCreate(
-                user_id=generation_request.user_id,
-                generation_request_id=generation_request_id,
+                user_id=generation_request_with_relation.user_id,
+                generation_request_id=generation_request_with_relation.id,
                 thumbnail_image_s3_key=thumbnail_s3_key,
-                title=title
+                title=hair_style.title
             )
         )
 
@@ -155,7 +131,7 @@ class MessageHandler:
         return [
             self.generated_image_repo.create(
                 obj_in=GeneratedImageCreate(
-                    user_id=generation_request.user_id,
+                    user_id=generation_request_with_relation.user_id,
                     s3_key=job.s3_key,
                     webui_png_info=job.webui_png_info,
                     generated_image_group_id=image_group.id,

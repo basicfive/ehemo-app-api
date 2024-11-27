@@ -1,35 +1,32 @@
-from typing import List, Tuple
+from typing import List
 from fastapi import Depends
-from app.application.query.hair_model_query import HairModelQueryService, HairModelDetails, get_hair_model_query_service
+
+from app.domain.hair_model.models.scene import ImageResolution
 from app.application.services.generation.dto.request import CreateGenerationRequestRequest, \
-    GenerationRequestDetails, GenerationRequestResponse, UpdateGenerationRequestRequest
+    GenerationRequestResponse
 from app.application.services.generation.dto.mq import MQPublishMessage
 from app.core.config import image_generation_setting, aws_s3_setting
 from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
 from app.core.errors.exceptions import NoInferenceConsumerException
-from app.core.errors.http_exceptions import ForbiddenException, UnauthorizedException, ConcurrentGenerationRequestError, \
+from app.core.errors.http_exceptions import UnauthorizedException, ConcurrentGenerationRequestError, \
     UserHasNotEnoughTokenException
 from app.core.utils import generate_unique_datatime_uuid_key
-from app.domain.generation.models.generation import GenerationRequest, ImageGenerationJob
+from app.domain.generation.models.generation import GenerationRequest
 from app.domain.generation.schemas.generation_request import GenerationRequestCreate, GenerationRequestUpdate
 from app.domain.generation.schemas.image_generation_job import ImageGenerationJobCreate, ImageGenerationJobInDB, \
     ImageGenerationJobUpdate
 from app.domain.generation.services.generation_domain_service import estimate_normal_priority_message_wait_sec, \
     calculate_normal_message_ttl_sec
-from app.domain.hair_model.models.hair import HairVariantModel, Length
-from app.domain.hair_model.schemas.hair.gender import GenderInDB
-from app.domain.hair_model.schemas.hair.hair_style import HairStyleInDB
-from app.domain.hair_model.schemas.hair.length import LengthInDB
-from app.domain.hair_model.schemas.hair.color import ColorInDB
-from app.domain.hair_model.schemas.scene.background import BackgroundInDB
-from app.domain.hair_model.schemas.scene.image_resolution import ImageResolutionInDB
+from app.domain.hair_model.models.hair import HairVariantModel, Length, SpecificColor
 from app.domain.hair_model.services.hair_model_prompt import create_prompts
 from app.domain.user.models.user import User
-from app.domain.user.schemas.user import UserInDB, UserUpdate
+from app.domain.user.schemas.user import UserUpdate
 from app.infrastructure.mq.rabbit_mq_service import RabbitMQService, get_rabbit_mq_service
 from app.infrastructure.repositories.generation.generation import GenerationRequestRepository, \
     ImageGenerationJobRepository, get_generation_request_repository, get_image_generation_job_repository
-from app.infrastructure.repositories.hair_model.hair_model import HairVariantModelRepository
+from app.infrastructure.repositories.hair_model.hair_model import HairVariantModelRepository, \
+    PostureAndClothingRepository, SpecificColorRepository, get_specific_color_repository, \
+    get_posture_and_clothing_repository, get_hair_variant_model_repository
 from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
 from datetime import datetime, UTC, timedelta
 
@@ -38,13 +35,17 @@ class RequestGenerationApplicationService:
     def __init__(
             self,
             user_repo: UserRepository,
-            hair_model_query_service: HairModelQueryService,
+            specific_color_repo: SpecificColorRepository,
+            posture_and_clothing_repo: PostureAndClothingRepository,
+            hair_variant_model_repo: HairVariantModelRepository,
             generation_request_repo: GenerationRequestRepository,
             image_generation_job_repo: ImageGenerationJobRepository,
             rabbit_mq_service: RabbitMQService
     ):
         self.user_repo = user_repo
-        self.hair_model_query_service = hair_model_query_service
+        self.specific_color_repo = specific_color_repo
+        self.posture_and_clothing_repo = posture_and_clothing_repo
+        self.hair_variant_model_repo = hair_variant_model_repo
         self.generation_request_repo = generation_request_repo
         self.image_generation_job_repo = image_generation_job_repo
         self.rabbit_mq_service = rabbit_mq_service
@@ -64,16 +65,22 @@ class RequestGenerationApplicationService:
             )
         )
 
+    # TODO: 1회 메서드 실행 시 db 9 + 10 회 (10번은 job create x 10)
     async def request_generation(
             self,
             request: CreateGenerationRequestRequest,
             user_id: int
     ) -> GenerationRequestResponse:
+
         if self._is_generation_in_progress(user_id):
             raise ConcurrentGenerationRequestError(context="Image generation already in progress.")
-        generation_request: GenerationRequest = self._create_generation_request(request, user_id)
 
-        return await self._start_generation(generation_request, user_id)
+        user: User = self.user_repo.get(user_id)
+        if not user.has_enough_token():
+            raise UserHasNotEnoughTokenException()
+
+        generation_request: GenerationRequest = self._create_generation_request(request, user_id)
+        return await self._start_generation(generation_request.id, user)
 
     def _is_generation_in_progress(self, user_id: int) -> bool:
         latest_generation_request: GenerationRequest = (
@@ -90,7 +97,7 @@ class RequestGenerationApplicationService:
             user_id: int
     ) -> GenerationRequest:
         hair_variant_model: HairVariantModel = (
-            self.hair_model_query_service.get_hair_variant_model_by_hair_style_length_color(
+            self.hair_variant_model_repo.get_by_hair_style_length_color(
                 hair_style_id=request.hair_style_id,
                 length_id=request.length_id,
                 color_id=request.color_id,
@@ -108,36 +115,22 @@ class RequestGenerationApplicationService:
     # TODO: 에러처리
     async def _start_generation(
             self,
-            generation_request: GenerationRequest,
-            user_id: int
+            generation_request_id: int,
+            user: User,
     ) -> GenerationRequestResponse:
         """
-        1. 사용자 토큰 validation을 진행한다. - 토큰이 충분하지 않은 경우 에러 처리
-        2. image_generation_job n개 생성한다.
-        3. 각각을 사용해서 mq 서버에 생성 요청을 보낸다.
+        1. Prompt 를 n개 생성한다.
+        2. image_generation_job 을 생성한다.
+        3. mq 서버에 생성 요청을 보낸다.
+        4. 2 - 3 프롬프트 갯수만큼 반복
         """
 
-        # validation
-        if generation_request.user_id != user_id:
-            raise ForbiddenException()
-
-        user = self.user_repo.get(user_id)
-
-        if not user.has_enough_token():
-            raise UserHasNotEnoughTokenException()
+        generation_request_with_relation: GenerationRequest = (
+            self.generation_request_repo.get_with_all_relations(generation_request_id)
+        )
 
         # create prompt list
-        # TODO: get_hair_model_details 로 모든 테이블마다 레코드 가져오는 건 너무 빡센 쿼리 작업이다... 최적화 어떻게 안되나.
-        hair_model_details: HairModelDetails = (
-            self.hair_model_query_service.get_hair_model_details(
-                hair_variant_model_id=generation_request.hair_variant_model_id,
-                background_id=generation_request.background_id,
-                image_resolution_id=generation_request.image_resolution_id
-            )
-        )
-        prompt_list = self._create_prompts(hair_model_details)
-
-        # TODO: transaction
+        prompt_list = self._create_prompts(generation_request_with_relation)
 
         # queue 상태 확인
         message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
@@ -154,9 +147,9 @@ class RequestGenerationApplicationService:
             # job 생성
             image_generation_job = self._create_image_generation_job(
                 prompt=prompt,
-                hair_model_details=hair_model_details,
+                image_resolution=generation_request_with_relation.image_resolution,
                 time_to_live_sec=message_time_to_live_sec,
-                generation_request_id=generation_request.id
+                generation_request_id=generation_request_with_relation.id
             )
             # MQ 요청 보내기
             await self._publish_job_as_mq_message(image_generation_job, message_time_to_live_sec)
@@ -166,29 +159,36 @@ class RequestGenerationApplicationService:
 
         message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
         return GenerationRequestResponse(
-            generation_request_id=generation_request.id,
+            generation_request_id=generation_request_with_relation.id,
             remaining_sec=estimate_normal_priority_message_wait_sec(image_count=message_count, processor_count=consumer_count),
             generated_image_cnt_per_request=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST
         )
 
-    def _create_prompts(self, hair_model_details: HairModelDetails) -> List[str]:
-        posture_and_clothing_list=self.hair_model_query_service.get_random_posture_and_clothing(
-            gender_id=hair_model_details.gender.id,
+    def _create_prompts(self, generation_request_with_relations: GenerationRequest) -> List[str]:
+
+        hair_variant_model_with_relations: HairVariantModel = generation_request_with_relations.hair_variant_model
+
+        posture_and_clothing_list = self.posture_and_clothing_repo.get_random_records_in_gender(
+            gender_id=generation_request_with_relations.hair_variant_model.gender.id,
+            limit=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST
+        )
+        specific_color_list: List[SpecificColor] = self.specific_color_repo.get_all_by_color_limit(
+            hair_variant_model_with_relations.color_id,
             limit=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST
         )
 
         # null length 수정 - hs 기본 길이로 변경한다.
-        if not hair_model_details.hair_style.has_length_option:
-            hair_model_details.length = self.hair_model_query_service.get_length_by_hair_style(
-                hair_style_id=hair_model_details.hair_style.id
-            )
+        if hair_variant_model_with_relations.hair_style.has_length_option:
+            length: Length = hair_variant_model_with_relations.length
+        else :
+            length: Length = hair_variant_model_with_relations.hair_style.length
 
         return create_prompts(
-            length=hair_model_details.length,
-            gender=hair_model_details.gender,
-            background=hair_model_details.background,
-            lora_model=hair_model_details.lora_model,
-            specific_color_list=hair_model_details.specific_color_list,
+            length=length,
+            gender=hair_variant_model_with_relations.gender,
+            background=generation_request_with_relations.background,
+            lora_model=hair_variant_model_with_relations.lora_model,
+            specific_color_list=specific_color_list,
             posture_and_clothing_list=posture_and_clothing_list,
             count=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST
         )
@@ -196,7 +196,7 @@ class RequestGenerationApplicationService:
     def _create_image_generation_job(
             self,
             prompt: str,
-            hair_model_details: HairModelDetails,
+            image_resolution: ImageResolution,
             time_to_live_sec: int,
             generation_request_id: int,
     ) -> ImageGenerationJobInDB:
@@ -208,8 +208,8 @@ class RequestGenerationApplicationService:
                     expires_at=datetime.now(UTC) + timedelta(seconds=time_to_live_sec),
                     prompt=prompt,
                     distilled_cfg_scale=image_generation_setting.DISTILLED_CFG_SCALE,
-                    width=hair_model_details.image_resolution.width,
-                    height=hair_model_details.image_resolution.height,
+                    width=image_resolution.width,
+                    height=image_resolution.height,
                     generation_request_id=generation_request_id,
                     s3_key=s3_key
                 )
@@ -231,60 +231,21 @@ class RequestGenerationApplicationService:
             obj_in=ImageGenerationJobUpdate(status=GenerationStatusEnum.PROCESSING)
         )
 
-    # TODO: 수정 사항 반영하는 코드는 어떻게 깔끔하게 짤지 다시 생각해보자.
-    # def update_generation_request(
-    #         self,
-    #         generation_request_id: int,
-    #         request: UpdateGenerationRequestRequest,
-    #         user_id: int
-    # ):
-    #     generation_request: GenerationRequest = self.generation_request_repo.get(generation_request_id)
-    #     if generation_request.user_id != user_id:
-    #         raise UnauthorizedException()
-    #
-    #     hair_variant_model: HairVariantModel = (
-    #         self.hair_model_query_service.get_hair_variant_model_by_hair_style_length_color(
-    #             hair_style_id=request.hair_style_id,
-    #             length_id=request.length_id,
-    #             color_id=request.color_id,
-    #         )
-    #     )
-    #     updated_generation_request: GenerationRequest = self.generation_request_repo.update(
-    #         obj_id=generation_request_id,
-    #         obj_in=GenerationRequestUpdate(
-    #             hair_variant_model_id=hair_variant_model.id,
-    #             background_id=request.background_id,
-    #             image_resolution_id=request.image_resolution_id
-    #         )
-    #     )
-    #     hair_model_details: HairModelDetails = (
-    #         self.hair_model_query_service.get_hair_model_details(
-    #             hair_variant_model_id=updated_generation_request.hair_variant_model_id,
-    #             background_id=updated_generation_request.background_id,
-    #             image_resolution_id=updated_generation_request.image_resolution_id
-    #         )
-    #     )
-    #     return GenerationRequestDetails(
-    #         generation_request_id=updated_generation_request.id,
-    #         gender=GenderInDB.model_validate(hair_model_details.gender),
-    #         hair_style=HairStyleInDB.model_validate(hair_model_details.hair_style),
-    #         length=LengthInDB.model_validate(hair_model_details.length),
-    #         color=ColorInDB.model_validate(hair_model_details.color),
-    #         background=BackgroundInDB.model_validate(hair_model_details.background),
-    #         image_resolution=ImageResolutionInDB.model_validate(hair_model_details.image_resolution)
-    #     )
-
 
 def get_request_generation_application_service(
         user_repo: UserRepository = Depends(get_user_repository),
-        hair_model_query_service: HairModelQueryService = Depends(get_hair_model_query_service),
+        specific_color_repo: SpecificColorRepository = Depends(get_specific_color_repository),
+        posture_and_clothing_repo: PostureAndClothingRepository = Depends(get_posture_and_clothing_repository),
+        hair_variant_model_repo: HairVariantModelRepository = Depends(get_hair_variant_model_repository),
         generation_request_repo: GenerationRequestRepository = Depends(get_generation_request_repository),
         image_generation_job_repo: ImageGenerationJobRepository = Depends(get_image_generation_job_repository),
         rabbit_mq_service: RabbitMQService = Depends(get_rabbit_mq_service)
 ) -> RequestGenerationApplicationService:
     return RequestGenerationApplicationService(
         user_repo=user_repo,
-        hair_model_query_service=hair_model_query_service,
+        specific_color_repo=specific_color_repo,
+        posture_and_clothing_repo=posture_and_clothing_repo,
+        hair_variant_model_repo=hair_variant_model_repo,
         generation_request_repo=generation_request_repo,
         image_generation_job_repo=image_generation_job_repo,
         rabbit_mq_service=rabbit_mq_service

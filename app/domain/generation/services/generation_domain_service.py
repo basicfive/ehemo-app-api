@@ -2,8 +2,9 @@ from typing import List
 from datetime import datetime, UTC
 
 from app.core.config import image_generation_setting
-from app.core.enums.generation_status import GenerationStatusEnum
-from app.domain.generation.models.generation import ImageGenerationJob
+from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
+from app.domain.generation.models.generation import ImageGenerationJob, GenerationRequest
+
 
 def _estimate_queue_wait_sec(
         image_count: int,
@@ -67,3 +68,12 @@ def calculate_remaining_generation_sec(image_generation_job_list: List[ImageGene
     # 음수가 되면(만료시간이 지났으면) 0 반환, 아니면 초 단위로 변환하여 반환
     return max(0, int(time_difference.total_seconds()))
 
+def should_create_image_group(generation_request: GenerationRequest, jobs: List[ImageGenerationJob]) -> bool:
+    """
+    이미지 그룹 생성 조건 확인
+    1. 모든 job 이 완료되었는가.
+    2. generation request 가 cancel 되지 않았는가.
+    """
+    if are_all_image_generation_jobs_complete(jobs):
+        return generation_request.generation_result == GenerationResultEnum.PENDING
+    return False

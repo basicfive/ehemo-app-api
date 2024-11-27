@@ -4,7 +4,7 @@ from fastapi import Depends
 
 from app.core.errors.http_exceptions import ValueException, UnauthorizedException
 from app.domain.generation.models.image import GeneratedImageGroup, GeneratedImage
-from app.domain.generation.schemas.generated_image_group import GeneratedImageGroupUpdate, GeneratedImageGroupInDB
+from app.domain.generation.schemas.generated_image_group import GeneratedImageGroupUpdate
 from app.infrastructure.repositories.generation.generation import GeneratedImageGroupRepository, \
     get_generated_image_group_repository, GeneratedImageRepository, get_generated_image_repository
 

@@ -2,13 +2,14 @@ from typing import List
 
 from fastapi import Depends
 from sqlalchemy import select, update, and_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from datetime import datetime, UTC
 
 from app.core.db.base import get_db
 from app.core.enums.generation_status import GenerationStatusEnum
 from app.domain.generation.models.generation import GenerationRequest, ImageGenerationJob
 from app.domain.generation.schemas.generated_image_group import GeneratedImageGroupCreate, GeneratedImageGroupUpdate
+from app.domain.hair_model.models.hair import HairVariantModel, HairStyle
 from app.infrastructure.repositories.crud_repository import CRUDRepository
 from app.domain.generation.schemas.generation_request import GenerationRequestCreate, GenerationRequestUpdate
 from app.domain.generation.schemas.image_generation_job import ImageGenerationJobCreate, ImageGenerationJobUpdate
@@ -28,6 +29,26 @@ class GenerationRequestRepository(CRUDRepository[GenerationRequest, GenerationRe
             .limit(1)
         )
         return self.db.execute(stmt).scalar_one_or_none()
+
+    def get_with_all_relations(self, generation_request_id: int) -> GenerationRequest:
+       stmt = (
+           select(GenerationRequest)
+           .options(
+               joinedload(GenerationRequest.hair_variant_model).options(
+                   joinedload(HairVariantModel.gender),
+                   joinedload(HairVariantModel.hair_style).options(
+                       joinedload(HairStyle.length)
+                   ),
+                   joinedload(HairVariantModel.length),
+                   joinedload(HairVariantModel.color),
+                   joinedload(HairVariantModel.lora_model)
+               ),
+               joinedload(GenerationRequest.background),
+               joinedload(GenerationRequest.image_resolution)
+           )
+           .where(GenerationRequest.id == generation_request_id)
+       )
+       return self.db.scalars(stmt).first()
 
 def get_generation_request_repository(db: Session = Depends(get_db)) -> GenerationRequestRepository:
     return GenerationRequestRepository(db=db)

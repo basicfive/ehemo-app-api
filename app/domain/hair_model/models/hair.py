@@ -24,6 +24,8 @@ class HairStyle(TimeStampModel):
     length_id = Column(Integer, ForeignKey("length.id"), nullable=True)
     # bangs_id = Column(Integer, nullable=True)
 
+    length = relationship("Length")
+
 class Length(TimeStampModel):
     __tablename__ = "length"
     title = Column(String(255), nullable=False)
@@ -97,6 +99,12 @@ class HairVariantModel(TimeStampModel):
     length_id = Column(Integer, ForeignKey("length.id"), nullable=True)
     color_id = Column(Integer, ForeignKey("color.id"), nullable=False)
     lora_model_id = Column(Integer, ForeignKey("lora_model.id"), nullable=False)
+
+    gender = relationship("Gender")
+    hair_style = relationship("HairStyle")
+    length = relationship("Length")
+    color = relationship("Color")
+    lora_model = relationship("LoRAModel")
 
     __table_args__ = (
         Index('idx_hair_variant_style_length_color',

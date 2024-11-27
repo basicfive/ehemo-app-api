@@ -244,22 +244,6 @@ class HairVariantModelRepository(CRUDRepository[HairVariantModel, HairVariantMod
     def get_all_by_lora_model(self, lora_model_id: int) -> List[HairVariantModel]:
         return self.db.query(HairVariantModel).filter(HairVariantModel.lora_model_id == lora_model_id).all()
 
-    def get_all_unpublished(self) -> List[HairVariantModel]:
-        return self.db.query(HairVariantModel).filter(HairVariantModel.is_published == False).all()
-
-    def update_is_published(self, ids: List[int], is_published: bool):
-        stmt = (
-            update(HairVariantModel)
-            .where(HairVariantModel.id.in_(ids))
-            .values(is_published=is_published)
-        )
-        self.db.execute(stmt)
-        self.db.commit()
-
-    def get_all_published(self) -> List[HairVariantModel]:
-        stmt = select(HairVariantModel).where(HairVariantModel.is_published == True)
-        return list(self.db.scalars(stmt).all())
-
 def get_hair_variant_model_repository(db: Session = Depends(get_db)) -> HairVariantModelRepository:
     return HairVariantModelRepository(db=db)
 
