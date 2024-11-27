@@ -41,3 +41,6 @@ class ConcurrentGenerationRequestError(CustomHttpException):
     def __init__(self, context: str = None):
         super().__init__(409, "Conflict", "Resource Conflict", context)
 
+class UserHasNotEnoughTokenException(CustomHttpException):
+    def __init__(self, context: str = None):
+        super().__init__(440, "UserToken", "Not Enough User Token", context)

@@ -65,8 +65,14 @@ class OAuthSetting(BaseModel):
 class ImageGenerationSetting(BaseModel):
     GENERATED_IMAGE_CNT_PER_REQUEST: int = 10
     DISTILLED_CFG_SCALE: float = 2.0
-    SINGLE_IMAGE_INFERENCE_SEC: int = 20
-    ETA_BUFFER_MULTIPLIER: float = 1.2
+    # 이걸 고정 상수로 두는게 맞나..?
+    SINGLE_INFERENCE_SEC_EST: int = 30
+
+    WAIT_TIME_BUFFER_MULT: float = 1.2
+    RETRY_WAIT_TIME_BUFFER_MULT: float = 1.0
+
+    MESSAGE_TTL_MULTIPLIER: float = 1.0
+    RETRY_MESSAGE_TTL_MULTIPLIER: float = 2.0
     MAX_RETRIES: int = 1
 
 

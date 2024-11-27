@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 from fastapi import Depends
 from app.application.query.hair_model_query import HairModelQueryService, HairModelDetails, get_hair_model_query_service
 from app.application.services.generation.dto.request import CreateGenerationRequestRequest, \
@@ -7,14 +7,15 @@ from app.application.services.generation.dto.mq import MQPublishMessage
 from app.core.config import image_generation_setting, aws_s3_setting
 from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
 from app.core.errors.exceptions import NoInferenceConsumerException
-from app.core.errors.http_exceptions import ForbiddenException, UnauthorizedException, ConcurrentGenerationRequestError
+from app.core.errors.http_exceptions import ForbiddenException, UnauthorizedException, ConcurrentGenerationRequestError, \
+    UserHasNotEnoughTokenException
 from app.core.utils import generate_unique_datatime_uuid_key
-from app.domain.generation.models.generation import GenerationRequest
+from app.domain.generation.models.generation import GenerationRequest, ImageGenerationJob
 from app.domain.generation.schemas.generation_request import GenerationRequestCreate, GenerationRequestUpdate
 from app.domain.generation.schemas.image_generation_job import ImageGenerationJobCreate, ImageGenerationJobInDB, \
     ImageGenerationJobUpdate
-from app.domain.generation.services.generation_domain_service import calculate_generation_eta_sec, \
-    calculate_single_generation_sec
+from app.domain.generation.services.generation_domain_service import estimate_normal_priority_message_wait_sec, \
+    calculate_normal_message_ttl_sec
 from app.domain.hair_model.models.hair import HairVariantModel, Length
 from app.domain.hair_model.schemas.hair.gender import GenderInDB
 from app.domain.hair_model.schemas.hair.hair_style import HairStyleInDB
@@ -28,10 +29,11 @@ from app.domain.user.schemas.user import UserInDB, UserUpdate
 from app.infrastructure.mq.rabbit_mq_service import RabbitMQService, get_rabbit_mq_service
 from app.infrastructure.repositories.generation.generation import GenerationRequestRepository, \
     ImageGenerationJobRepository, get_generation_request_repository, get_image_generation_job_repository
+from app.infrastructure.repositories.hair_model.hair_model import HairVariantModelRepository
 from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
 from datetime import datetime, UTC, timedelta
 
-
+# TODO: DB 접근마다 에러처리 / TRANSACTION
 class RequestGenerationApplicationService:
     def __init__(
             self,
@@ -47,7 +49,6 @@ class RequestGenerationApplicationService:
         self.image_generation_job_repo = image_generation_job_repo
         self.rabbit_mq_service = rabbit_mq_service
 
-    # TODO: DB 접근마다 에러처리 / TRANSACTION
     def cancel_generation(
             self,
             generation_request_id: int,
@@ -71,6 +72,7 @@ class RequestGenerationApplicationService:
         if self._is_generation_in_progress(user_id):
             raise ConcurrentGenerationRequestError(context="Image generation already in progress.")
         generation_request: GenerationRequest = self._create_generation_request(request, user_id)
+
         return await self._start_generation(generation_request, user_id)
 
     def _is_generation_in_progress(self, user_id: int) -> bool:
@@ -87,7 +89,6 @@ class RequestGenerationApplicationService:
             request: CreateGenerationRequestRequest,
             user_id: int
     ) -> GenerationRequest:
-
         hair_variant_model: HairVariantModel = (
             self.hair_model_query_service.get_hair_variant_model_by_hair_style_length_color(
                 hair_style_id=request.hair_style_id,
@@ -104,6 +105,7 @@ class RequestGenerationApplicationService:
             )
         )
 
+    # TODO: 에러처리
     async def _start_generation(
             self,
             generation_request: GenerationRequest,
@@ -114,16 +116,18 @@ class RequestGenerationApplicationService:
         2. image_generation_job n개 생성한다.
         3. 각각을 사용해서 mq 서버에 생성 요청을 보낸다.
         """
+
+        # validation
         if generation_request.user_id != user_id:
             raise ForbiddenException()
 
         user = self.user_repo.get(user_id)
 
         if not user.has_enough_token():
-            # TODO 커스텀 에러
-            raise ValueError("사용자 토큰 없음")
+            raise UserHasNotEnoughTokenException()
 
-        # prompt 10개 생성
+        # create prompt list
+        # TODO: get_hair_model_details 로 모든 테이블마다 레코드 가져오는 건 너무 빡센 쿼리 작업이다... 최적화 어떻게 안되나.
         hair_model_details: HairModelDetails = (
             self.hair_model_query_service.get_hair_model_details(
                 hair_variant_model_id=generation_request.hair_variant_model_id,
@@ -131,6 +135,43 @@ class RequestGenerationApplicationService:
                 image_resolution_id=generation_request.image_resolution_id
             )
         )
+        prompt_list = self._create_prompts(hair_model_details)
+
+        # TODO: transaction
+
+        # queue 상태 확인
+        message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
+        if consumer_count < 1:
+            raise NoInferenceConsumerException()
+
+        message_time_to_live_sec = estimate_normal_priority_message_wait_sec(
+            image_count=message_count,
+            processor_count=consumer_count
+        )
+
+        for idx, prompt in enumerate(prompt_list):
+            message_time_to_live_sec += calculate_normal_message_ttl_sec()
+            # job 생성
+            image_generation_job = self._create_image_generation_job(
+                prompt=prompt,
+                hair_model_details=hair_model_details,
+                time_to_live_sec=message_time_to_live_sec,
+                generation_request_id=generation_request.id
+            )
+            # MQ 요청 보내기
+            await self._publish_job_as_mq_message(image_generation_job, message_time_to_live_sec)
+
+        # 사용자 토큰 감소
+        self.user_repo.update(obj_id=user.id, obj_in=UserUpdate(token=user.token - 1))
+
+        message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
+        return GenerationRequestResponse(
+            generation_request_id=generation_request.id,
+            remaining_sec=estimate_normal_priority_message_wait_sec(image_count=message_count, processor_count=consumer_count),
+            generated_image_cnt_per_request=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST
+        )
+
+    def _create_prompts(self, hair_model_details: HairModelDetails) -> List[str]:
         posture_and_clothing_list=self.hair_model_query_service.get_random_posture_and_clothing(
             gender_id=hair_model_details.gender.id,
             limit=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST
@@ -138,9 +179,11 @@ class RequestGenerationApplicationService:
 
         # null length 수정 - hs 기본 길이로 변경한다.
         if not hair_model_details.hair_style.has_length_option:
-            hair_model_details.length = self.hair_model_query_service.get_length_by_hair_style(hair_style_id=hair_model_details.hair_style.id)
+            hair_model_details.length = self.hair_model_query_service.get_length_by_hair_style(
+                hair_style_id=hair_model_details.hair_style.id
+            )
 
-        prompt_list: List[str] = create_prompts(
+        return create_prompts(
             length=hair_model_details.length,
             gender=hair_model_details.gender,
             background=hair_model_details.background,
@@ -150,61 +193,43 @@ class RequestGenerationApplicationService:
             count=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST
         )
 
-        # image_generation_job 10개 생성
-        # TODO: transaction
-        # TODO: 에러처리
-
-        # queue 상태 확인
-        message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
-        if consumer_count < 1:
-            raise NoInferenceConsumerException()
-        message_ttl = calculate_generation_eta_sec(image_count=message_count, processor_count=consumer_count)
-        message_ttl_list: List[int] = []
-        for _ in prompt_list:
-            message_ttl_list.append(message_ttl)
-            message_ttl += calculate_single_generation_sec(processor_count=consumer_count)
-
-
-        image_generation_job_list: List[ImageGenerationJobInDB] = []
-        for idx, prompt in enumerate(prompt_list):
-            s3_key = generate_unique_datatime_uuid_key(prefix=aws_s3_setting.GENERATED_IMAGE_S3KEY_PREFIX)
-            db_image_generation_job = self.image_generation_job_repo.create(
+    def _create_image_generation_job(
+            self,
+            prompt: str,
+            hair_model_details: HairModelDetails,
+            time_to_live_sec: int,
+            generation_request_id: int,
+    ) -> ImageGenerationJobInDB:
+        s3_key = generate_unique_datatime_uuid_key(prefix=aws_s3_setting.GENERATED_IMAGE_S3KEY_PREFIX)
+        return ImageGenerationJobInDB.model_validate(
+            self.image_generation_job_repo.create(
                 obj_in=ImageGenerationJobCreate(
                     retry_count=image_generation_setting.MAX_RETRIES,
-                    expires_at=datetime.now(UTC)+ timedelta(seconds=message_ttl_list[idx]),
+                    expires_at=datetime.now(UTC) + timedelta(seconds=time_to_live_sec),
                     prompt=prompt,
                     distilled_cfg_scale=image_generation_setting.DISTILLED_CFG_SCALE,
                     width=hair_model_details.image_resolution.width,
                     height=hair_model_details.image_resolution.height,
-                    generation_request_id=generation_request.id,
+                    generation_request_id=generation_request_id,
                     s3_key=s3_key
                 )
             )
-            image_generation_job_list.append(ImageGenerationJobInDB.model_validate(db_image_generation_job))
-
-        # MQ 요청 보내기
-        for idx, image_generation_job in enumerate(image_generation_job_list):
-            message = MQPublishMessage(
-                **image_generation_job.model_dump(),
-                image_generation_job_id=image_generation_job.id,
-            )
-            await self.rabbit_mq_service.publish(message=message, expiration_sec=message_ttl_list[idx])
-            self.image_generation_job_repo.update(
-                obj_id=image_generation_job.id,
-                obj_in=ImageGenerationJobUpdate(status=GenerationStatusEnum.PROCESSING)
-            )
-
-        message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
-
-        # 사용자 토큰 감소
-        self.user_repo.update(obj_id=user.id, obj_in=UserUpdate(token=user.token - 1))
-
-        return GenerationRequestResponse(
-            generation_request_id=generation_request.id,
-            remaining_sec=calculate_generation_eta_sec(image_count=message_count, processor_count=consumer_count),
-            generated_image_cnt_per_request=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST
         )
 
+    async def _publish_job_as_mq_message(
+            self,
+            image_generation_job: ImageGenerationJobInDB,
+            time_to_live_sec: int
+    ):
+        message = MQPublishMessage(
+            **image_generation_job.model_dump(),
+            image_generation_job_id=image_generation_job.id,
+        )
+        await self.rabbit_mq_service.publish(message=message, expiration_sec=time_to_live_sec)
+        self.image_generation_job_repo.update(
+            obj_id=image_generation_job.id,
+            obj_in=ImageGenerationJobUpdate(status=GenerationStatusEnum.PROCESSING)
+        )
 
     # TODO: 수정 사항 반영하는 코드는 어떻게 깔끔하게 짤지 다시 생각해보자.
     # def update_generation_request(
