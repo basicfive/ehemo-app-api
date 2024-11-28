@@ -1,8 +1,6 @@
 from fastapi.params import Depends
 from typing import List, Optional
 
-from firebase_admin.auth import get_user
-
 from app.domain.hair_model.models.hair import HairVariantModel
 from app.application.services.generation.dto.query import GenerationRequestStatusResponse, GenerationRequestDetails, \
     GenerationRequestStatusWithDetails
@@ -91,7 +89,11 @@ class GenerationRequestQueryService:
         if latest_generation_request is None:
             return GenerationRequestStatusWithDetails()
         if latest_generation_request.generation_result != GenerationResultEnum.PENDING:
-            return GenerationRequestStatusWithDetails(generation_status=latest_generation_request.generation_result)
+            return GenerationRequestStatusWithDetails(
+                generation_request_id=latest_generation_request.id,
+                generation_status=latest_generation_request.generation_result,
+                remaining_sec=0,
+            )
 
         generation_request_with_relation: GenerationRequest = (
             self.generation_request_repo.get_with_all_relations(latest_generation_request.id)

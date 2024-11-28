@@ -26,10 +26,6 @@ class GenerationRequestDetails(BaseModel):
     image_resolution: ImageResolutionInDB
 
 class GenerationRequestStatusWithDetails(BaseModel):
-    generation_status: Optional[GenerationResultEnum] = None
-    remaining_sec: Optional[int] = None
-    generated_image_group_id: Optional[int] = None
-
     generation_request_id: Optional[int] = None
     gender: Optional[GenderInDB] = None
     hair_style: Optional[HairStyleInDB] = None
@@ -37,3 +33,7 @@ class GenerationRequestStatusWithDetails(BaseModel):
     color: Optional[ColorInDB] = None
     background: Optional[BackgroundInDB] = None
     image_resolution: Optional[ImageResolutionInDB] = None
+
+    generation_status: Optional[GenerationResultEnum] = None
+    remaining_sec: Optional[int] = None
+    generated_image_group_id: Optional[int] = None
