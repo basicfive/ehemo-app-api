@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from datetime import datetime, UTC
 
 from app.core.config import image_generation_setting
@@ -77,3 +77,9 @@ def should_create_image_group(generation_request: GenerationRequest, jobs: List[
     if are_all_image_generation_jobs_complete(jobs):
         return generation_request.generation_result == GenerationResultEnum.PENDING
     return False
+
+def is_generation_in_progress(latest_generation_request: Optional[GenerationRequest]):
+    if latest_generation_request is None or \
+            latest_generation_request.generation_result != GenerationResultEnum.PENDING:
+        return False
+    return True

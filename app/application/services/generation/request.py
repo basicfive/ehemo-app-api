@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import Depends
 
 from app.domain.hair_model.models.scene import ImageResolution
@@ -16,7 +16,7 @@ from app.domain.generation.schemas.generation_request import GenerationRequestCr
 from app.domain.generation.schemas.image_generation_job import ImageGenerationJobCreate, ImageGenerationJobInDB, \
     ImageGenerationJobUpdate
 from app.domain.generation.services.generation_domain_service import estimate_normal_priority_message_wait_sec, \
-    calculate_normal_message_ttl_sec
+    calculate_normal_message_ttl_sec, is_generation_in_progress
 from app.domain.hair_model.models.hair import HairVariantModel, Length, SpecificColor
 from app.domain.hair_model.services.hair_model_prompt import create_prompts
 from app.domain.user.models.user import User
@@ -75,6 +75,7 @@ class RequestGenerationApplicationService:
         if self._is_generation_in_progress(user_id):
             raise ConcurrentGenerationRequestError(context="Image generation already in progress.")
 
+        # TODO: (urgent) id에 해당하는 user 존재하는 레코드인지 에러 처리필요
         user: User = self.user_repo.get(user_id)
         if not user.has_enough_token():
             raise UserHasNotEnoughTokenException()
@@ -83,13 +84,10 @@ class RequestGenerationApplicationService:
         return await self._start_generation(generation_request.id, user)
 
     def _is_generation_in_progress(self, user_id: int) -> bool:
-        latest_generation_request: GenerationRequest = (
+        latest_generation_request: Optional[GenerationRequest] = (
             self.generation_request_repo.get_latest_generation_request_by_user(user_id=user_id)
         )
-        if latest_generation_request is None or \
-                latest_generation_request.generation_result != GenerationResultEnum.PENDING:
-            return False
-        return True
+        return is_generation_in_progress(latest_generation_request)
 
     def _create_generation_request(
             self,
