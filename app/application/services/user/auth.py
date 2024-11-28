@@ -41,7 +41,7 @@ class UserAuthApplicationService:
         self.redis_service.save_refresh_token(user.id, refresh_token)
 
         return LoginResponse(
-            uuid=user.uuid,
+            uuid=str(user.uuid),
             email=user.email,
             user_token=user.token,
             access_token=access_token,
