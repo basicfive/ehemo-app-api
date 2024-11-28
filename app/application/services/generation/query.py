@@ -88,12 +88,6 @@ class GenerationRequestQueryService:
         )
         if latest_generation_request is None:
             return GenerationRequestStatusWithDetails()
-        if latest_generation_request.generation_result != GenerationResultEnum.PENDING:
-            return GenerationRequestStatusWithDetails(
-                generation_request_id=latest_generation_request.id,
-                generation_status=latest_generation_request.generation_result,
-                remaining_sec=0,
-            )
 
         generation_request_with_relation: GenerationRequest = (
             self.generation_request_repo.get_with_all_relations(latest_generation_request.id)

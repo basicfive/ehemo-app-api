@@ -1,8 +1,14 @@
-from sqlalchemy import Column, String, Integer, ForeignKey, UniqueConstraint, Index
+from sqlalchemy import Column, String, Integer, UniqueConstraint, Index
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
+
 from app.core.db.time_stamp_model import TimeStampModel
 
 class User(TimeStampModel):
     __tablename__ = "user"
+
+    # UUID 필드 추가
+    uuid = Column(UUID(as_uuid=True), default=uuid.uuid4, unique=True, nullable=False)
 
     token = Column(Integer, default=0, nullable=False)
     email = Column(String(320), nullable=False)

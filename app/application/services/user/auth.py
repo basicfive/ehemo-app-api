@@ -1,7 +1,7 @@
 from fastapi import Depends
 from sqlalchemy.exc import NoResultFound
 
-from app.application.services.user.dto.auth import UserInfo, TokenResponse
+from app.application.services.user.dto.auth import UserInfo, TokenResponse, LoginResponse
 from app.domain.user.schemas.user import UserCreate
 from app.domain.user.services.auth import AuthTokenService, get_auth_token_service
 from app.infrastructure.auth.social_client.apple_auth_client import get_apple_auth_client
@@ -26,7 +26,7 @@ class UserAuthApplicationService:
         self.auth_token_service = auth_token_service
         self.social_auth_client = social_auth_client
 
-    def mobile_login(self, id_token: str) -> TokenResponse:
+    def mobile_login(self, id_token: str) -> LoginResponse:
         auth_info: AuthInfo = self.social_auth_client.verify_mobile_token(id_token)
 
         user_info = UserInfo(**auth_info.model_dump())
@@ -40,7 +40,10 @@ class UserAuthApplicationService:
         access_token, refresh_token = self.auth_token_service.create_tokens(user.id)
         self.redis_service.save_refresh_token(user.id, refresh_token)
 
-        return TokenResponse(
+        return LoginResponse(
+            uuid=user.uuid,
+            email=user.email,
+            user_token=user.token,
             access_token=access_token,
             refresh_token=refresh_token
         )

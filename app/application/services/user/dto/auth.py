@@ -8,3 +8,10 @@ class UserInfo(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
+
+class LoginResponse(BaseModel):
+    uuid: str
+    email: str
+    user_token: int
+    access_token: str
+    refresh_token: str
