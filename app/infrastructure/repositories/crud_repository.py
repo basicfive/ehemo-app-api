@@ -1,10 +1,8 @@
 from typing import Generic, TypeVar, Type, List, Optional, Dict, Union, Any
 
-from certifi import where
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 from sqlalchemy.future import select
-from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 
 ModelType = TypeVar("ModelType")

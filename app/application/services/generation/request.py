@@ -202,7 +202,7 @@ class RequestGenerationApplicationService:
         return ImageGenerationJobInDB.model_validate(
             self.image_generation_job_repo.create(
                 obj_in=ImageGenerationJobCreate(
-                    retry_count=image_generation_setting.MAX_RETRIES,
+                    retry_count=0,
                     expires_at=datetime.now(UTC) + timedelta(seconds=time_to_live_sec),
                     prompt=prompt,
                     distilled_cfg_scale=image_generation_setting.DISTILLED_CFG_SCALE,
