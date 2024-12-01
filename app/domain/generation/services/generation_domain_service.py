@@ -58,9 +58,12 @@ def are_all_image_generation_jobs_complete(image_generation_job_list: List[Image
     return True
 
 def calculate_remaining_generation_sec(image_generation_job_list: List[ImageGenerationJob]) -> int:
-
+    print("calculating remaining sec: ")
     # 가장 늦은 expires_at 찾기
     latest_expire = max(job.expires_at for job in image_generation_job_list)
+
+    print(f"latest_expire: {latest_expire}")
+    print(f"current time : {datetime.now(UTC)}")
 
     # 현재 UTC 시간과의 차이 계산
     time_difference = latest_expire - datetime.now(UTC)

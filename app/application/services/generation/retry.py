@@ -60,6 +60,9 @@ class ImageGenerationRetryService:
 
             current_message_expire_at += calculate_retry_message_ttl_sec()
 
+            print("Currently updating expire time with retry: ")
+            print(f"current time : {datetime.now(UTC)}")
+
             # 재요청 - mq 높은 우선순위
             self.image_generation_job_repo.update(
                 obj_id=expired_job.id,
