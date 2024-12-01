@@ -7,7 +7,7 @@ import logging
 
 load_dotenv()
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
-logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+# logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 class BaseSetting(BaseModel):
     PROJECT_NAME: str = "ehemo-app-api"

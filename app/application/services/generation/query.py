@@ -54,6 +54,9 @@ class GenerationRequestQueryService:
             generated_image_group = self.generated_image_group_repo.get_by_generation_request(generation_request.id)
             generated_image_group_id = generated_image_group.id
 
+        print(f"generation result : {generation_request.generation_result}")
+        print(f"remaining sec : {remaining_sec}")
+
         return GenerationRequestStatusResponse(
             generation_status=generation_request.generation_result,
             remaining_sec=remaining_sec,
