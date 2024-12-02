@@ -13,7 +13,7 @@ class UserRepository(CRUDRepository[User, UserCreate, UserUpdate]):
         self.db = db
 
     def get_by_social_account(self, provider: str, social_id: str) -> User:
-        stmt = select(User).filter_by(provider=provider, social_id=social_id)
+        stmt = select(User).filter_by(provider=provider, social_id=social_id, deleted=False)
         return self.db.execute(stmt).scalar_one()
 
 def get_user_repository(db: Session = Depends(get_db)):

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, UniqueConstraint, Index
+from sqlalchemy import Column, String, Integer, UniqueConstraint, Index, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 
@@ -14,6 +14,8 @@ class User(TimeStampModel):
     email = Column(String(320), nullable=False)
     provider = Column(String(20), nullable=False)
     social_id = Column(String(255), nullable=False)
+
+    deleted = Column(Boolean, default=False, nullable=False)
 
     __table_args__ = (
         UniqueConstraint('provider', 'social_id', name='uix_provider_social_id'),

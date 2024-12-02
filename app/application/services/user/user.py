@@ -3,10 +3,11 @@ from fastapi import Depends
 
 from app.application.services.user.dto.user_info import UserInfoResponse, UserTokenResponse
 from app.domain.user.models.user import User
+from app.domain.user.schemas.user import UserUpdate
 from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
 
 
-class UserInfoApplicationService:
+class UserApplicationService:
     def __init__(
             self,
             user_repo: UserRepository
@@ -25,7 +26,10 @@ class UserInfoApplicationService:
             token=user.token,
         )
 
-def get_user_info_application_service(
+    def soft_delete_user(self, user_id: int):
+        self.user_repo.update(obj_id=user_id, obj_in=UserUpdate(deleted=True))
+
+def get_user_application_service(
         user_repo: UserRepository = Depends(get_user_repository)
 ):
-    return UserInfoApplicationService(user_repo=user_repo)
+    return UserApplicationService(user_repo=user_repo)

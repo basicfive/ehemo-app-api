@@ -12,6 +12,7 @@ class UserUpdate(BaseModel):
     provider: Optional[str] = None
     social_id: Optional[str] = None
     token: Optional[int] = None
+    deleted: Optional[bool] = None
 
 class UserInDB(BaseModel):
     id: int
@@ -19,6 +20,7 @@ class UserInDB(BaseModel):
     provider: str
     social_id: str
     token: int
+    deleted: bool
 
     class Config:
         from_attributes=True
