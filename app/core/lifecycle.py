@@ -59,20 +59,17 @@ class LifespanServices:
        self.consume_task = asyncio.create_task(self._start_consuming())
 
    async def _start_consuming(self):
-       retry_count = 0
-       max_retries = 3
-       while retry_count < max_retries:
-           try:
-               if self.mq_service and not await self.mq_service.check_connection():
-                   await self.mq_service.ensure_connection()
-               await self.mq_service.consume(self.message_handler.handle_message)
-               retry_count = 0  # 성공시 카운트 리셋
-               while True:
-                   await asyncio.sleep(3600)
-           except Exception as e:
-               retry_count += 1
-               logger.error(f"Consume error (attempt {retry_count}/{max_retries}): {e}")
-               await asyncio.sleep(5 * retry_count)  # 점진적 대기
+       """RabbitMQ consume 작업을 시작하는 코루틴"""
+       try:
+           await self.mq_service.consume(self.message_handler.handle_message)
+           # consume이 시작된 후 계속 실행 상태를 유지하기 위한 무한 대기
+           while True:
+               await asyncio.sleep(3600)  # 1시간마다 한번씩 체크
+       except Exception as e:
+           logger.error(f"Consume task encountered an error: {e}")
+           # 에러 발생시 재시작
+           await asyncio.sleep(5)  # 5초 대기 후 재시작
+           self.consume_task = asyncio.create_task(self._start_consuming())
 
    async def cleanup(self):
        """모든 리소스 정리"""

@@ -38,7 +38,7 @@ class RabbitMQService:
         self.connect_kwargs = {
             "url": url,
             "ssl_context": ssl_context,
-            "heartbeat": 360,
+            "heartbeat": 300,
             "timeout": 300
         }
 
@@ -72,6 +72,38 @@ class RabbitMQService:
             routing_key=self.publish_queue
         )
         logger.info(f"[MQ] Published Job ID: {message.image_generation_job_id}. DETAILS: {message.to_str()}")
+
+    async def consume(self, sync_callback: Callable):
+        while True:  # 지속적인 재시도를 위한 루프
+            try:
+                if self.connection.is_closed or self.channel.is_closed:
+                    await self._reconnect()
+
+                queue = await self.channel.declare_queue(self.consume_queue, passive=True)
+
+                async def async_wrapper(message):
+                    try:
+                        async with message.process(requeue=True):  # requeue 옵션 추가
+                            loop = asyncio.get_event_loop()
+                            await loop.run_in_executor(None, sync_callback, message.body)
+                    except Exception as e:
+                        logger.error(f"Error processing message: {e}", exc_info=True)
+                        # connection 문제면 재연결 시도
+                        if isinstance(e, (ConnectionError, TimeoutError)):
+                            await self._reconnect()
+                        raise  # 다시 throw해서 메시지가 requeue되도록 함
+
+                await queue.consume(async_wrapper)
+
+                # consume이 시작된 후 connection 상태 모니터링
+                while not (self.connection.is_closed or self.channel.is_closed):
+                    await asyncio.sleep(30)  # 30초마다 체크
+
+                logger.warning("Connection or channel closed, restarting consumer...")
+
+            except Exception as e:
+                logger.error(f"Consumer encountered an error: {e}", exc_info=True)
+                await asyncio.sleep(5)  # 에러 발생 시 잠시 대기 후 재시도
 
     @log_errors("RabbitMQ consume failed")
     async def consume(self, sync_callback: Callable):
