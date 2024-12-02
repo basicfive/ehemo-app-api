@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, UniqueConstraint, Index, Boolean
+from sqlalchemy import Column, String, Integer, Index, Boolean, text
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 
@@ -18,8 +18,13 @@ class User(TimeStampModel):
     deleted = Column(Boolean, default=False, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint('provider', 'social_id', name='uix_provider_social_id'),
-        Index('idx_provider_social_id', 'provider', 'social_id'),
+        Index(
+            'idx_provider_social_id_active',
+            'provider',
+            'social_id',
+            unique=True,
+            postgresql_where=text('deleted = false')
+        ),
     )
 
     def has_enough_token(self) -> bool:
