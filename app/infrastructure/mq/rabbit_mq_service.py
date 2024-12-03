@@ -48,6 +48,7 @@ class RabbitMQService:
             self.connection = await connect_robust(**self.connect_kwargs)
         if not self.channel or self.channel.is_closed:
             self.channel = await self.connection.channel()
+        await self.channel.set_qos(prefetch_count=10)
 
     @retry(
         stop=stop_after_attempt(3),
