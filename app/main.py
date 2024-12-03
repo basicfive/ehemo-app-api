@@ -1,13 +1,11 @@
-import asyncio
-
 from fastapi import FastAPI
 import logging
 
+from app.core.api.concurrent_request_middleware import ConcurrentRequestMiddleware
 from app.core.db.base import Base, engine
 from app.core.config import base_settings
 from app.api.v1.api import router
 from app.core.lifecycle import LifespanServices
-from app.infrastructure.mq.rabbit_mq_service import RabbitMQService
 from contextlib import asynccontextmanager
 
 Base.metadata.create_all(bind=engine)
@@ -32,6 +30,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+app.add_middleware(ConcurrentRequestMiddleware, max_concurrent=15)
 app.include_router(router, prefix=base_settings.API_V1_STR)
 
 @app.get("/health")
