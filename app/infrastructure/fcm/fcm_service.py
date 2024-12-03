@@ -48,3 +48,6 @@ class FCMService:
         except Exception as e:
             logging.error(f"Multiple FCM sending failed: {str(e)}")
             raise FCMException("FCM 일괄 전송 실패")
+
+def get_fcm_service():
+    return FCMService()

@@ -13,7 +13,6 @@ class AsyncTaskManager(ABC):
 
     @abstractmethod
     async def execute(self):
-        """실행할 태스크 로직"""
         pass
 
     async def start(self):

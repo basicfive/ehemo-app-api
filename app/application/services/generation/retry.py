@@ -2,7 +2,10 @@ import logging
 from datetime import datetime, timedelta, UTC
 from typing import List
 
+from sqlalchemy.orm import Session
+
 from app.application.services.generation.dto.mq import MQPublishMessage
+from app.core.db.base import get_db
 from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
 from app.core.enums.message_priority import MessagePriority
 from app.core.errors.exceptions import NoInferenceConsumerException
@@ -15,9 +18,9 @@ from app.domain.user.schemas.user import UserUpdate
 from app.infrastructure.fcm.fcm_service import FCMService
 from app.infrastructure.mq.rabbit_mq_service import RabbitMQService
 from app.infrastructure.repositories.generation.generation import ImageGenerationJobRepository, \
-    GenerationRequestRepository
+    GenerationRequestRepository, get_image_generation_job_repository, get_generation_request_repository
 from app.core.config import image_generation_setting
-from app.infrastructure.repositories.user.user import UserRepository
+from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
 
 logger = logging.getLogger()
 
@@ -103,3 +106,19 @@ class ImageGenerationRetryService:
                 obj_id=generation_request.id,
                 obj_in=GenerationRequestUpdate(generation_result=GenerationResultEnum.FAILED)
             )
+
+async def retry_expired_jobs(
+        rabbit_mq_service: RabbitMQService,
+):
+    db: Session = next(get_db())
+    try:
+        service = ImageGenerationRetryService(
+            image_generation_job_repo = get_image_generation_job_repository(db),
+            generation_request_repo = get_generation_request_repository(db),
+            user_repo=get_user_repository(db),
+            rabbit_mq_service=rabbit_mq_service,
+            fcm_service=FCMService(),
+        )
+        await service.retry_expired_jobs()
+    finally:
+        db.close()

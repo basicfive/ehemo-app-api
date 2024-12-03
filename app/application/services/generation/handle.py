@@ -4,7 +4,7 @@ from typing import List
 
 from app.application.services.generation.dto.mq import MQConsumeMessage
 from app.core.config import aws_s3_setting
-from app.core.container import DependencyContainer
+from app.core.db.base import get_db
 from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
 from app.core.utils import generate_unique_datatime_uuid_key, concatenate_images_horizontally, compress_and_resize_image
 from app.domain.generation.models.generation import ImageGenerationJob, GenerationRequest
@@ -15,40 +15,38 @@ from app.domain.generation.schemas.generation_request import GenerationRequestUp
 from app.domain.generation.schemas.image_generation_job import ImageGenerationJobUpdate
 from app.domain.generation.services.generation_domain_service import should_create_image_group
 from app.domain.hair_model.models.hair import HairStyle
+from app.infrastructure.fcm.fcm_service import FCMService, get_fcm_service
 from app.infrastructure.repositories.generation.generation import (
     GenerationRequestRepository,
     ImageGenerationJobRepository,
     GeneratedImageRepository,
-    GeneratedImageGroupRepository
+    GeneratedImageGroupRepository, get_generation_request_repository, get_image_generation_job_repository,
+    get_generated_image_repository, get_generated_image_group_repository
 )
+from app.infrastructure.s3.s3_client import S3Client, get_s3_client
 
 logger = logging.getLogger(__name__)
 
 
 class MessageHandler:
     """메시지 처리를 위한 핸들러"""
+    def __init__(
+            self,
+            generation_request_repo: GenerationRequestRepository,
+            image_generation_job_repo: ImageGenerationJobRepository,
+            generated_image_repo: GeneratedImageRepository,
+            generated_image_group_repo: GeneratedImageGroupRepository,
+            s3_client: S3Client,
+            fcm_service: FCMService,
+    ):
+        self.generation_request_repo = generation_request_repo
+        self.image_generation_job_repo = image_generation_job_repo
+        self.generated_image_repo = generated_image_repo
+        self.generated_image_group_repo = generated_image_group_repo
+        self.s3_client = s3_client
+        self.fcm_service = fcm_service
 
-    def __init__(self, container: DependencyContainer):
-        self.container = container
-
-    @property
-    def generation_request_repo(self) -> GenerationRequestRepository:
-        return self.container.get_repository(GenerationRequestRepository)
-
-    @property
-    def image_generation_job_repo(self) -> ImageGenerationJobRepository:
-        return self.container.get_repository(ImageGenerationJobRepository)
-
-    @property
-    def generated_image_repo(self) -> GeneratedImageRepository:
-        return self.container.get_repository(GeneratedImageRepository)
-
-    @property
-    def generated_image_group_repo(self) -> GeneratedImageGroupRepository:
-        return self.container.get_repository(GeneratedImageGroupRepository)
-
-
-    def handle_message(self, body: bytes) -> None:
+    def process_message(self, body: bytes) -> None:
         """메시지 처리의 메인 엔트리포인트"""
         try:
             data_dict = json.loads(body)
@@ -104,7 +102,7 @@ class MessageHandler:
         print(f"generation result : {generation_request_with_relation.generation_result}")
 
         # FCM 알림 전송
-        # self.container.fcm_service.send_notification()
+        # self..fcm_service.send_notification()
 
     def _create_generated_images(
             self,
@@ -144,7 +142,7 @@ class MessageHandler:
     def _create_thumbnail(self, jobs: List[ImageGenerationJob]) -> str:
         """썸네일 이미지 생성"""
         image_urls = [
-            self.container.s3_client.create_presigned_url(job.s3_key)
+            self.s3_client.create_presigned_url(job.s3_key)
             for job in jobs
         ]
 
@@ -155,5 +153,21 @@ class MessageHandler:
             prefix=aws_s3_setting.GENERATED_IMAGE_GROUP_S3KEY_PREFIX
         )
 
-        self.container.s3_client.upload_to_s3(thumbnail_key, compressed_bytes, img_format)
+        self.s3_client.upload_to_s3(thumbnail_key, compressed_bytes, img_format)
         return thumbnail_key
+
+
+def handle_message(body: bytes) -> None:
+    db = next(get_db())
+    try:
+        message_handler = MessageHandler(
+            generation_request_repo=get_generation_request_repository(db),
+            image_generation_job_repo=get_image_generation_job_repository(db),
+            generated_image_repo=get_generated_image_repository(db),
+            generated_image_group_repo=get_generated_image_group_repository(db),
+            s3_client=get_s3_client(),
+            fcm_service=get_fcm_service(),
+        )
+        message_handler.process_message(body)
+    finally:
+        db.close()
