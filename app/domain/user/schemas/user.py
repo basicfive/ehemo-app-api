@@ -13,14 +13,17 @@ class UserUpdate(BaseModel):
     social_id: Optional[str] = None
     token: Optional[int] = None
     deleted: Optional[bool] = None
+    fcm_token: Optional[str] = None
 
 class UserInDB(BaseModel):
     id: int
+    uuid: str
     email: str
     provider: str
     social_id: str
     token: int
     deleted: bool
+    fcm_token: str
 
     class Config:
         from_attributes=True

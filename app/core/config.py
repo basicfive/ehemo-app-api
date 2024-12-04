@@ -77,6 +77,9 @@ class ImageGenerationSetting(BaseModel):
     RETRY_MESSAGE_TTL_MULTIPLIER: float = 2.0
     MAX_RETRIES: int = 1
 
+class UserSetting(BaseModel):
+    MONTHLY_RECHARGED_TOKEN: int = 15
+    FREE_TRIAL_TOKEN: int = 1
 
 base_settings = BaseSetting()
 rabbit_mq_setting = RabbitMQSetting()

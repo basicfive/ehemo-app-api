@@ -22,6 +22,14 @@ def get_user_token(
 ) -> UserInfoResponse:
     return service.get_user_info(user_id=user_id)
 
+@router.put("/info/with-fcm", response_model=UserInfoResponse, status_code=status.HTTP_200_OK)
+def update_fcm_and_get_user_info(
+        fcm_token: str,
+        user_id: int = Depends(validate_user_token),
+        service: UserApplicationService = Depends(get_user_application_service)
+) -> UserInfoResponse:
+    return service.update_fcm_token(fcm_token=fcm_token, user_id=user_id)
+
 @router.patch("/soft-delete", status_code=status.HTTP_200_OK)
 def soft_delete_user(
         user_id: int = Depends(validate_user_token),

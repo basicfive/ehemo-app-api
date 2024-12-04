@@ -29,6 +29,18 @@ class UserApplicationService:
     def soft_delete_user(self, user_id: int):
         self.user_repo.update(obj_id=user_id, obj_in=UserUpdate(deleted=True))
 
+    def update_fcm_token(self, fcm_token: str, user_id: int) -> UserInfoResponse:
+        user: User = self.user_repo.get(user_id)
+
+        if user.fcm_token != fcm_token:
+            self.user_repo.update(obj_id=user.id, obj_in=UserUpdate(fcm_token=fcm_token))
+
+        return UserInfoResponse(
+            uuid=str(user.uuid),
+            email=user.email,
+            token=user.token,
+        )
+
 def get_user_application_service(
         user_repo: UserRepository = Depends(get_user_repository)
 ):

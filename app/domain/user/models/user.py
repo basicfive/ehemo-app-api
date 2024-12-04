@@ -9,6 +9,7 @@ class User(TimeStampModel):
 
     # UUID 필드 추가
     uuid = Column(UUID(as_uuid=True), default=uuid.uuid4, unique=True, nullable=False)
+    fcm_token = Column(String(255), nullable=True)
 
     token = Column(Integer, default=0, nullable=False)
     email = Column(String(320), nullable=False)
