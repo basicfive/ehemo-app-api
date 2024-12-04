@@ -81,6 +81,14 @@ class UserSetting(BaseModel):
     MONTHLY_RECHARGED_TOKEN: int = 15
     FREE_TRIAL_TOKEN: int = 1
 
+class FCMSetting(BaseModel):
+    SUCCESS_TITLE: str = "요청하신 이미지의 생성이 완료되었습니다."
+    SUCCESS_BODY: str = "요청하신 이미지의 생성이 완료되었습니다."
+
+    FAILURE_TITLE: str = "요청하신 이미지의 생성이 실패하였습니다."
+    FAILURE_BODY: str = "요청하신 이미지의 생성이 실패하였습니다."
+
+
 base_settings = BaseSetting()
 rabbit_mq_setting = RabbitMQSetting()
 redis_setting = RedisSetting()
@@ -88,3 +96,5 @@ aws_s3_setting = AWSS3Setting()
 jwt_setting = JwtSetting()
 oauth_setting = OAuthSetting()
 image_generation_setting = ImageGenerationSetting()
+user_setting = UserSetting()
+fcm_setting = FCMSetting()

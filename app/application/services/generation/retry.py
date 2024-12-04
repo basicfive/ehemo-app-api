@@ -19,7 +19,7 @@ from app.infrastructure.fcm.fcm_service import FCMService
 from app.infrastructure.mq.rabbit_mq_service import RabbitMQService
 from app.infrastructure.repositories.generation.generation import ImageGenerationJobRepository, \
     GenerationRequestRepository, get_image_generation_job_repository, get_generation_request_repository
-from app.core.config import image_generation_setting
+from app.core.config import image_generation_setting, fcm_setting
 from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
 
 logger = logging.getLogger()
@@ -96,10 +96,15 @@ class ImageGenerationRetryService:
         # 아직 fcm 에러를 보내지 않았다면, fcm 전송 후 generation request 업데이트
         generation_request: GenerationRequest = self.generation_request_repo.get(expired_job.generation_request_id)
         if generation_request.generation_result == GenerationResultEnum.PENDING:
-            # self.fcm_service.send_notification()
 
-            # 유저 토큰 반환 - 이걸 잘 묶어줘야할듯.
             user: User = self.user_repo.get(generation_request.user_id)
+            self.fcm_service.send_to_token(
+                token=user.fcm_token,
+                title=fcm_setting.FAILURE_TITLE,
+                body=fcm_setting.FAILURE_BODY,
+            )
+
+            # 유저 토큰 반환
             self.user_repo.update(obj_id=user.id, obj_in=UserUpdate(token=user.token + 1))
 
             self.generation_request_repo.update(

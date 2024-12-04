@@ -17,6 +17,31 @@ class FCMService:
         except Exception as e:
             raise FCMException(context=f"Failed to initialize Firebase Admin: {str(e)}")
 
+    def send_to_token(
+            self,
+            token: str,
+            title: str,
+            body: str,
+            data: Optional[Dict[str, str]] = None
+    ) -> dict:
+        """
+        Send FCM message to a single device token
+        """
+        try:
+            message = messaging.Message(
+                notification=messaging.Notification(
+                    title=title,
+                    body=body,
+                ),
+                data=data or {},
+                token=token,
+            )
+
+            response = messaging.send(message)
+            return {"success": True, "message_id": response}
+        except Exception as e:
+            raise FCMException(context=f"Failed to send FCM message: {str(e)}")
+
     def send_to_tokens(
             self,
             tokens: List[str],

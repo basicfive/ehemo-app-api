@@ -2,8 +2,10 @@ import json
 import logging
 from typing import List
 
+from firebase_admin.auth import get_user
+
 from app.application.services.generation.dto.mq import MQConsumeMessage
-from app.core.config import aws_s3_setting
+from app.core.config import aws_s3_setting, fcm_setting
 from app.core.db.base import get_db
 from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
 from app.core.utils import generate_unique_datatime_uuid_key, concatenate_images_horizontally, compress_and_resize_image
@@ -15,6 +17,7 @@ from app.domain.generation.schemas.generation_request import GenerationRequestUp
 from app.domain.generation.schemas.image_generation_job import ImageGenerationJobUpdate
 from app.domain.generation.services.generation_domain_service import should_create_image_group
 from app.domain.hair_model.models.hair import HairStyle
+from app.domain.user.models.user import User
 from app.infrastructure.fcm.fcm_service import FCMService, get_fcm_service
 from app.infrastructure.repositories.generation.generation import (
     GenerationRequestRepository,
@@ -23,6 +26,7 @@ from app.infrastructure.repositories.generation.generation import (
     GeneratedImageGroupRepository, get_generation_request_repository, get_image_generation_job_repository,
     get_generated_image_repository, get_generated_image_group_repository
 )
+from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
 from app.infrastructure.s3.s3_client import S3Client, get_s3_client
 
 logger = logging.getLogger(__name__)
@@ -36,6 +40,7 @@ class MessageHandler:
             image_generation_job_repo: ImageGenerationJobRepository,
             generated_image_repo: GeneratedImageRepository,
             generated_image_group_repo: GeneratedImageGroupRepository,
+            user_repo: UserRepository,
             s3_client: S3Client,
             fcm_service: FCMService,
     ):
@@ -43,6 +48,7 @@ class MessageHandler:
         self.image_generation_job_repo = image_generation_job_repo
         self.generated_image_repo = generated_image_repo
         self.generated_image_group_repo = generated_image_group_repo
+        self.user_repo = user_repo
         self.s3_client = s3_client
         self.fcm_service = fcm_service
 
@@ -99,10 +105,15 @@ class MessageHandler:
             )
         )
 
-        print(f"generation result : {generation_request_with_relation.generation_result}")
+        user: User = self.user_repo.get(generation_request_with_relation.user_id)
 
         # FCM 알림 전송
-        # self..fcm_service.send_notification()
+        # TODO: user fcm token null 값이면 어떻게 동작하지?
+        self.fcm_service.send_to_token(
+            token=user.fcm_token,
+            title=fcm_setting.SUCCESS_TITLE,
+            body=fcm_setting.SUCCESS_BODY,
+        )
 
     def _create_generated_images(
             self,
@@ -165,6 +176,7 @@ def handle_message(body: bytes) -> None:
             image_generation_job_repo=get_image_generation_job_repository(db),
             generated_image_repo=get_generated_image_repository(db),
             generated_image_group_repo=get_generated_image_group_repository(db),
+            user_repo=get_user_repository(db),
             s3_client=get_s3_client(),
             fcm_service=get_fcm_service(),
         )
