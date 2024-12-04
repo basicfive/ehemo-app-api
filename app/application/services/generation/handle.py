@@ -18,6 +18,7 @@ from app.domain.generation.schemas.image_generation_job import ImageGenerationJo
 from app.domain.generation.services.generation_domain_service import should_create_image_group
 from app.domain.hair_model.models.hair import HairStyle
 from app.domain.user.models.user import User
+from app.infrastructure.fcm.dto.fcm_message import FCMGenerationResultData
 from app.infrastructure.fcm.fcm_service import FCMService, get_fcm_service
 from app.infrastructure.repositories.generation.generation import (
     GenerationRequestRepository,
@@ -109,10 +110,12 @@ class MessageHandler:
 
         # FCM 알림 전송
         # TODO: user fcm token null 값이면 어떻게 동작하지?
+        fcm_data = FCMGenerationResultData(generation_status=GenerationResultEnum.SUCCEED)
         self.fcm_service.send_to_token(
             token=user.fcm_token,
             title=fcm_setting.SUCCESS_TITLE,
             body=fcm_setting.SUCCESS_BODY,
+            data=fcm_data.model_dump(),
         )
 
     def _create_generated_images(

@@ -15,6 +15,7 @@ from app.domain.generation.schemas.image_generation_job import ImageGenerationJo
 from app.domain.generation.services.generation_domain_service import estimate_high_priority_message_wait_sec, calculate_retry_message_ttl_sec
 from app.domain.user.models.user import User
 from app.domain.user.schemas.user import UserUpdate
+from app.infrastructure.fcm.dto.fcm_message import FCMGenerationResultData
 from app.infrastructure.fcm.fcm_service import FCMService
 from app.infrastructure.mq.rabbit_mq_service import RabbitMQService
 from app.infrastructure.repositories.generation.generation import ImageGenerationJobRepository, \
@@ -98,10 +99,12 @@ class ImageGenerationRetryService:
         if generation_request.generation_result == GenerationResultEnum.PENDING:
 
             user: User = self.user_repo.get(generation_request.user_id)
+            fcm_data = FCMGenerationResultData(generation_status=GenerationResultEnum.FAILED)
             self.fcm_service.send_to_token(
                 token=user.fcm_token,
                 title=fcm_setting.FAILURE_TITLE,
                 body=fcm_setting.FAILURE_BODY,
+                data=fcm_data.model_dump(),
             )
 
             # 유저 토큰 반환
