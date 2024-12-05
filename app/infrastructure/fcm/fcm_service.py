@@ -6,6 +6,8 @@ import firebase_admin
 from app.core.config import oauth_setting
 from app.core.errors.exceptions import FCMException
 
+logger = logging.getLogger()
+
 class FCMService:
     _instance = None
 
@@ -37,6 +39,7 @@ class FCMService:
                 token=token,
             )
 
+            logger.info(f"sending fcm message... title: {title}, token: {token[:10]}")
             response = messaging.send(message)
             return {"success": True, "message_id": response}
         except Exception as e:
