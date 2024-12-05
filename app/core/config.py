@@ -85,6 +85,9 @@ class FCMSetting(BaseModel):
     SUCCESS_TITLE: str = "요청하신 이미지의 생성이 완료되었습니다."
     SUCCESS_BODY: str = "요청하신 이미지의 생성이 완료되었습니다."
 
+    CATEGORY: str = "GENERATION_RESULT"
+    IDENTIFIER_PREFIX: str = "request_"
+
     FAILURE_TITLE: str = "요청하신 이미지의 생성이 실패하였습니다."
     FAILURE_BODY: str = "요청하신 이미지의 생성이 실패하였습니다."
 

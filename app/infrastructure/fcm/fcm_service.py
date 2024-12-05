@@ -24,17 +24,35 @@ class FCMService:
             token: str,
             title: str,
             body: str,
+            category: Optional[str] = None,  # 카테고리(click_action/category)
+            identifier: Optional[str] = None,  # 식별자(tag/thread_id)
             data: Optional[Dict[str, str]] = None
     ) -> dict:
-        """
-        Send FCM message to a single device token
-        """
         try:
             message = messaging.Message(
                 notification=messaging.Notification(
                     title=title,
                     body=body,
                 ),
+                android=messaging.AndroidConfig(
+                    notification=messaging.AndroidNotification(
+                        click_action=category,
+                        tag=identifier
+                    ) if category or identifier else None
+                ),
+                apns=messaging.APNSConfig(
+                    headers={'apns-priority': '10'},
+                    payload=messaging.APNSPayload(
+                        aps=messaging.Aps(
+                            alert=messaging.ApsAlert(
+                                title=title,
+                                body=body,
+                            ),
+                            category=category,
+                            thread_id=identifier
+                        )
+                    )
+                ) if category or identifier else None,
                 data=data or {},
                 token=token,
             )

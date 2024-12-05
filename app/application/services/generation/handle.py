@@ -113,6 +113,8 @@ class MessageHandler:
             token=user.fcm_token,
             title=fcm_setting.SUCCESS_TITLE,
             body=fcm_setting.SUCCESS_BODY,
+            category=fcm_setting.CATEGORY,
+            identifier=fcm_setting.IDENTIFIER_PREFIX + str(generation_request_id),
             data=fcm_data.to_fcm_data(),
         )
 
