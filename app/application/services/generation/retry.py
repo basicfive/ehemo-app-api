@@ -104,7 +104,7 @@ class ImageGenerationRetryService:
                 token=user.fcm_token,
                 title=fcm_setting.FAILURE_TITLE,
                 body=fcm_setting.FAILURE_BODY,
-                data=fcm_data.model_dump(),
+                data=fcm_data.to_fcm_data(),
             )
 
             # 유저 토큰 반환

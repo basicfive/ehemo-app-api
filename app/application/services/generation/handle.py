@@ -2,8 +2,6 @@ import json
 import logging
 from typing import List
 
-from firebase_admin.auth import get_user
-
 from app.application.services.generation.dto.mq import MQConsumeMessage
 from app.core.config import aws_s3_setting, fcm_setting
 from app.core.db.base import get_db
@@ -115,7 +113,7 @@ class MessageHandler:
             token=user.fcm_token,
             title=fcm_setting.SUCCESS_TITLE,
             body=fcm_setting.SUCCESS_BODY,
-            data=fcm_data.model_dump(),
+            data=fcm_data.to_fcm_data(),
         )
 
     def _create_generated_images(
