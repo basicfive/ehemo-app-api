@@ -71,18 +71,17 @@ class UserAuthApplicationService:
     def refresh_tokens(self, refresh_token: str) -> TokenResponse:
         all_refresh_tokens = self.redis_service.get_all_refresh_tokens()
 
-        print(f"\n===== Current Active Sessions =====")
-        for token, user_id in all_refresh_tokens:
-            print(f"\nUser ID: {user_id}")
-            print(f"Refresh Token: {token}")
+        # print(f"\n===== Current Active Sessions =====")
+        # for token, user_id in all_refresh_tokens:
+        #     print(f"\nUser ID: {user_id}")
+        #     print(f"Refresh Token: {token}")
 
         user_id = self.redis_service.validate_refresh_token(refresh_token)
 
         access_token, new_refresh_token = self.auth_token_service.create_tokens(user_id)
 
-        print(f"access token: {access_token}")
-
-        print(f"\n================================")
+        # print(f"access token: {access_token}")
+        # print(f"\n================================")
 
         self.redis_service.save_refresh_token(user_id, new_refresh_token)
         self.redis_service.revoke_refresh_token(refresh_token)

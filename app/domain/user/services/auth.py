@@ -26,18 +26,15 @@ class AuthTokenService:
     @staticmethod
     def validate_access_token(token: str) -> int:
         try:
-            logger.info("Validating access token.")
             # Decode JWT
             payload: dict = jwt.decode(
                 token,
                 jwt_setting.JWT_SECRET_KEY,
                 algorithms=["HS256"]
             )
-            logger.info("Token successfully decoded. Payload: %s", payload)
 
             # Return the user ID from the token
             user_id = int(payload["sub"])
-            logger.info("Extracted user ID: %d", user_id)
             return user_id
 
         except jwt.ExpiredSignatureError:
