@@ -1,13 +1,21 @@
 from fastapi import Request
-from fastapi.responses import JSONResponse
 import logging
 
+from starlette.responses import JSONResponse
+
+from app.core.errors.error_messages import INTERNAL_SERVER_ERROR_MESSAGE
+
+logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
-async def general_exception_handler(request: Request, exc: Exception):
-    error_message = f"Unhandled error occurred: {str(exc)}"
-    logger.error(error_message, exc_info=True)
+async def handle_general_exception(request: Request, exc: Exception):
+    logger.error("Unhandled Exception Occurred", exc_info=exc)
+
     return JSONResponse(
         status_code=500,
-        content={"message", "An internal server error occurred"}
+        content={
+            "error_code": "Internal Server Error",
+            "message": INTERNAL_SERVER_ERROR_MESSAGE,
+            "context": None
+        }
     )
