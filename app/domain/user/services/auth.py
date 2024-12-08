@@ -4,7 +4,7 @@ from uuid import uuid4
 import jwt
 
 from app.core.config import jwt_setting
-from app.core.errors.http_exceptions import UnauthorizedException
+from app.core.errors.http_exceptions import AccessUnauthorizedException
 
 logger = logging.getLogger()
 
@@ -39,19 +39,19 @@ class AuthTokenService:
 
         except jwt.ExpiredSignatureError:
             logger.error("The token has expired.")
-            raise UnauthorizedException("Token has expired.")
+            raise AccessUnauthorizedException("Token has expired.")
 
         except jwt.DecodeError:
             logger.error("Failed to decode token. Token might be invalid: %s", token)
-            raise UnauthorizedException("Invalid token.")
+            raise AccessUnauthorizedException("Invalid token.")
 
         except KeyError:
             logger.error("Token payload does not contain 'sub'. Payload: %s", payload)
-            raise UnauthorizedException("Malformed token payload.")
+            raise AccessUnauthorizedException("Malformed token payload.")
 
         except jwt.InvalidTokenError as e:
             logger.error("Invalid token error: %s", str(e))
-            raise UnauthorizedException("Invalid token.")
+            raise AccessUnauthorizedException("Invalid token.")
 
 def get_auth_token_service() -> AuthTokenService:
     return AuthTokenService()

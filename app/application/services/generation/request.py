@@ -1,6 +1,8 @@
+from lib2to3.fixes.fix_input import context
 from typing import List, Optional
 from fastapi import Depends
 
+from app.core.errors.error_messages import USER_HAS_NOT_ENOUGH_TOKEN_MESSAGE, CONCURRENT_GENERATION_REQUEST_MESSAGE
 from app.domain.hair_model.models.scene import ImageResolution
 from app.application.services.generation.dto.request import CreateGenerationRequestRequest, \
     GenerationRequestResponse
@@ -8,7 +10,7 @@ from app.application.services.generation.dto.mq import MQPublishMessage
 from app.core.config import image_generation_setting, aws_s3_setting
 from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
 from app.core.errors.exceptions import NoInferenceConsumerException
-from app.core.errors.http_exceptions import UnauthorizedException, ConcurrentGenerationRequestError, \
+from app.core.errors.http_exceptions import AccessUnauthorizedException, ConcurrentGenerationRequestError, \
     UserHasNotEnoughTokenException
 from app.core.utils import generate_unique_datatime_uuid_key
 from app.domain.generation.models.generation import GenerationRequest
@@ -57,7 +59,7 @@ class RequestGenerationApplicationService:
     ):
         generation_request: GenerationRequest = self.generation_request_repo.get(generation_request_id)
         if generation_request.user_id != user_id:
-            raise UnauthorizedException()
+            raise AccessUnauthorizedException()
         self.generation_request_repo.update(
             obj_id=generation_request.id,
             obj_in=GenerationRequestUpdate(
@@ -73,7 +75,7 @@ class RequestGenerationApplicationService:
     ) -> GenerationRequestResponse:
 
         if self._is_generation_in_progress(user_id):
-            raise ConcurrentGenerationRequestError(context="Image generation already in progress.")
+            raise ConcurrentGenerationRequestError()
 
         # TODO: (urgent) id에 해당하는 user 존재하는 레코드인지 에러 처리필요
         user: User = self.user_repo.get(user_id)

@@ -5,7 +5,7 @@ from app.domain.hair_model.models.hair import HairVariantModel
 from app.application.services.generation.dto.query import GenerationRequestStatusResponse, GenerationRequestDetails, \
     GenerationRequestStatusWithDetails
 from app.core.enums.generation_status import GenerationResultEnum
-from app.core.errors.http_exceptions import UnauthorizedException
+from app.core.errors.http_exceptions import AccessUnauthorizedException
 from app.domain.generation.models.generation import GenerationRequest, ImageGenerationJob
 from app.domain.generation.services.generation_domain_service import calculate_remaining_generation_sec, \
     is_generation_in_progress
@@ -38,7 +38,7 @@ class GenerationRequestQueryService:
     def get_generation_request_status(self, generation_request_id: int, user_id: int):
         generation_request: GenerationRequest = self.generation_request_repo.get(generation_request_id)
         if generation_request.user_id != user_id:
-            raise UnauthorizedException()
+            raise AccessUnauthorizedException()
         return self._get_generation_request_status(generation_request)
 
     def _get_generation_request_status(self, generation_request: GenerationRequest):
@@ -69,7 +69,7 @@ class GenerationRequestQueryService:
         )
 
         if generation_request_with_relation.user_id != user_id:
-            raise UnauthorizedException()
+            raise AccessUnauthorizedException()
 
         return self._get_generated_request_details(generation_request_with_relation)
 
