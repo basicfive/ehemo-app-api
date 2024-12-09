@@ -35,9 +35,12 @@ class FCMService:
                     body=body,
                 ),
                 android=messaging.AndroidConfig(
+                    priority='high',
                     notification=messaging.AndroidNotification(
                         click_action=category,
-                        tag=identifier
+                        tag=identifier,
+                        priority='max',  # 추가: 알림 우선순위
+                        visibility='public'  # 추가: 잠금화면에서도 표시
                     ) if category or identifier else None
                 ),
                 apns=messaging.APNSConfig(
