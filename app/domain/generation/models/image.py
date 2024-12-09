@@ -24,3 +24,18 @@ class GeneratedImageGroup(TimeStampModel):
     generation_request_id = Column(Integer, ForeignKey("generation_request.id"), index=True)
 
 
+class ExampleGeneratedImage(TimeStampModel):
+    __tablename__ = "example_generated_image"
+    s3_key = Column(String(1024), nullable=False)
+    webui_png_info = Column(String(2048), nullable=True)
+    deleted = Column(Boolean, default=False, nullable=False)
+
+    example_generated_image_group_id = Column(Integer, ForeignKey("example_generated_image_group.id"), index=True)
+
+class ExampleGeneratedImageGroup(TimeStampModel):
+    __tablename__ = "example_generated_image_group"
+
+    title = Column(String(100), nullable=False)
+    rating = Column(Integer, default=0, nullable=False)
+    thumbnail_image_s3_key = Column(String(2048), nullable=False)
+    deleted = Column(Boolean, default=False, nullable=False)

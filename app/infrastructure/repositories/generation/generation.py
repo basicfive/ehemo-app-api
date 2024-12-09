@@ -8,12 +8,17 @@ from datetime import datetime, UTC
 from app.core.db.base import get_db
 from app.core.enums.generation_status import GenerationStatusEnum
 from app.domain.generation.models.generation import GenerationRequest, ImageGenerationJob
+from app.domain.generation.schemas.example_generated_image import ExampleGeneratedImageCreate, \
+    ExampleGeneratedImageUpdate
+from app.domain.generation.schemas.example_generated_image_group import ExampleGeneratedImageGroupCreate, \
+    ExampleGeneratedImageGroupUpdate
 from app.domain.generation.schemas.generated_image_group import GeneratedImageGroupCreate, GeneratedImageGroupUpdate
 from app.domain.hair_model.models.hair import HairVariantModel, HairStyle
 from app.infrastructure.repositories.crud_repository import CRUDRepository
 from app.domain.generation.schemas.generation_request import GenerationRequestCreate, GenerationRequestUpdate
 from app.domain.generation.schemas.image_generation_job import ImageGenerationJobCreate, ImageGenerationJobUpdate
-from app.domain.generation.models.image import GeneratedImage, GeneratedImageGroup
+from app.domain.generation.models.image import GeneratedImage, GeneratedImageGroup, ExampleGeneratedImageGroup, \
+    ExampleGeneratedImage
 from app.domain.generation.schemas.generated_image import GeneratedImageCreate, GeneratedImageUpdate
 
 
@@ -122,3 +127,27 @@ class GeneratedImageGroupRepository(CRUDRepository[GeneratedImageGroup, Generate
 
 def get_generated_image_group_repository(db: Session = Depends(get_db)) -> GeneratedImageGroupRepository:
     return GeneratedImageGroupRepository(db=db)
+
+
+class ExampleGeneratedImageGroupRepository(CRUDRepository[ExampleGeneratedImageGroup, ExampleGeneratedImageGroupCreate, ExampleGeneratedImageGroupUpdate]):
+    def __init__(self, db: Session):
+        super().__init__(model=ExampleGeneratedImageGroup, db=db)
+
+def get_example_generated_image_group_repository(db: Session = Depends(get_db)) -> ExampleGeneratedImageGroupRepository:
+    return ExampleGeneratedImageGroupRepository(db=db)
+
+
+class ExampleGeneratedImageRepository(CRUDRepository[ExampleGeneratedImage, ExampleGeneratedImageCreate, ExampleGeneratedImageUpdate]):
+    def __init__(self, db: Session):
+        super().__init__(model=ExampleGeneratedImage, db=db)
+
+    def get_by_group_id(self, group_id: int) -> List[ExampleGeneratedImage]:
+        stmt = (
+            select(ExampleGeneratedImage)
+            .where(ExampleGeneratedImage.example_generated_image_group_id == group_id)
+        )
+        return list(self.db.scalars(stmt).all())
+
+def get_example_generated_image_repository(db: Session = Depends(get_db)) -> ExampleGeneratedImageRepository:
+    return ExampleGeneratedImageRepository(db=db)
+

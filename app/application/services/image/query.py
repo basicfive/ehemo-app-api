@@ -2,7 +2,7 @@ from typing import List
 from fastapi import Depends
 
 from app.application.services.image.dto.query import GeneratedImageData, GeneratedImageGroupData
-from app.core.errors.http_exceptions import ForbiddenException
+from app.core.errors.http_exceptions import ForbiddenRequestException
 from app.domain.generation.models.generation import GenerationRequest
 from app.domain.generation.models.image import GeneratedImageGroup, GeneratedImage
 from app.domain.generation.schemas.generated_image import GeneratedImageInDB
@@ -13,7 +13,9 @@ from app.infrastructure.repositories.hair_model.hair_model import HairStyleRepos
 from app.infrastructure.s3.s3_client import S3Client, get_s3_client
 from app.infrastructure.repositories.generation.generation import GeneratedImageRepository, \
     GeneratedImageGroupRepository, get_generated_image_repository, get_generated_image_group_repository, \
-    GenerationRequestRepository, get_generation_request_repository
+    GenerationRequestRepository, get_generation_request_repository, ExampleGeneratedImageRepository, \
+    ExampleGeneratedImageGroupRepository, get_example_generated_image_repository, \
+    get_example_generated_image_group_repository
 
 
 class ImageQueryApplicationService:
@@ -21,6 +23,8 @@ class ImageQueryApplicationService:
             self,
             generated_image_repo: GeneratedImageRepository,
             generated_image_group_repo: GeneratedImageGroupRepository,
+            example_generated_image_repo: ExampleGeneratedImageRepository,
+            example_generated_image_group_repo: ExampleGeneratedImageGroupRepository,
             hair_style_repo: HairStyleRepository,
             generation_request_repo: GenerationRequestRepository,
             image_resolution_repo: ImageResolutionRepository,
@@ -28,6 +32,8 @@ class ImageQueryApplicationService:
     ):
         self.generated_image_repo = generated_image_repo
         self.generated_image_group_repo = generated_image_group_repo
+        self.example_generated_image_repo = example_generated_image_repo
+        self.example_generated_image_group_repo = example_generated_image_group_repo
         self.hair_style_repo = hair_style_repo
         self.generation_request_repo = generation_request_repo
         self.image_resolution_repo = image_resolution_repo
@@ -38,7 +44,7 @@ class ImageQueryApplicationService:
         # 검증 로직 - 해당 image group이 user의 것이 맞는가?
         db_generated_image_group: GeneratedImageGroup = self.generated_image_group_repo.get(generated_image_group_id)
         if db_generated_image_group.user_id != user_id:
-            raise ForbiddenException()
+            raise ForbiddenRequestException()
 
         db_generated_image_list: List[GeneratedImage] = self.generated_image_repo.get_all_by_generate_image_group(generated_image_group_id)
 
@@ -88,6 +94,8 @@ class ImageQueryApplicationService:
 def get_image_query_application_service(
         generated_image_repo: GeneratedImageRepository = Depends(get_generated_image_repository),
         generated_image_group_repo: GeneratedImageGroupRepository = Depends(get_generated_image_group_repository),
+        example_generated_image_repo: ExampleGeneratedImageRepository = Depends(get_example_generated_image_repository),
+        example_generated_image_group_repo: ExampleGeneratedImageGroupRepository = Depends(get_example_generated_image_group_repository),
         hair_style_repo: HairStyleRepository = Depends(get_hair_style_repository),
         generation_request_repo: GenerationRequestRepository = Depends(get_generation_request_repository),
         image_resolution_repo: ImageResolutionRepository = Depends(get_image_resolution_repository),
@@ -96,6 +104,8 @@ def get_image_query_application_service(
     return ImageQueryApplicationService(
         generated_image_repo=generated_image_repo,
         generated_image_group_repo=generated_image_group_repo,
+        example_generated_image_repo=example_generated_image_repo,
+        example_generated_image_group_repo=example_generated_image_group_repo,
         hair_style_repo=hair_style_repo,
         generation_request_repo=generation_request_repo,
         image_resolution_repo=image_resolution_repo,

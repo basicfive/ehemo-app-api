@@ -1,8 +1,8 @@
-from fastapi import HTTPException, Depends
+from fastapi import Depends
 from redis import Redis
 
 from app.core.config import jwt_setting
-from app.core.errors.http_exceptions import ForbiddenException
+from app.core.errors.http_exceptions import ForbiddenRequestException
 from app.infrastructure.auth.redis_client import get_redis_client
 
 class RedisService:
@@ -20,7 +20,7 @@ class RedisService:
     def validate_refresh_token(self, refresh_token: str) -> int:
         user_id_str: str = self._redis.get(f"refresh_token:{refresh_token}")
         if not user_id_str:
-            raise ForbiddenException("Invalid refresh token")
+            raise ForbiddenRequestException("Invalid refresh token")
         return int(user_id_str)
 
     def revoke_refresh_token(self, refresh_token: str) -> None:
