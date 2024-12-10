@@ -69,7 +69,7 @@ class ImageGenerationSetting(BaseModel):
     GENERATED_IMAGE_CNT_PER_REQUEST: int = 10
     DISTILLED_CFG_SCALE: float = 2.0
     # 이걸 고정 상수로 두는게 맞나..?
-    SINGLE_INFERENCE_SEC_EST: int = 30
+    SINGLE_INFERENCE_SEC_EST: int = 60
 
     WAIT_TIME_BUFFER_MULT: float = 1.2
     RETRY_WAIT_TIME_BUFFER_MULT: float = 1.0
