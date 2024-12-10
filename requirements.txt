@@ -18,9 +18,9 @@ cryptography>=41.0.0
 redis~=5.2.0
 google-auth
 google-auth-oauthlib
-python-multipart
+python-multipart~=0.0.18
 firebase-admin~=6.5.0
 
-starlette~=0.38.6
+starlette~=0.40.0
 aio-pika~=9.4.3
 protobuf~=5.28.3
