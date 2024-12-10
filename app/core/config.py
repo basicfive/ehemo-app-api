@@ -5,9 +5,10 @@ from dotenv import load_dotenv
 from pathlib import Path
 import logging
 
+logging.basicConfig(level=logging.INFO)
+
 load_dotenv()
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
-# logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 class BaseSetting(BaseModel):
     PROJECT_NAME: str = "ehemo-app-api"
