@@ -37,7 +37,7 @@ jobs:
      if: contains(github.ref, 'dev')
      run: |
        touch firebase-adminsdk.json
-       echo '${{ secrets.FIREBASE_SDK }}' > firebase-adminsdk.json
+       echo '${{ secrets.DEV_FIREBASE_SDK }}' > firebase-adminsdk.json
      shell: bash
 
    # Build and push Docker image
