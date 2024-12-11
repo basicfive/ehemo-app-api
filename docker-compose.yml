@@ -16,7 +16,7 @@ services:
         max-file: "3"
 
   redis:
-    container_name: ehemo-app-redis  # Redis 컨테이너 이름도 지정
+    container_name: ehemo-app-redis
     image: redis:latest
     command: redis-server --appendonly yes --appendfsync everysec
     volumes:
