@@ -99,38 +99,22 @@ jobs:
 
    - name: Deploy to Private Server
      if: contains(github.ref, 'dev')
+
      run: |
+       scp docker-compose.yml target:~/docker-compose.yml
+       
        ssh target << 'ENDSSH'
        echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
        
        # 기존 컨테이너 정리
-       docker stop ehemo-app-api || true
-       docker rm ehemo-app-api || true
+       docker-compose down || true
        docker rmi ${{ env.DOCKER_IMAGE }}:latest || true
        
-       # 새 이미지 pull
-       docker pull ${{ env.DOCKER_IMAGE }}:latest
-       
-       # 컨테이너 실행 (로그 관련 옵션 추가)
-       docker run -d \
-         --name ehemo-app-api \
-         -p 8000:8000 \
-         --log-driver json-file \
-         --log-opt max-size=10m \
-         ${{ env.DOCKER_IMAGE }}:latest
-       
-       echo "=== Initial Container Logs ==="
-       sleep 3
-       docker logs ehemo-app-api
+       # 새 이미지 pull 및 실행
+       DOCKER_IMAGE=${{ env.DOCKER_IMAGE }} docker-compose up -d
        
        echo "=== Container Status ==="
-       docker ps -a
-       
-       echo "=== Process List Inside Container ==="
-       docker exec ehemo-app-api ps aux
-       
-       echo "=== Redis Status Inside Container ==="
-       docker exec ehemo-app-api redis-cli ping
+       docker-compose ps
        ENDSSH
 
    # Remove Github runner IP from Bastion's security group

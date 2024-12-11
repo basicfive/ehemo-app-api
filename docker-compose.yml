@@ -1,0 +1,28 @@
+version: '3.8'
+services:
+  api:
+    container_name: ehemo-app-api
+    image: ${DOCKER_IMAGE:-ehemo-app-api}:latest
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    container_name: ehemo-app-redis  # Redis 컨테이너 이름도 지정
+    image: redis:latest
+    command: redis-server --appendonly yes --appendfsync everysec
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+
+volumes:
+  redis-data:
