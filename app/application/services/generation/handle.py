@@ -3,6 +3,7 @@ import logging
 from typing import List
 
 from app.application.services.generation.dto.mq import MQConsumeMessage
+from app.application.services.transactional_service import TransactionalService
 from app.core.config import aws_s3_setting, fcm_setting
 from app.core.db.base import get_db
 from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
@@ -16,6 +17,8 @@ from app.domain.generation.schemas.image_generation_job import ImageGenerationJo
 from app.domain.generation.services.generation_domain_service import should_create_image_group
 from app.domain.hair_model.models.hair import HairStyle
 from app.domain.user.models.user import User
+from app.infrastructure.database.transaction import transactional
+from app.infrastructure.database.unit_of_work import UnitOfWork, get_unit_of_work
 from app.infrastructure.fcm.dto.fcm_message import FCMGenerationResultData
 from app.infrastructure.fcm.fcm_service import FCMService, get_fcm_service
 from app.infrastructure.repositories.generation.generation import (
@@ -31,7 +34,7 @@ from app.infrastructure.s3.s3_client import S3Client, get_s3_client
 logger = logging.getLogger(__name__)
 
 
-class MessageHandler:
+class MessageHandler(TransactionalService):
     """메시지 처리를 위한 핸들러"""
     def __init__(
             self,
@@ -42,7 +45,9 @@ class MessageHandler:
             user_repo: UserRepository,
             s3_client: S3Client,
             fcm_service: FCMService,
+            unit_of_work: UnitOfWork,
     ):
+        super().__init__(unit_of_work)
         self.generation_request_repo = generation_request_repo
         self.image_generation_job_repo = image_generation_job_repo
         self.generated_image_repo = generated_image_repo
@@ -51,6 +56,7 @@ class MessageHandler:
         self.s3_client = s3_client
         self.fcm_service = fcm_service
 
+    @transactional
     def process_message(self, body: bytes) -> None:
         """메시지 처리의 메인 엔트리포인트"""
         try:
@@ -73,7 +79,7 @@ class MessageHandler:
             raise
 
     def _update_generation_job(self, message: MQConsumeMessage) -> ImageGenerationJob:
-        return self.image_generation_job_repo.update(
+        return self.image_generation_job_repo.update_with_flush(
             obj_id=message.image_generation_job_id,
             obj_in=ImageGenerationJobUpdate(
                 webui_png_info=message.webui_png_info,
@@ -122,7 +128,7 @@ class MessageHandler:
             self,
             generation_request_with_relation: GenerationRequest,
             image_generation_jobs: List[ImageGenerationJob],
-    ) -> List[GeneratedImage]:
+    ):
         """생성된 이미지 처리 및 저장"""
 
         # 썸네일 이미지 생성 및 업로드
@@ -130,7 +136,7 @@ class MessageHandler:
         hair_style: HairStyle = generation_request_with_relation.hair_variant_model.hair_style
 
         # 이미지 그룹 생성
-        image_group = self.generated_image_group_repo.create(
+        image_group = self.generated_image_group_repo.create_with_flush(
             obj_in=GeneratedImageGroupCreate(
                 user_id=generation_request_with_relation.user_id,
                 generation_request_id=generation_request_with_relation.id,
@@ -140,7 +146,7 @@ class MessageHandler:
         )
 
         # 개별 이미지 생성
-        return [
+        for job in image_generation_jobs:
             self.generated_image_repo.create(
                 obj_in=GeneratedImageCreate(
                     user_id=generation_request_with_relation.user_id,
@@ -150,8 +156,6 @@ class MessageHandler:
                     image_generation_job_id=job.id
                 )
             )
-            for job in image_generation_jobs
-        ]
 
     def _create_thumbnail(self, jobs: List[ImageGenerationJob]) -> str:
         """썸네일 이미지 생성"""
@@ -182,6 +186,7 @@ def handle_message(body: bytes) -> None:
             user_repo=get_user_repository(db),
             s3_client=get_s3_client(),
             fcm_service=get_fcm_service(),
+            unit_of_work=get_unit_of_work(db),
         )
         message_handler.process_message(body)
     finally:

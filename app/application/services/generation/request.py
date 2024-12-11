@@ -1,8 +1,7 @@
-from lib2to3.fixes.fix_input import context
 from typing import List, Optional
 from fastapi import Depends
 
-from app.core.errors.error_messages import USER_HAS_NOT_ENOUGH_TOKEN_MESSAGE, CONCURRENT_GENERATION_REQUEST_MESSAGE
+from app.application.services.transactional_service import TransactionalService
 from app.domain.hair_model.models.scene import ImageResolution
 from app.application.services.generation.dto.request import CreateGenerationRequestRequest, \
     GenerationRequestResponse
@@ -23,6 +22,8 @@ from app.domain.hair_model.models.hair import HairVariantModel, Length, Specific
 from app.domain.hair_model.services.hair_model_prompt import create_prompts
 from app.domain.user.models.user import User
 from app.domain.user.schemas.user import UserUpdate
+from app.infrastructure.database.transaction import transactional
+from app.infrastructure.database.unit_of_work import UnitOfWork, get_unit_of_work
 from app.infrastructure.mq.rabbit_mq_service import RabbitMQService, get_rabbit_mq_service
 from app.infrastructure.repositories.generation.generation import GenerationRequestRepository, \
     ImageGenerationJobRepository, get_generation_request_repository, get_image_generation_job_repository
@@ -33,7 +34,7 @@ from app.infrastructure.repositories.user.user import UserRepository, get_user_r
 from datetime import datetime, UTC, timedelta
 
 # TODO: DB 접근마다 에러처리 / TRANSACTION
-class RequestGenerationApplicationService:
+class RequestGenerationApplicationService(TransactionalService):
     def __init__(
             self,
             user_repo: UserRepository,
@@ -42,8 +43,11 @@ class RequestGenerationApplicationService:
             hair_variant_model_repo: HairVariantModelRepository,
             generation_request_repo: GenerationRequestRepository,
             image_generation_job_repo: ImageGenerationJobRepository,
-            rabbit_mq_service: RabbitMQService
+            rabbit_mq_service: RabbitMQService,
+            unit_of_work: UnitOfWork,
+
     ):
+        super().__init__(unit_of_work)
         self.user_repo = user_repo
         self.specific_color_repo = specific_color_repo
         self.posture_and_clothing_repo = posture_and_clothing_repo
@@ -52,6 +56,7 @@ class RequestGenerationApplicationService:
         self.image_generation_job_repo = image_generation_job_repo
         self.rabbit_mq_service = rabbit_mq_service
 
+    @transactional
     def cancel_generation(
             self,
             generation_request_id: int,
@@ -68,6 +73,7 @@ class RequestGenerationApplicationService:
         )
 
     # TODO: 1회 메서드 실행 시 db 9 + 10 회 (10번은 job create x 10)
+    @transactional
     async def request_generation(
             self,
             request: CreateGenerationRequestRequest,
@@ -103,7 +109,7 @@ class RequestGenerationApplicationService:
                 color_id=request.color_id,
             )
         )
-        return self.generation_request_repo.create(
+        return self.generation_request_repo.create_with_flush(
             obj_in=GenerationRequestCreate(
                 user_id=user_id,
                 hair_variant_model_id=hair_variant_model.id,
@@ -202,7 +208,7 @@ class RequestGenerationApplicationService:
     ) -> ImageGenerationJobInDB:
         s3_key = generate_unique_datatime_uuid_key(prefix=aws_s3_setting.GENERATED_IMAGE_S3KEY_PREFIX)
         return ImageGenerationJobInDB.model_validate(
-            self.image_generation_job_repo.create(
+            self.image_generation_job_repo.create_with_flush(
                 obj_in=ImageGenerationJobCreate(
                     retry_count=0,
                     expires_at=datetime.now(UTC) + timedelta(seconds=time_to_live_sec),
@@ -239,7 +245,8 @@ def get_request_generation_application_service(
         hair_variant_model_repo: HairVariantModelRepository = Depends(get_hair_variant_model_repository),
         generation_request_repo: GenerationRequestRepository = Depends(get_generation_request_repository),
         image_generation_job_repo: ImageGenerationJobRepository = Depends(get_image_generation_job_repository),
-        rabbit_mq_service: RabbitMQService = Depends(get_rabbit_mq_service)
+        rabbit_mq_service: RabbitMQService = Depends(get_rabbit_mq_service),
+        unit_of_work: UnitOfWork = Depends(get_unit_of_work),
 ) -> RequestGenerationApplicationService:
     return RequestGenerationApplicationService(
         user_repo=user_repo,
@@ -248,6 +255,7 @@ def get_request_generation_application_service(
         hair_variant_model_repo=hair_variant_model_repo,
         generation_request_repo=generation_request_repo,
         image_generation_job_repo=image_generation_job_repo,
-        rabbit_mq_service=rabbit_mq_service
+        rabbit_mq_service=rabbit_mq_service,
+        unit_of_work=unit_of_work
     )
 

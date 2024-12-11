@@ -45,8 +45,11 @@ class CRUDRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         obj_in_data = obj_in.model_dump()
         db_obj = self.model(**obj_in_data)
         self.db.add(db_obj)
-        self.db.commit()
-        self.db.refresh(db_obj)
+        return db_obj
+
+    def create_with_flush(self, *, obj_in: CreateSchemaType) -> ModelType:
+        db_obj = self.create(obj_in=obj_in)
+        self.db.flush()
         return db_obj
 
     def update(
@@ -63,12 +66,24 @@ class CRUDRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             setattr(db_obj, field, update_data[field])
 
         self.db.add(db_obj)
-        self.db.commit()
-        self.db.refresh(db_obj)
+        return db_obj
+
+    def update_with_flush(
+            self,
+            *,
+            obj_id: int,
+            obj_in: Union[UpdateSchemaType, Dict[str, any]],
+    ) -> ModelType:
+        db_obj = self.update(obj_id=obj_id, obj_in=obj_in)
+        self.db.flush()
         return db_obj
 
     def remove(self, *, obj_id: int) -> ModelType:
         db_obj = self.get(obj_id=obj_id)
         self.db.delete(db_obj)
-        self.db.commit()
+        return db_obj
+
+    def remove_with_flush(self, *, obj_id: int) -> ModelType:
+        db_obj = self.remove(obj_id=obj_id)
+        self.db.flush()
         return db_obj

@@ -5,6 +5,7 @@ from typing import List
 from sqlalchemy.orm import Session
 
 from app.application.services.generation.dto.mq import MQPublishMessage
+from app.application.services.transactional_service import TransactionalService
 from app.core.db.base import get_db
 from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
 from app.core.enums.message_priority import MessagePriority
@@ -15,6 +16,8 @@ from app.domain.generation.schemas.image_generation_job import ImageGenerationJo
 from app.domain.generation.services.generation_domain_service import estimate_high_priority_message_wait_sec, calculate_retry_message_ttl_sec
 from app.domain.user.models.user import User
 from app.domain.user.schemas.user import UserUpdate
+from app.infrastructure.database.transaction import transactional
+from app.infrastructure.database.unit_of_work import UnitOfWork
 from app.infrastructure.fcm.dto.fcm_message import FCMGenerationResultData
 from app.infrastructure.fcm.fcm_service import FCMService
 from app.infrastructure.mq.rabbit_mq_service import RabbitMQService
@@ -25,21 +28,24 @@ from app.infrastructure.repositories.user.user import UserRepository, get_user_r
 
 logger = logging.getLogger()
 
-class ImageGenerationRetryService:
+class ImageGenerationRetryService(TransactionalService):
     def __init__(
             self,
             image_generation_job_repo: ImageGenerationJobRepository,
             generation_request_repo: GenerationRequestRepository,
             user_repo: UserRepository,
             rabbit_mq_service: RabbitMQService,
-            fcm_service: FCMService
+            fcm_service: FCMService,
+            unit_of_work: UnitOfWork,
     ):
+        super().__init__(unit_of_work)
         self.image_generation_job_repo = image_generation_job_repo
         self.generation_request_repo = generation_request_repo
         self.user_repo = user_repo
         self.rabbit_mq_service = rabbit_mq_service
         self.fcm_service = fcm_service
 
+    @transactional
     async def retry_expired_jobs(self):
         expired_jobs: List[ImageGenerationJob] = self.image_generation_job_repo.get_all_expired_but_to_process_jobs()
 
@@ -59,7 +65,7 @@ class ImageGenerationRetryService:
         for expired_job in expired_jobs:
             # [FAILED 처리]
             if expired_job.retry_count >= image_generation_setting.MAX_RETRIES:
-                self._check_request_failed_and_notify_fcm(expired_job)
+                self._mark_request_failed_and_notify_fcm(expired_job)
                 continue
 
             current_message_expire_at += calculate_retry_message_ttl_sec()
@@ -68,17 +74,17 @@ class ImageGenerationRetryService:
             print(f"current time : {datetime.now(UTC)}")
 
             # 재요청 - mq 높은 우선순위
-            self.image_generation_job_repo.update(
+            db_retry_job = self.image_generation_job_repo.update_with_flush(
                 obj_id=expired_job.id,
                 obj_in=ImageGenerationJobUpdate(
                     retry_count=expired_job.retry_count + 1,
                     expires_at=datetime.now(UTC) + timedelta(seconds=current_message_expire_at)
                 )
             )
-            image_generation_job = ImageGenerationJobInDB.model_validate(expired_job)
+            retry_job = ImageGenerationJobInDB.model_validate(db_retry_job)
             message = MQPublishMessage(
-                **image_generation_job.model_dump(),
-                image_generation_job_id=expired_job.id,
+                **retry_job.model_dump(),
+                image_generation_job_id=retry_job.id,
             )
 
             await self.rabbit_mq_service.publish(
@@ -87,7 +93,7 @@ class ImageGenerationRetryService:
                 priority=MessagePriority.URGENT
             )
 
-    def _check_request_failed_and_notify_fcm(self, expired_job: ImageGenerationJob):
+    def _mark_request_failed_and_notify_fcm(self, expired_job: ImageGenerationJob):
         self.image_generation_job_repo.update(
             obj_id=expired_job.id,
             obj_in=ImageGenerationJobUpdate(status=GenerationStatusEnum.FAILED)
@@ -126,6 +132,7 @@ async def retry_expired_jobs(
             user_repo=get_user_repository(db),
             rabbit_mq_service=rabbit_mq_service,
             fcm_service=FCMService(),
+            unit_of_work=UnitOfWork(db),
         )
         await service.retry_expired_jobs()
     finally:

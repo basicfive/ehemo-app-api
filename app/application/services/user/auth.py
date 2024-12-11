@@ -1,6 +1,7 @@
 from fastapi import Depends
 from sqlalchemy.exc import NoResultFound
 
+from app.application.services.transactional_service import TransactionalService
 from app.application.services.user.dto.auth import UserInfo, TokenResponse
 from app.domain.user.schemas.user import UserCreate
 from app.domain.user.services.auth import AuthTokenService, get_auth_token_service
@@ -10,22 +11,27 @@ from app.infrastructure.auth.social_client.google_auth_client import get_google_
 from app.infrastructure.auth.redis_service import RedisService, get_redis_service
 from app.infrastructure.auth.social_client.kakao_auth_client import get_kakao_auth_client
 from app.infrastructure.auth.social_client.social_auth_client import SocialAuthClient
+from app.infrastructure.database.transaction import transactional
+from app.infrastructure.database.unit_of_work import UnitOfWork, get_unit_of_work
 from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
 from app.domain.user.models.user import User
 
-class UserAuthApplicationService:
+class UserAuthApplicationService(TransactionalService):
     def __init__(
             self,
             user_repo: UserRepository,
             redis_service: RedisService,
             auth_token_service: AuthTokenService,
-            social_auth_client: SocialAuthClient
+            social_auth_client: SocialAuthClient,
+            unit_of_work: UnitOfWork,
     ):
+        super().__init__(unit_of_work)
         self.user_repo = user_repo
         self.redis_service = redis_service
         self.auth_token_service = auth_token_service
         self.social_auth_client = social_auth_client
 
+    @transactional
     def mobile_login(self, id_token: str) -> TokenResponse:
         auth_info: AuthInfo = self.social_auth_client.verify_mobile_token(id_token)
 
@@ -48,6 +54,7 @@ class UserAuthApplicationService:
     def get_web_login_url(self) -> str:
         return self.social_auth_client.get_authorization_url()
 
+    @transactional
     def web_auth_callback(self, code: str) -> TokenResponse:
         auth_info: AuthInfo = self.social_auth_client.verify_web_token(code)
 
@@ -69,8 +76,7 @@ class UserAuthApplicationService:
     # FIXME: Atomic 하지 않음. 같은 user 의 동시 요청 시, redis 에 같은 user_id 의 여러 refresh token 이 저장됨.
     # 우선 앱 쪽에서 같은 user 의 refresh token 요청은 동기적으로 처리하는 것으로 해결, 추후 하단 코드 개선.
     def refresh_tokens(self, refresh_token: str) -> TokenResponse:
-        all_refresh_tokens = self.redis_service.get_all_refresh_tokens()
-
+        # all_refresh_tokens = self.redis_service.get_all_refresh_tokens()
         # print(f"\n===== Current Active Sessions =====")
         # for token, user_id in all_refresh_tokens:
         #     print(f"\nUser ID: {user_id}")
@@ -97,7 +103,7 @@ class UserAuthApplicationService:
             db_user: User = self.user_repo.get_by_social_account(provider=user_info.provider, social_id=user_info.social_id)
             return db_user
         except NoResultFound:
-            db_user = self.user_repo.create(obj_in=UserCreate(**user_info.model_dump()))
+            db_user = self.user_repo.create_with_flush(obj_in=UserCreate(**user_info.model_dump()))
             return db_user
 
 
@@ -105,39 +111,45 @@ def get_google_user_auth_application_service(
         user_repo: UserRepository = Depends(get_user_repository),
         redis_service: RedisService = Depends(get_redis_service),
         auth_token_service: AuthTokenService = Depends(get_auth_token_service),
-        social_auth_client: SocialAuthClient = Depends(get_google_auth_client)
+        social_auth_client: SocialAuthClient = Depends(get_google_auth_client),
+        unit_of_work: UnitOfWork = Depends(get_unit_of_work),
 ) -> UserAuthApplicationService:
     return UserAuthApplicationService(
         user_repo=user_repo,
         redis_service=redis_service,
         auth_token_service=auth_token_service,
-        social_auth_client=social_auth_client
+        social_auth_client=social_auth_client,
+        unit_of_work=unit_of_work,
     )
 
 def get_kakao_user_auth_application_service(
         user_repo: UserRepository = Depends(get_user_repository),
         redis_service: RedisService = Depends(get_redis_service),
         auth_token_service: AuthTokenService = Depends(get_auth_token_service),
-        social_auth_client: SocialAuthClient = Depends(get_kakao_auth_client)
+        social_auth_client: SocialAuthClient = Depends(get_kakao_auth_client),
+        unit_of_work: UnitOfWork = Depends(get_unit_of_work),
 ) -> UserAuthApplicationService:
     return UserAuthApplicationService(
         user_repo=user_repo,
         redis_service=redis_service,
         auth_token_service=auth_token_service,
-        social_auth_client=social_auth_client
+        social_auth_client=social_auth_client,
+        unit_of_work = unit_of_work,
     )
 
 def get_apple_user_auth_application_service(
         user_repo: UserRepository = Depends(get_user_repository),
         redis_service: RedisService = Depends(get_redis_service),
         auth_token_service: AuthTokenService = Depends(get_auth_token_service),
-        social_auth_client: SocialAuthClient = Depends(get_apple_auth_client)
+        social_auth_client: SocialAuthClient = Depends(get_apple_auth_client),
+        unit_of_work: UnitOfWork = Depends(get_unit_of_work),
 ) -> UserAuthApplicationService:
     return UserAuthApplicationService(
         user_repo=user_repo,
         redis_service=redis_service,
         auth_token_service=auth_token_service,
-        social_auth_client=social_auth_client
+        social_auth_client=social_auth_client,
+        unit_of_work=unit_of_work,
     )
 
 
