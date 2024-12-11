@@ -83,14 +83,14 @@ class UserSetting(BaseModel):
     FREE_TRIAL_TOKEN: int = 1
 
 class FCMSetting(BaseModel):
-    SUCCESS_TITLE: str = "요청하신 이미지의 생성이 완료되었습니다."
-    SUCCESS_BODY: str = "요청하신 이미지의 생성이 완료되었습니다."
+    SUCCESS_TITLE: str = "AI 모델 이미지 생성이 완료되었어요"
+    SUCCESS_BODY: str = "생성된 이미지를 확인해보세요"
 
     CATEGORY: str = "GENERATION_RESULT"
     IDENTIFIER_PREFIX: str = "request_"
 
-    FAILURE_TITLE: str = "요청하신 이미지의 생성이 실패하였습니다."
-    FAILURE_BODY: str = "요청하신 이미지의 생성이 실패하였습니다."
+    FAILURE_TITLE: str = "AI 모델 이미지 생성에 실패했어요"
+    FAILURE_BODY: str = "토큰은 반환되었으니, 잠시 후에 다시 시도해주세요"
 
 
 base_settings = BaseSetting()
