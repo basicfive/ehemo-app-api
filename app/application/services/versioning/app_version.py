@@ -1,6 +1,6 @@
 from fastapi import Depends
 
-from app.application.services.versioning.dto.app_version import CheckVersionRequest, CheckVersionResponse
+from app.application.services.versioning.dto.app_version import CheckVersionResponse
 from app.domain.versioning.models.app_version import AppVersion
 from app.domain.versioning.models.enums.app_version import PlatformEnum
 from app.domain.versioning.services.app_version import suggests_update, requires_update
