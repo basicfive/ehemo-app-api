@@ -1,0 +1,219 @@
+name: Deploy fastapi server as docker image on private ec2 instance
+
+on:
+  push:
+    branches: [ "dev", "prod" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    # 환경 설정: 파일 생성 및 환경 변수 설정
+    - name: Configure Environment
+      run: |
+        # SSH 키 저장을 위한 디렉토리 생성
+        mkdir -p $HOME/.ssh
+        
+        # 브랜치별 환경 설정
+        if [[ ${{ github.ref }} == 'refs/heads/prod' ]]; then
+          # 설정 파일 생성
+          echo '${{ secrets.PROD_DOTENV }}' > .env
+          echo '${{ secrets.PROD_FIREBASE_SDK }}' > firebase-adminsdk.json
+          
+          # 환경 변수 설정
+          {
+            echo "DOCKER_IMAGE=ghcr.io/${{ github.actor }}/ehemo-app-api/prod"
+            echo "GITHUB_TOKEN=${{ secrets.GHCR_TOKEN }}"
+            echo "AWS_REGION=${{ secrets.PROD_AWS_REGION }}"
+            echo "AWS_ACCESS_KEY=${{ secrets.PROD_AWS_ACCESS_KEY }}"
+            echo "AWS_SECRET_KEY=${{ secrets.PROD_AWS_SECRET_KEY }}"
+            echo "AWS_BASTION_SG_ID=${{ secrets.PROD_AWS_BASTION_SG_ID }}"
+            echo "BASTION_HOST=${{ secrets.PROD_BASTION_HOST }}"
+            echo "BASTION_USER=${{ secrets.PROD_BASTION_USER }}"
+            echo "TARGET_PRIVATE_IP=${{ secrets.PROD_TARGET_PRIVATE_IP }}"
+            echo "TARGET_USER=${{ secrets.PROD_TARGET_USER }}"
+          } >> $GITHUB_ENV
+          
+          # SSH 키 파일 생성
+          echo '${{ secrets.PROD_BASTION_SSH_KEY }}' > $HOME/.ssh/bastion_key
+          echo '${{ secrets.PROD_TARGET_SSH_KEY }}' > $HOME/.ssh/target_key
+        
+        else
+          # 설정 파일 생성
+          echo '${{ secrets.DEV_DOTENV }}' > .env
+          echo '${{ secrets.DEV_FIREBASE_SDK }}' > firebase-adminsdk.json
+          
+          # 환경 변수 설정
+          {
+            echo "DOCKER_IMAGE=ghcr.io/${{ github.actor }}/ehemo-app-api/dev"
+            echo "GITHUB_TOKEN=${{ secrets.GHCR_TOKEN }}"
+            echo "AWS_REGION=${{ secrets.DEV_AWS_REGION }}"
+            echo "AWS_ACCESS_KEY=${{ secrets.DEV_AWS_ACCESS_KEY }}"
+            echo "AWS_SECRET_KEY=${{ secrets.DEV_AWS_SECRET_KEY }}"
+            echo "AWS_BASTION_SG_ID=${{ secrets.DEV_AWS_BASTION_SG_ID }}"
+            echo "BASTION_HOST=${{ secrets.DEV_BASTION_HOST }}"
+            echo "BASTION_USER=${{ secrets.DEV_BASTION_USER }}"
+            echo "TARGET_PRIVATE_IP=${{ secrets.DEV_TARGET_PRIVATE_IP }}"
+            echo "TARGET_USER=${{ secrets.DEV_TARGET_USER }}"
+          } >> $GITHUB_ENV
+          
+          # SSH 키 파일 생성
+          echo '${{ secrets.DEV_BASTION_SSH_KEY }}' > $HOME/.ssh/bastion_key
+          echo '${{ secrets.DEV_TARGET_SSH_KEY }}' > $HOME/.ssh/target_key
+        fi
+        
+        # SSH 키 파일 권한 설정
+        chmod 400 $HOME/.ssh/bastion_key $HOME/.ssh/target_key
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ env.GITHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: |
+          ${{ env.DOCKER_IMAGE }}:latest
+          ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+
+    - name: Image digest
+      run: echo ${{ steps.docker_build.outputs.digest }}
+
+    - name: Get Github action IP
+      run: echo "IP=$(curl -s ifconfig.me)" >> $GITHUB_ENV
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ env.AWS_ACCESS_KEY }}
+        aws-secret-access-key: ${{ env.AWS_SECRET_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Add IP to bastion security group
+      run: |
+        if ! aws ec2 authorize-security-group-ingress --group-id ${{ env.AWS_BASTION_SG_ID }} --protocol tcp --port 22 --cidr ${{ env.IP }}/32; then
+          echo "Failed to add IP to security group"
+          exit 1
+        fi
+
+    - name: Setup SSH Config
+      run: |
+        cat >> $HOME/.ssh/config << EOF
+        Host bastion
+            HostName ${{ env.BASTION_HOST }}
+            User ${{ env.BASTION_USER }}
+            IdentityFile $HOME/.ssh/bastion_key
+            StrictHostKeyChecking no
+            
+        Host target
+            HostName ${{ env.TARGET_PRIVATE_IP }}
+            User ${{ env.TARGET_USER }}
+            IdentityFile $HOME/.ssh/target_key
+            ProxyCommand ssh -W %h:%p bastion
+            StrictHostKeyChecking no
+        EOF
+
+    - name: Deploy to Private Server
+      run: |
+        # 배포 시작을 로깅
+        echo "Starting deployment process..."
+        
+        # docker-compose.yml 파일을 서버로 전송
+        if ! scp docker-compose.yml target:~/docker-compose.yml; then
+          echo "Failed to transfer docker-compose.yml"
+          exit 1
+        fi
+
+        ssh target << 'ENDSSH'
+        # 컨테이너 상태 확인
+        echo "=== Current Container Status ==="
+        docker ps -a
+        
+        # 이전 이미지 태그 저장 (롤백용)
+        PREVIOUS_IMAGE=$(docker inspect ehemo-app-api --format='{{.Config.Image}}' 2>/dev/null || echo "")
+        echo "Previous image: $PREVIOUS_IMAGE"
+        
+        # 새 이미지 풀
+        echo "Pulling new image..."
+        if ! docker pull ${{ env.DOCKER_IMAGE }}:latest; then
+          echo "Failed to pull new image"
+          exit 1
+        fi
+        
+        # 기존 컨테이너 정리
+        echo "Cleaning up existing containers..."
+        docker rm -f ehemo-app-api ehemo-app-redis || true
+        docker-compose down || true
+        
+        # GitHub 컨테이너 레지스트리 로그인
+        echo "Logging into GitHub Container Registry..."
+        if ! echo "${{ env.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin; then
+          echo "Failed to login to GitHub Container Registry"
+          exit 1
+        fi
+        
+        # 새 컨테이너 시작
+        echo "Starting new containers..."
+        if ! DOCKER_IMAGE=${{ env.DOCKER_IMAGE }} docker-compose up -d; then
+          echo "Failed to start new containers. Rolling back..."
+          if [ ! -z "$PREVIOUS_IMAGE" ]; then
+            docker tag $PREVIOUS_IMAGE ${{ env.DOCKER_IMAGE }}:latest
+            DOCKER_IMAGE=${{ env.DOCKER_IMAGE }} docker-compose up -d
+          fi
+          exit 1
+        fi
+        
+        echo "=== Final Container Status ==="
+        docker-compose ps
+        
+        # 컨테이너 실행 확인
+        if ! docker ps | grep -q "ehemo-app-api"; then
+          echo "Failed to start containers"
+          if [ ! -z "$PREVIOUS_IMAGE" ]; then
+            echo "Rolling back to previous version..."
+            docker tag $PREVIOUS_IMAGE ${{ env.DOCKER_IMAGE }}:latest
+            DOCKER_IMAGE=${{ env.DOCKER_IMAGE }} docker-compose up -d
+          fi
+          exit 1
+        fi
+        ENDSSH
+
+    - name: Remove IP from bastion security group
+      if: always()
+      run: |
+        if ! aws ec2 revoke-security-group-ingress --group-id ${{ env.AWS_BASTION_SG_ID }} --protocol tcp --port 22 --cidr ${{ env.IP }}/32; then
+          echo "Failed to remove IP from security group"
+          exit 1
+        fi
+
+    # 정리 단계: 파일 삭제 및 환경 변수 해제
+    - name: Cleanup
+      if: always()
+      run: |
+        # 생성한 파일들 삭제
+        rm -f .env firebase-adminsdk.json
+        rm -f $HOME/.ssh/bastion_key $HOME/.ssh/target_key
+        
+        # 환경 변수 해제
+        unset DOCKER_IMAGE
+        unset GITHUB_TOKEN
+        unset AWS_REGION
+        unset AWS_ACCESS_KEY
+        unset AWS_SECRET_KEY
+        unset AWS_BASTION_SG_ID
+        unset BASTION_HOST
+        unset BASTION_USER
+        unset TARGET_PRIVATE_IP
+        unset TARGET_USER
+        unset IP
