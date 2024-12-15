@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, status
 
-from app.application.services.user.auth import validate_user_token
 from app.application.services.versioning.app_version import AppVersionQueryApplicationService, \
     get_app_version_query_application_service
 from app.application.services.versioning.dto.app_version import CheckVersionResponse
@@ -14,7 +13,6 @@ router = APIRouter()
 def check_version(
         current_version: str,
         platform: PlatformEnum,
-        _: int = Depends(validate_user_token),
         service: AppVersionQueryApplicationService = Depends(get_app_version_query_application_service),
 ) -> CheckVersionResponse:
     return service.check_version(current_version, platform)
