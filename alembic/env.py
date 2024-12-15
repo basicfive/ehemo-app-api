@@ -6,12 +6,7 @@ from sqlalchemy import pool
 from alembic import context
 
 from app.core.db.base import Base
-from app.domain.generation.models.generation import *
-from app.domain.generation.models.image import *
-from app.domain.hair_model.models.hair import *
-from app.domain.hair_model.models.scene import *
-from app.domain.hair_model.models.model_thumbnail import *
-from app.domain.user.models.user import *
+from app.domain import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -22,7 +17,13 @@ import os
 load_dotenv()
 
 # alembic.ini의 sqlalchemy.url 값을 .env에서 가져온 값으로 덮어쓰기
-config.set_main_option('sqlalchemy.url', os.getenv('DATABASE_URL'))
+ENV = os.getenv('ENV', 'dev')
+
+# 환경별 DATABASE_URL 설정
+if ENV == 'prod':
+    config.set_main_option('sqlalchemy.url', os.getenv('PROD_DATABASE_URL'))
+else:
+    config.set_main_option('sqlalchemy.url', os.getenv('DEV_DATABASE_URL'))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
