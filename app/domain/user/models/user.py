@@ -11,7 +11,7 @@ class User(TimeStampModel):
     uuid = Column(UUID(as_uuid=True), default=uuid.uuid4, unique=True, nullable=False)
     fcm_token = Column(String(255), nullable=True)
 
-    token = Column(Integer, default=15, nullable=False)
+    token = Column(Integer, default=15, nullable=True)
     email = Column(String(320), nullable=False)
     provider = Column(String(20), nullable=False)
     social_id = Column(String(255), nullable=False)
