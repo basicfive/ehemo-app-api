@@ -20,8 +20,9 @@ from app.domain.generation.services.generation_domain_service import estimate_no
     calculate_normal_message_ttl_sec, is_generation_in_progress
 from app.domain.hair_model.models.hair import HairVariantModel, Length, SpecificColor
 from app.domain.hair_model.services.hair_model_prompt import create_prompts
+from app.domain.subscription.models.subscription import Subscription
+from app.domain.subscription.schemas.subscription import SubscriptionUpdate
 from app.domain.user.models.user import User
-from app.domain.user.schemas.user import UserUpdate
 from app.infrastructure.database.transaction import transactional
 from app.infrastructure.database.unit_of_work import UnitOfWork, get_unit_of_work
 from app.infrastructure.mq.rabbit_mq_service import RabbitMQService, get_rabbit_mq_service
@@ -30,6 +31,8 @@ from app.infrastructure.repositories.generation.generation import GenerationRequ
 from app.infrastructure.repositories.hair_model.hair_model import HairVariantModelRepository, \
     PostureAndClothingRepository, SpecificColorRepository, get_specific_color_repository, \
     get_posture_and_clothing_repository, get_hair_variant_model_repository
+from app.infrastructure.repositories.subscription.subscription import SubscriptionRepository, \
+    get_subscription_repository
 from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
 from datetime import datetime, UTC, timedelta
 
@@ -38,6 +41,7 @@ class RequestGenerationApplicationService(TransactionalService):
     def __init__(
             self,
             user_repo: UserRepository,
+            subscription_repo: SubscriptionRepository,
             specific_color_repo: SpecificColorRepository,
             posture_and_clothing_repo: PostureAndClothingRepository,
             hair_variant_model_repo: HairVariantModelRepository,
@@ -49,6 +53,7 @@ class RequestGenerationApplicationService(TransactionalService):
     ):
         super().__init__(unit_of_work)
         self.user_repo = user_repo
+        self.subscription_repo = subscription_repo
         self.specific_color_repo = specific_color_repo
         self.posture_and_clothing_repo = posture_and_clothing_repo
         self.hair_variant_model_repo = hair_variant_model_repo
@@ -84,12 +89,14 @@ class RequestGenerationApplicationService(TransactionalService):
             raise ConcurrentGenerationRequestError()
 
         # TODO: (urgent) id에 해당하는 user 존재하는 레코드인지 에러 처리필요
-        user: User = self.user_repo.get(user_id)
-        if not user.has_enough_token():
+        user_with_sub: User = self.user_repo.get_with_subscription(user_id)
+        subscription: Subscription = user_with_sub.subscription
+
+        if not subscription.has_available_token():
             raise UserHasNotEnoughTokenException()
 
         generation_request: GenerationRequest = self._create_generation_request(request, user_id)
-        return await self._start_generation(generation_request.id, user)
+        return await self._start_generation(generation_request.id, subscription)
 
     def _is_generation_in_progress(self, user_id: int) -> bool:
         latest_generation_request: Optional[GenerationRequest] = (
@@ -122,7 +129,7 @@ class RequestGenerationApplicationService(TransactionalService):
     async def _start_generation(
             self,
             generation_request_id: int,
-            user: User,
+            subscription: Subscription,
     ) -> GenerationRequestResponse:
         """
         1. Prompt 를 n개 생성한다.
@@ -160,8 +167,8 @@ class RequestGenerationApplicationService(TransactionalService):
             # MQ 요청 보내기
             await self._publish_job_as_mq_message(image_generation_job, message_time_to_live_sec)
 
-        # 사용자 토큰 감소
-        self.user_repo.update(obj_id=user.id, obj_in=UserUpdate(token=user.token - 1))
+        # 구독권 토큰 감소
+        self.subscription_repo.update(obj_id=subscription.id, obj_in=SubscriptionUpdate(token=subscription.token - 1))
 
         message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
         return GenerationRequestResponse(
@@ -240,6 +247,7 @@ class RequestGenerationApplicationService(TransactionalService):
 
 def get_request_generation_application_service(
         user_repo: UserRepository = Depends(get_user_repository),
+        subscription_repo: SubscriptionRepository = Depends(get_subscription_repository),
         specific_color_repo: SpecificColorRepository = Depends(get_specific_color_repository),
         posture_and_clothing_repo: PostureAndClothingRepository = Depends(get_posture_and_clothing_repository),
         hair_variant_model_repo: HairVariantModelRepository = Depends(get_hair_variant_model_repository),
@@ -250,12 +258,13 @@ def get_request_generation_application_service(
 ) -> RequestGenerationApplicationService:
     return RequestGenerationApplicationService(
         user_repo=user_repo,
+        subscription_repo=subscription_repo,
         specific_color_repo=specific_color_repo,
         posture_and_clothing_repo=posture_and_clothing_repo,
         hair_variant_model_repo=hair_variant_model_repo,
         generation_request_repo=generation_request_repo,
         image_generation_job_repo=image_generation_job_repo,
         rabbit_mq_service=rabbit_mq_service,
-        unit_of_work=unit_of_work
+        unit_of_work=unit_of_work,
     )
 

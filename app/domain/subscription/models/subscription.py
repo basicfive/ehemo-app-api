@@ -24,3 +24,5 @@ class Subscription(TimeStampModel):
 
     user = relationship("User", back_populates="subscription")
 
+    def has_available_token(self) -> bool:
+        return self.token > 0

@@ -7,15 +7,13 @@ from app.application.services.generation.dto.query import GenerationRequestStatu
 from app.core.enums.generation_status import GenerationResultEnum
 from app.core.errors.http_exceptions import AccessUnauthorizedException
 from app.domain.generation.models.generation import GenerationRequest, ImageGenerationJob
-from app.domain.generation.services.generation_domain_service import calculate_remaining_generation_sec, \
-    is_generation_in_progress
+from app.domain.generation.services.generation_domain_service import calculate_remaining_generation_sec
 from app.domain.hair_model.schemas.hair.gender import GenderInDB
 from app.domain.hair_model.schemas.hair.hair_style import HairStyleInDB
 from app.domain.hair_model.schemas.hair.length import LengthInDB
 from app.domain.hair_model.schemas.hair.color import ColorInDB
 from app.domain.hair_model.schemas.scene.background import BackgroundInDB
 from app.domain.hair_model.schemas.scene.image_resolution import ImageResolutionInDB
-from app.domain.user.models.user import User
 from app.infrastructure.repositories.generation.generation import GenerationRequestRepository, \
     get_generation_request_repository, ImageGenerationJobRepository, get_image_generation_job_repository, \
     GeneratedImageGroupRepository, get_generated_image_group_repository

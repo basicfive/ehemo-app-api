@@ -9,7 +9,6 @@ from app.core.db.base import get_db
 from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
 from app.core.utils import generate_unique_datatime_uuid_key, concatenate_images_horizontally, compress_and_resize_image
 from app.domain.generation.models.generation import ImageGenerationJob, GenerationRequest
-from app.domain.generation.models.image import GeneratedImage
 from app.domain.generation.schemas.generated_image import GeneratedImageCreate
 from app.domain.generation.schemas.generated_image_group import GeneratedImageGroupCreate
 from app.domain.generation.schemas.generation_request import GenerationRequestUpdate

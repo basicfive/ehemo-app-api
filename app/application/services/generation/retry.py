@@ -14,6 +14,8 @@ from app.domain.generation.models.generation import ImageGenerationJob, Generati
 from app.domain.generation.schemas.generation_request import GenerationRequestUpdate
 from app.domain.generation.schemas.image_generation_job import ImageGenerationJobUpdate, ImageGenerationJobInDB
 from app.domain.generation.services.generation_domain_service import estimate_high_priority_message_wait_sec, calculate_retry_message_ttl_sec
+from app.domain.subscription.models.subscription import Subscription
+from app.domain.subscription.schemas.subscription import SubscriptionUpdate
 from app.domain.user.models.user import User
 from app.domain.user.schemas.user import UserUpdate
 from app.infrastructure.database.transaction import transactional
@@ -24,6 +26,8 @@ from app.infrastructure.mq.rabbit_mq_service import RabbitMQService
 from app.infrastructure.repositories.generation.generation import ImageGenerationJobRepository, \
     GenerationRequestRepository, get_image_generation_job_repository, get_generation_request_repository
 from app.core.config import image_generation_setting, fcm_setting
+from app.infrastructure.repositories.subscription.subscription import SubscriptionRepository, \
+    get_subscription_repository
 from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
 
 logger = logging.getLogger()
@@ -34,6 +38,7 @@ class ImageGenerationRetryService(TransactionalService):
             image_generation_job_repo: ImageGenerationJobRepository,
             generation_request_repo: GenerationRequestRepository,
             user_repo: UserRepository,
+            subscription_repo: SubscriptionRepository,
             rabbit_mq_service: RabbitMQService,
             fcm_service: FCMService,
             unit_of_work: UnitOfWork,
@@ -42,6 +47,7 @@ class ImageGenerationRetryService(TransactionalService):
         self.image_generation_job_repo = image_generation_job_repo
         self.generation_request_repo = generation_request_repo
         self.user_repo = user_repo
+        self.subscription_repo = subscription_repo
         self.rabbit_mq_service = rabbit_mq_service
         self.fcm_service = fcm_service
 
@@ -104,17 +110,18 @@ class ImageGenerationRetryService(TransactionalService):
         generation_request: GenerationRequest = self.generation_request_repo.get(expired_job.generation_request_id)
         if generation_request.generation_result == GenerationResultEnum.PENDING:
 
-            user: User = self.user_repo.get(generation_request.user_id)
+            user_with_sub: User = self.user_repo.get_with_subscription(generation_request.user_id)
             fcm_data = FCMGenerationResultData(generation_status=GenerationResultEnum.FAILED)
             self.fcm_service.send_to_token(
-                token=user.fcm_token,
+                token=user_with_sub.fcm_token,
                 title=fcm_setting.FAILURE_TITLE,
                 body=fcm_setting.FAILURE_BODY,
                 data=fcm_data.to_fcm_data(),
             )
 
-            # 유저 토큰 반환
-            self.user_repo.update(obj_id=user.id, obj_in=UserUpdate(token=user.token + 1))
+            # 구독 토큰 반환
+            subscription: Subscription = user_with_sub.subscription
+            self.subscription_repo.update(obj_id=subscription.id, obj_in=SubscriptionUpdate(token=subscription.token + 1))
 
             self.generation_request_repo.update(
                 obj_id=generation_request.id,
@@ -130,6 +137,7 @@ async def retry_expired_jobs(
             image_generation_job_repo = get_image_generation_job_repository(db),
             generation_request_repo = get_generation_request_repository(db),
             user_repo=get_user_repository(db),
+            subscription_repo=get_subscription_repository(db),
             rabbit_mq_service=rabbit_mq_service,
             fcm_service=FCMService(),
             unit_of_work=UnitOfWork(db),
