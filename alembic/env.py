@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 import os
 load_dotenv()
 
-# alembic.ini의 sqlalchemy.url 값을 .env에서 가져온 값으로 덮어쓰기
+# 환경 구분
 ENV = os.getenv('ENV', 'dev')
 
 # 환경별 DATABASE_URL 설정

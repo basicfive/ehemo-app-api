@@ -9,6 +9,7 @@ from app.api.v1.endpoints.prod.user import auth as prod_auth
 from app.api.v1.endpoints.prod.user import user
 from app.api.v1.endpoints.prod.home import model_thumbnail
 from app.api.v1.endpoints.prod.versioning import app_version
+from app.api.v1.endpoints.prod.subscription import subscription, revenuecat_webhook
 
 router = APIRouter()
 
@@ -17,8 +18,15 @@ router.include_router(dev_auth.router, prefix="/dev/user", tags=['dev/user'])
 
 router.include_router(request.router, prefix="/prod/generation", tags=['generation'])
 router.include_router(hair_model_options.router, prefix="/prod/generation", tags=['generation'])
+
 router.include_router(image.router, prefix="/prod/image", tags=['image'])
+
 router.include_router(prod_auth.router, prefix="/prod/user", tags=['user'])
 router.include_router(user.router, prefix="/prod/user", tags=['user'])
+
 router.include_router(model_thumbnail.router, prefix="/prod/home", tags=['home'])
+
 router.include_router(app_version.router, prefix="/prod/versioning", tags=['versioning'])
+
+router.include_router(revenuecat_webhook.router, prefix="/prod/subscription", tags=['subscription'])
+router.include_router(subscription.router, prefix="/prod/subscription", tags=['subscription'])

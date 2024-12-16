@@ -1,4 +1,5 @@
-from sqlalchemy import Column, String, Integer, Index, Boolean, text
+from sqlalchemy import Column, String, Index, Boolean, text
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 
@@ -7,16 +8,16 @@ from app.core.db.time_stamp_model import TimeStampModel
 class User(TimeStampModel):
     __tablename__ = "user"
 
-    # UUID 필드 추가
     uuid = Column(UUID(as_uuid=True), default=uuid.uuid4, unique=True, nullable=False)
     fcm_token = Column(String(255), nullable=True)
 
-    token = Column(Integer, default=15, nullable=True)
     email = Column(String(320), nullable=False)
     provider = Column(String(20), nullable=False)
     social_id = Column(String(255), nullable=False)
 
     deleted = Column(Boolean, default=False, nullable=False)
+
+    subscription = relationship("Subscription", back_populates="user")
 
     __table_args__ = (
         Index(
@@ -28,7 +29,3 @@ class User(TimeStampModel):
         ),
     )
 
-    def has_enough_token(self) -> bool:
-        if self.token == 0:
-            return False
-        return True

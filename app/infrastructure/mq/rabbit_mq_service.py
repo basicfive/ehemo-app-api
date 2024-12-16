@@ -1,4 +1,5 @@
 import asyncio
+from typing import Dict
 import ssl
 import logging
 from urllib.parse import quote
@@ -15,8 +16,12 @@ from app.core.enums.message_priority import MessagePriority
 logger = logging.getLogger()
 
 class RabbitMQService:
+    _instances: Dict[str, 'RabbitMQService'] = {}
+    _lock = asyncio.Lock()
+
     def __init__(
             self,
+            connection_name: str,
             hostname: str = rabbit_mq_setting.RABBITMQ_HOST,
             vhost: str = rabbit_mq_setting.RABBITMQ_VHOST,
             username: str = rabbit_mq_setting.RABBITMQ_USERNAME,
@@ -24,6 +29,7 @@ class RabbitMQService:
             publish_queue: str = rabbit_mq_setting.RABBITMQ_PUBLISH_QUEUE,
             consume_queue: str = rabbit_mq_setting.RABBITMQ_CONSUME_QUEUE
     ):
+        self.connection_name = connection_name
         self.publish_queue = publish_queue
         self.consume_queue = consume_queue
         self.connection: Optional[Connection] = None
@@ -39,9 +45,25 @@ class RabbitMQService:
             "url": url,
             "ssl_context": ssl_context,
             "heartbeat": 300,
-            "timeout": 300
+            "timeout": 300,
+            "client_properties": {
+                "connection_name": connection_name
+            }
         }
 
+    @classmethod
+    async def get_instance(cls, connection_name: str) -> 'RabbitMQService':
+        async with cls._lock:
+            if connection_name not in cls._instances:
+                instance = cls(connection_name=connection_name)
+                await instance.connect()
+                cls._instances[connection_name] = instance
+            return cls._instances[connection_name]
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10)
+    )
     @log_errors("Failed to connect to RabbitMQ")
     async def connect(self):
         if not self.connection or self.connection.is_closed:
@@ -134,12 +156,13 @@ class RabbitMQService:
             await self.channel.close()
         if self.connection and not self.connection.is_closed:
             await self.connection.close()
-
+        async with self._lock:
+            if self.connection_name in self._instances:
+                del self._instances[self.connection_name]
 
 async def get_rabbit_mq_service() -> AsyncGenerator[RabbitMQService, None]:
-    rabbit_mq_service = RabbitMQService()
-    await rabbit_mq_service.connect()
+    service = await RabbitMQService.get_instance("api")
     try:
-        yield rabbit_mq_service
+        yield service
     finally:
-        await rabbit_mq_service.close()
+        pass

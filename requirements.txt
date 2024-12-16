@@ -24,3 +24,5 @@ firebase-admin~=6.5.0
 starlette~=0.40.0
 aio-pika~=9.4.3
 protobuf~=5.28.3
+pytz
+python-dateutil

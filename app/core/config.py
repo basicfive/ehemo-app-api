@@ -78,8 +78,8 @@ class ImageGenerationSetting(BaseModel):
     RETRY_MESSAGE_TTL_MULTIPLIER: float = 2.0
     MAX_RETRIES: int = 1
 
-class UserSetting(BaseModel):
-    MONTHLY_RECHARGED_TOKEN: int = 15
+class TokenSetting(BaseModel):
+    MONTHLY_REFILLED_TOKEN: int = 15
     FREE_TRIAL_TOKEN: int = 1
 
 class FCMSetting(BaseModel):
@@ -92,6 +92,17 @@ class FCMSetting(BaseModel):
     FAILURE_TITLE: str = "AI 모델 이미지 생성에 실패했어요"
     FAILURE_BODY: str = "토큰은 반환되었으니, 잠시 후에 다시 시도해주세요"
 
+    TOKEN_REFILL_TITLE: str = "토큰이 리필되었어요"
+    TOKEN_REFILL_BODY: str = "토큰이 리필되었어요"
+
+class RevenueCatSetting(BaseModel):
+    AUTHORIZATION_HEADER_UUID: str = os.getenv("REVENUECAT_UUID")
+
+
+class TimezoneConfig(BaseModel):
+    SEOUL: str = "Asia/Seoul"
+    UTC: str = "UTC"
+
 
 base_settings = BaseSetting()
 rabbit_mq_setting = RabbitMQSetting()
@@ -100,5 +111,6 @@ aws_s3_setting = AWSS3Setting()
 jwt_setting = JwtSetting()
 oauth_setting = OAuthSetting()
 image_generation_setting = ImageGenerationSetting()
-user_setting = UserSetting()
+token_setting = TokenSetting()
 fcm_setting = FCMSetting()
+timezone_config = TimezoneConfig()

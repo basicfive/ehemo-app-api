@@ -2,7 +2,7 @@ from fastapi import Depends
 from sqlalchemy.exc import NoResultFound
 
 from app.application.services.transactional_service import TransactionalService
-from app.application.services.user.dto.auth import UserInfo, TokenResponse
+from app.application.services.user.dto.auth import TokenResponse
 from app.domain.user.schemas.user import UserCreate
 from app.domain.user.services.auth import AuthTokenService, get_auth_token_service
 from app.infrastructure.auth.social_client.apple_auth_client import get_apple_auth_client
@@ -35,8 +35,7 @@ class UserAuthApplicationService(TransactionalService):
     def mobile_login(self, id_token: str) -> TokenResponse:
         auth_info: AuthInfo = self.social_auth_client.verify_mobile_token(id_token)
 
-        user_info = UserInfo(**auth_info.model_dump())
-        user: User = self._get_or_create_user(user_info)
+        user: User = self._get_or_create_user(auth_info)
 
         """
         TODO: 토큰 생성과 refresh 토큰 저장이 구분되어있음.
@@ -58,8 +57,7 @@ class UserAuthApplicationService(TransactionalService):
     def web_auth_callback(self, code: str) -> TokenResponse:
         auth_info: AuthInfo = self.social_auth_client.verify_web_token(code)
 
-        user_info = UserInfo(**auth_info.model_dump())
-        user: User = self._get_or_create_user(user_info)
+        user: User = self._get_or_create_user(auth_info=auth_info)
 
         access_token, refresh_token = self.auth_token_service.create_tokens(user.id)
         self.redis_service.save_refresh_token(user.id, refresh_token)
@@ -97,14 +95,12 @@ class UserAuthApplicationService(TransactionalService):
             refresh_token=new_refresh_token
         )
 
-    def _get_or_create_user(self, user_info: UserInfo) -> User:
+    def _get_or_create_user(self, auth_info: AuthInfo) -> User:
         try:
             # TODO: DB에서 리소스가 없는 경우 에러 반환하지 않는 쪽으로 가야하는가?
-            db_user: User = self.user_repo.get_by_social_account(provider=user_info.provider, social_id=user_info.social_id)
-            return db_user
+            return self.user_repo.get_by_social_account(provider=auth_info.provider, social_id=auth_info.social_id)
         except NoResultFound:
-            db_user = self.user_repo.create_with_flush(obj_in=UserCreate(**user_info.model_dump()))
-            return db_user
+            return self.user_repo.create_with_flush(obj_in=UserCreate(**auth_info.model_dump()))
 
 
 def get_google_user_auth_application_service(

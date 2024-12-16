@@ -86,7 +86,7 @@ class FCMService:
                 tokens=tokens,
             )
 
-            response = messaging.send_multicast(message)
+            response = messaging.send_each_for_multicast(message)
             return {
                 "success": True,
                 "success_count": response.success_count,

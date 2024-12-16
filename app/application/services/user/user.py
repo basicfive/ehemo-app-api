@@ -19,15 +19,15 @@ class UserApplicationService(TransactionalService):
         self.user_repo = user_repo
 
     def get_user_token(self, user_id: int) -> UserTokenResponse:
-        user: User = self.user_repo.get(obj_id=user_id)
-        return UserTokenResponse(token=user.token)
+        user_with_subscription: User = self.user_repo.get_with_subscription(user_id=user_id)
+        return UserTokenResponse(token=user_with_subscription.subscription.token)
 
     def get_user_info(self, user_id: int) -> UserInfoResponse:
-        user: User = self.user_repo.get(obj_id=user_id)
+        user_with_subscription: User = self.user_repo.get_with_subscription(user_id=user_id)
         return UserInfoResponse(
-            uuid=str(user.uuid),
-            email=user.email,
-            token=user.token,
+            uuid=str(user_with_subscription.uuid),
+            email=user_with_subscription.email,
+            token=user_with_subscription.subscription.token,
         )
 
     @transactional
@@ -36,19 +36,22 @@ class UserApplicationService(TransactionalService):
 
     @transactional
     def update_fcm_token(self, fcm_token: str, user_id: int) -> UserInfoResponse:
-        user: User = self.user_repo.get(user_id)
+        user_with_subscription: User = self.user_repo.get_with_subscription(user_id=user_id)
 
-        if user.fcm_token != fcm_token:
-            self.user_repo.update(obj_id=user.id, obj_in=UserUpdate(fcm_token=fcm_token))
+        if user_with_subscription.fcm_token != fcm_token:
+            self.user_repo.update(obj_id=user_with_subscription.id, obj_in=UserUpdate(fcm_token=fcm_token))
 
         return UserInfoResponse(
-            uuid=str(user.uuid),
-            email=user.email,
-            token=user.token,
+            uuid=str(user_with_subscription.uuid),
+            email=user_with_subscription.email,
+            token=user_with_subscription.subscription.token,
         )
 
 def get_user_application_service(
         user_repo: UserRepository = Depends(get_user_repository),
         unit_of_work: UnitOfWork = Depends(get_unit_of_work),
 ):
-    return UserApplicationService(user_repo=user_repo, unit_of_work=unit_of_work)
+    return UserApplicationService(
+        user_repo=user_repo,
+        unit_of_work=unit_of_work,
+    )
