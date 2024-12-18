@@ -4,7 +4,7 @@ from typing import List, Optional
 from app.domain.hair_model.models.hair import HairVariantModel
 from app.application.services.generation.dto.query import GenerationRequestStatusResponse, GenerationRequestDetails, \
     GenerationRequestStatusWithDetails
-from app.core.enums.generation_status import GenerationResultEnum
+from app.domain.generation.models.enums.generation_status import GenerationResultEnum
 from app.core.errors.http_exceptions import AccessUnauthorizedException
 from app.domain.generation.models.generation import GenerationRequest, ImageGenerationJob
 from app.domain.generation.services.generation_domain_service import calculate_remaining_generation_sec

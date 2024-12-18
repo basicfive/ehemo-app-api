@@ -2,7 +2,7 @@ from logging import getLogger
 
 from app.application.services.generation.handle import handle_message
 from app.application.services.generation.retry import retry_expired_jobs
-from app.application.services.subscription.token import refill_user_tokens
+from app.application.services.token.token_refill import refill_user_tokens
 from app.infrastructure.mq.rabbit_mq_service import RabbitMQService
 from app.infrastructure.task.base import AsyncTaskManager, DailyTaskManager, ContinuousTaskManager
 

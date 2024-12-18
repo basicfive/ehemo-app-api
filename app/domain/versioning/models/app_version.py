@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Enum
 
-from app.core.db.time_stamp_model import TimeStampModel
+from app.domain.time_stamp_model import TimeStampModel
 from app.domain.versioning.models.enums.app_version import PlatformEnum
 
 

@@ -4,16 +4,16 @@ import boto3
 from botocore.exceptions import ClientError
 from botocore.client import Config
 
-from app.core.config import aws_s3_setting
+from app.core.config import aws_s3_settings
 
 
 class S3Client:
     def __init__(
             self,
-            aws_access_key_id: str = aws_s3_setting.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key: str = aws_s3_setting.AWS_SECRET_ACCESS_KEY,
-            region_name: str = aws_s3_setting.REGION_NAME,
-            bucket_name: str = aws_s3_setting.BUCKET_NAME
+            aws_access_key_id: str = aws_s3_settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key: str = aws_s3_settings.AWS_SECRET_ACCESS_KEY,
+            region_name: str = aws_s3_settings.REGION_NAME,
+            bucket_name: str = aws_s3_settings.BUCKET_NAME
     ):
         self.aws_access_key_id = aws_access_key_id
         self.aws_secret_access_key = aws_secret_access_key
@@ -31,7 +31,7 @@ class S3Client:
     def create_presigned_url(
             self,
             s3_key: str,
-            expiration: int = aws_s3_setting.PRESIGNED_URL_EXPIRATION_SEC,
+            expiration: int = aws_s3_settings.PRESIGNED_URL_EXPIRATION_SEC,
             http_method: str = 'GET'
     ) -> Optional[str]:
         try:

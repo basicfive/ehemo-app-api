@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, joinedload
 from datetime import datetime, UTC
 
 from app.core.db.base import get_db
-from app.core.enums.generation_status import GenerationStatusEnum
+from app.domain.generation.models.enums.generation_status import GenerationStatusEnum
 from app.domain.generation.models.generation import GenerationRequest, ImageGenerationJob
 from app.domain.generation.schemas.example_generated_image import ExampleGeneratedImageCreate, \
     ExampleGeneratedImageUpdate

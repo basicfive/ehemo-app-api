@@ -1,13 +1,15 @@
 from typing import List, Optional
 from fastapi import Depends
 
+from app import token_settings, token_transaction_consts
 from app.application.services.transactional_service import TransactionalService
+from app.domain import ImageGenerationJob
 from app.domain.hair_model.models.scene import ImageResolution
 from app.application.services.generation.dto.request import CreateGenerationRequestRequest, \
     GenerationRequestResponse
 from app.application.services.generation.dto.mq import MQPublishMessage
-from app.core.config import image_generation_setting, aws_s3_setting
-from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
+from app.core.config import image_generation_settings, aws_s3_settings
+from app.domain.generation.models.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
 from app.core.errors.exceptions import NoInferenceConsumerException
 from app.core.errors.http_exceptions import AccessUnauthorizedException, ConcurrentGenerationRequestError, \
     UserHasNotEnoughTokenException
@@ -17,11 +19,13 @@ from app.domain.generation.schemas.generation_request import GenerationRequestCr
 from app.domain.generation.schemas.image_generation_job import ImageGenerationJobCreate, ImageGenerationJobInDB, \
     ImageGenerationJobUpdate
 from app.domain.generation.services.generation_domain_service import estimate_normal_priority_message_wait_sec, \
-    calculate_normal_message_ttl_sec, is_generation_in_progress
+    calculate_normal_message_ttl_sec, is_generation_in_progress, calculate_remaining_generation_sec
 from app.domain.hair_model.models.hair import HairVariantModel, Length, SpecificColor
 from app.domain.hair_model.services.hair_model_prompt import create_prompts
-from app.domain.subscription.models.subscription import Subscription
-from app.domain.subscription.schemas.subscription import SubscriptionUpdate
+from app.domain.subscription.schemas.user_subscription import UserSubscriptionUpdate
+from app.domain.token.models.enums.token import TokenSourceType
+from app.domain.token.models.token import TokenWallet
+from app.domain.token.services.token_domain_sevice import TokenDomainService, get_token_domain_service
 from app.domain.user.models.user import User
 from app.infrastructure.database.transaction import transactional
 from app.infrastructure.database.unit_of_work import UnitOfWork, get_unit_of_work
@@ -31,8 +35,6 @@ from app.infrastructure.repositories.generation.generation import GenerationRequ
 from app.infrastructure.repositories.hair_model.hair_model import HairVariantModelRepository, \
     PostureAndClothingRepository, SpecificColorRepository, get_specific_color_repository, \
     get_posture_and_clothing_repository, get_hair_variant_model_repository
-from app.infrastructure.repositories.subscription.subscription import SubscriptionRepository, \
-    get_subscription_repository
 from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
 from datetime import datetime, UTC, timedelta
 
@@ -41,7 +43,7 @@ class RequestGenerationApplicationService(TransactionalService):
     def __init__(
             self,
             user_repo: UserRepository,
-            subscription_repo: SubscriptionRepository,
+            token_domain_service: TokenDomainService,
             specific_color_repo: SpecificColorRepository,
             posture_and_clothing_repo: PostureAndClothingRepository,
             hair_variant_model_repo: HairVariantModelRepository,
@@ -53,7 +55,7 @@ class RequestGenerationApplicationService(TransactionalService):
     ):
         super().__init__(unit_of_work)
         self.user_repo = user_repo
-        self.subscription_repo = subscription_repo
+        self.token_domain_service = token_domain_service
         self.specific_color_repo = specific_color_repo
         self.posture_and_clothing_repo = posture_and_clothing_repo
         self.hair_variant_model_repo = hair_variant_model_repo
@@ -88,15 +90,15 @@ class RequestGenerationApplicationService(TransactionalService):
         if self._is_generation_in_progress(user_id):
             raise ConcurrentGenerationRequestError()
 
-        # TODO: (urgent) id에 해당하는 user 존재하는 레코드인지 에러 처리필요
-        user_with_sub: User = self.user_repo.get_with_subscription(user_id)
-        subscription: Subscription = user_with_sub.subscription
+        # TODO: id에 해당하는 user 존재하는 레코드인지 에러 처리필요
+        user_with_wallet: User = self.user_repo.get_with_token_wallet(user_id)
+        token_wallet: TokenWallet = user_with_wallet.token_wallet
 
-        if not subscription.has_available_token():
+        if not token_wallet.has_available_token(token_settings.TOKENS_PER_GENERATION):
             raise UserHasNotEnoughTokenException()
 
         generation_request: GenerationRequest = self._create_generation_request(request, user_id)
-        return await self._start_generation(generation_request.id, subscription)
+        return await self._start_generation(generation_request.id, token_wallet)
 
     def _is_generation_in_progress(self, user_id: int) -> bool:
         latest_generation_request: Optional[GenerationRequest] = (
@@ -129,7 +131,7 @@ class RequestGenerationApplicationService(TransactionalService):
     async def _start_generation(
             self,
             generation_request_id: int,
-            subscription: Subscription,
+            token_wallet: TokenWallet,
     ) -> GenerationRequestResponse:
         """
         1. Prompt 를 n개 생성한다.
@@ -155,6 +157,8 @@ class RequestGenerationApplicationService(TransactionalService):
             processor_count=consumer_count
         )
 
+        image_generation_job_list: List[ImageGenerationJob] = []
+
         for idx, prompt in enumerate(prompt_list):
             message_time_to_live_sec += calculate_normal_message_ttl_sec()
             # job 생성
@@ -164,17 +168,24 @@ class RequestGenerationApplicationService(TransactionalService):
                 time_to_live_sec=message_time_to_live_sec,
                 generation_request_id=generation_request_with_relation.id
             )
+            image_generation_job_list.append(image_generation_job)
             # MQ 요청 보내기
-            await self._publish_job_as_mq_message(image_generation_job, message_time_to_live_sec)
+            await self._publish_job_as_mq_message(
+                ImageGenerationJobInDB.model_validate(image_generation_job),
+                message_time_to_live_sec
+            )
 
         # 구독권 토큰 감소
-        self.subscription_repo.update(obj_id=subscription.id, obj_in=SubscriptionUpdate(token=subscription.token - 1))
+        self.token_domain_service.consume_token(
+            token_wallet=token_wallet,
+            amount=token_settings.TOKENS_PER_GENERATION,
+            source_type=TokenSourceType.IMAGE_GENERATION,
+        )
 
-        message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
         return GenerationRequestResponse(
             generation_request_id=generation_request_with_relation.id,
-            remaining_sec=estimate_normal_priority_message_wait_sec(image_count=message_count, processor_count=consumer_count),
-            generated_image_cnt_per_request=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST
+            remaining_sec=calculate_remaining_generation_sec(image_generation_job_list),
+            generated_image_cnt_per_request=image_generation_settings.GENERATED_IMAGE_CNT_PER_REQUEST
         )
 
     def _create_prompts(self, generation_request_with_relations: GenerationRequest) -> List[str]:
@@ -183,11 +194,11 @@ class RequestGenerationApplicationService(TransactionalService):
 
         posture_and_clothing_list = self.posture_and_clothing_repo.get_random_records_in_gender(
             gender_id=generation_request_with_relations.hair_variant_model.gender.id,
-            limit=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST
+            limit=image_generation_settings.GENERATED_IMAGE_CNT_PER_REQUEST
         )
         specific_color_list: List[SpecificColor] = self.specific_color_repo.get_all_by_color_limit(
             hair_variant_model_with_relations.color_id,
-            limit=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST
+            limit=image_generation_settings.GENERATED_IMAGE_CNT_PER_REQUEST
         )
 
         # null length 수정 - hs 기본 길이로 변경한다.
@@ -203,7 +214,7 @@ class RequestGenerationApplicationService(TransactionalService):
             lora_model=hair_variant_model_with_relations.lora_model,
             specific_color_list=specific_color_list,
             posture_and_clothing_list=posture_and_clothing_list,
-            count=image_generation_setting.GENERATED_IMAGE_CNT_PER_REQUEST
+            count=image_generation_settings.GENERATED_IMAGE_CNT_PER_REQUEST
         )
 
     def _create_image_generation_job(
@@ -212,20 +223,18 @@ class RequestGenerationApplicationService(TransactionalService):
             image_resolution: ImageResolution,
             time_to_live_sec: int,
             generation_request_id: int,
-    ) -> ImageGenerationJobInDB:
-        s3_key = generate_unique_datatime_uuid_key(prefix=aws_s3_setting.GENERATED_IMAGE_S3KEY_PREFIX)
-        return ImageGenerationJobInDB.model_validate(
-            self.image_generation_job_repo.create_with_flush(
-                obj_in=ImageGenerationJobCreate(
-                    retry_count=0,
-                    expires_at=datetime.now(UTC) + timedelta(seconds=time_to_live_sec),
-                    prompt=prompt,
-                    distilled_cfg_scale=image_generation_setting.DISTILLED_CFG_SCALE,
-                    width=image_resolution.width,
-                    height=image_resolution.height,
-                    generation_request_id=generation_request_id,
-                    s3_key=s3_key
-                )
+    ) -> ImageGenerationJob:
+        s3_key = generate_unique_datatime_uuid_key(prefix=aws_s3_settings.GENERATED_IMAGE_S3KEY_PREFIX)
+        return self.image_generation_job_repo.create_with_flush(
+            obj_in=ImageGenerationJobCreate(
+                retry_count=0,
+                expires_at=datetime.now(UTC) + timedelta(seconds=time_to_live_sec),
+                prompt=prompt,
+                distilled_cfg_scale=image_generation_settings.DISTILLED_CFG_SCALE,
+                width=image_resolution.width,
+                height=image_resolution.height,
+                generation_request_id=generation_request_id,
+                s3_key=s3_key
             )
         )
 
@@ -247,7 +256,7 @@ class RequestGenerationApplicationService(TransactionalService):
 
 def get_request_generation_application_service(
         user_repo: UserRepository = Depends(get_user_repository),
-        subscription_repo: SubscriptionRepository = Depends(get_subscription_repository),
+        token_domain_service: TokenDomainService = Depends(get_token_domain_service),
         specific_color_repo: SpecificColorRepository = Depends(get_specific_color_repository),
         posture_and_clothing_repo: PostureAndClothingRepository = Depends(get_posture_and_clothing_repository),
         hair_variant_model_repo: HairVariantModelRepository = Depends(get_hair_variant_model_repository),
@@ -258,7 +267,7 @@ def get_request_generation_application_service(
 ) -> RequestGenerationApplicationService:
     return RequestGenerationApplicationService(
         user_repo=user_repo,
-        subscription_repo=subscription_repo,
+        token_domain_service=token_domain_service,
         specific_color_repo=specific_color_repo,
         posture_and_clothing_repo=posture_and_clothing_repo,
         hair_variant_model_repo=hair_variant_model_repo,

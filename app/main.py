@@ -7,6 +7,9 @@ from app.api.v1.api import router
 from app.core.errors.handlers import handle_general_exception
 from app.core.lifecycle import LifespanServices
 from contextlib import asynccontextmanager
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 Base.metadata.create_all(bind=engine)
 

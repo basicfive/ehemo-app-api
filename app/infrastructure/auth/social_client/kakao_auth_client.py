@@ -4,7 +4,7 @@ import jwt
 import requests
 from jwt import InvalidTokenError
 
-from app.core.config import oauth_setting
+from app.core.config import oauth_settings
 from app.core.errors.http_exceptions import SocialAuthException
 from app.infrastructure.auth.social_client.dto.auth_data import AuthInfo
 from app.infrastructure.auth.social_client.social_auth_client import SocialAuthClient
@@ -18,8 +18,8 @@ class KakaoAuthClient(SocialAuthClient):
         base_url = "https://kauth.kakao.com/oauth/authorize"
 
         params = {
-            "client_id": oauth_setting.KAKAO_CLIENT_ID,
-            "redirect_uri": oauth_setting.KAKAO_REDIRECT_URI,
+            "client_id": oauth_settings.KAKAO_CLIENT_ID,
+            "redirect_uri": oauth_settings.KAKAO_REDIRECT_URI,
             "response_type": "code",
             "scope": "openid account_email",
             "prompt": "select_account"
@@ -38,7 +38,7 @@ class KakaoAuthClient(SocialAuthClient):
                 id_token,
                 signing_key.key,
                 algorithms=['RS256'],
-                audience=oauth_setting.KAKAO_CLIENT_ID,
+                audience=oauth_settings.KAKAO_CLIENT_ID,
                 issuer='https://kauth.kakao.com'
             )
 
@@ -69,9 +69,9 @@ class KakaoAuthClient(SocialAuthClient):
             "https://kauth.kakao.com/oauth/token",
             data={
                 "code": code,
-                "client_id": oauth_setting.KAKAO_CLIENT_ID,
-                "client_secret": oauth_setting.KAKAO_CLIENT_SECRET,
-                "redirect_uri": oauth_setting.KAKAO_REDIRECT_URI,
+                "client_id": oauth_settings.KAKAO_CLIENT_ID,
+                "client_secret": oauth_settings.KAKAO_CLIENT_SECRET,
+                "redirect_uri": oauth_settings.KAKAO_REDIRECT_URI,
                 "grant_type": "authorization_code"
             }
         )

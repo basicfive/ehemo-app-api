@@ -5,7 +5,7 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
 from app.core.errors.http_exceptions import SocialAuthException
-from app.core.config import oauth_setting
+from app.core.config import oauth_settings
 from app.infrastructure.auth.social_client.dto.auth_data import AuthInfo
 from app.infrastructure.auth.social_client.social_auth_client import SocialAuthClient
 
@@ -15,8 +15,8 @@ class GoogleAuthClient(SocialAuthClient):
         """웹 로그인용 Google OAuth 2.0 인증 URL 생성"""
         base_url = "https://accounts.google.com/o/oauth2/v2/auth"
         params = {
-            "client_id": oauth_setting.GOOGLE_CLIENT_ID,
-            "redirect_uri": oauth_setting.GOOGLE_REDIRECT_URI,
+            "client_id": oauth_settings.GOOGLE_CLIENT_ID,
+            "redirect_uri": oauth_settings.GOOGLE_REDIRECT_URI,
             "response_type": "code",
             "scope": "openid email",
             "access_type": "offline",
@@ -32,7 +32,7 @@ class GoogleAuthClient(SocialAuthClient):
 
             response = requests.post(
                 "https://identitytoolkit.googleapis.com/v1/accounts:lookup",
-                params={"key": oauth_setting.FIREBASE_API_KEY},
+                params={"key": oauth_settings.FIREBASE_API_KEY},
                 json={"idToken": id_token}
             )
 
@@ -60,9 +60,9 @@ class GoogleAuthClient(SocialAuthClient):
                 "https://oauth2.googleapis.com/token",
                 data={
                     "code": code,
-                    "client_id": oauth_setting.GOOGLE_CLIENT_ID,
-                    "client_secret": oauth_setting.GOOGLE_CLIENT_SECRET,
-                    "redirect_uri": oauth_setting.GOOGLE_REDIRECT_URI,
+                    "client_id": oauth_settings.GOOGLE_CLIENT_ID,
+                    "client_secret": oauth_settings.GOOGLE_CLIENT_SECRET,
+                    "redirect_uri": oauth_settings.GOOGLE_REDIRECT_URI,
                     "grant_type": "authorization_code"
                 }
             )
@@ -79,7 +79,7 @@ class GoogleAuthClient(SocialAuthClient):
             decoded_token = id_token.verify_oauth2_token(
                 id_token_str,
                 request_adapter,
-                oauth_setting.GOOGLE_CLIENT_ID
+                oauth_settings.GOOGLE_CLIENT_ID
             )
 
             return AuthInfo(

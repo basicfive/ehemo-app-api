@@ -4,7 +4,7 @@ from app.application.services.versioning.dto.app_version import CheckVersionResp
 from app.domain.versioning.models.app_version import AppVersion
 from app.domain.versioning.models.enums.app_version import PlatformEnum
 from app.domain.versioning.services.app_version import suggests_update, requires_update
-from app.infrastructure.repositories.versioning.app_version import AppVersionRepository, get_app_version_repository
+from app.infrastructure.repositories.versioning.versioning import AppVersionRepository, get_app_version_repository
 
 
 class AppVersionQueryApplicationService:

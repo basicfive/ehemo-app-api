@@ -2,11 +2,12 @@ import json
 import logging
 from typing import List
 
+from app import fcm_consts
 from app.application.services.generation.dto.mq import MQConsumeMessage
 from app.application.services.transactional_service import TransactionalService
-from app.core.config import aws_s3_setting, fcm_setting
+from app.core.config import aws_s3_settings
 from app.core.db.base import get_db
-from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
+from app.domain.generation.models.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
 from app.core.utils import generate_unique_datatime_uuid_key, concatenate_images_horizontally, compress_and_resize_image
 from app.domain.generation.models.generation import ImageGenerationJob, GenerationRequest
 from app.domain.generation.schemas.generated_image import GeneratedImageCreate
@@ -116,10 +117,10 @@ class MessageHandler(TransactionalService):
         fcm_data = FCMGenerationResultData(generation_status=GenerationResultEnum.SUCCEED)
         self.fcm_service.send_to_token(
             token=user.fcm_token,
-            title=fcm_setting.SUCCESS_TITLE,
-            body=fcm_setting.SUCCESS_BODY,
-            category=fcm_setting.CATEGORY,
-            identifier=fcm_setting.IDENTIFIER_PREFIX + str(generation_request_id),
+            title=fcm_consts.SUCCESS_TITLE,
+            body=fcm_consts.SUCCESS_BODY,
+            category=fcm_consts.CATEGORY,
+            identifier=fcm_consts.IDENTIFIER_PREFIX + str(generation_request_id),
             data=fcm_data.to_fcm_data(),
         )
 
@@ -167,7 +168,7 @@ class MessageHandler(TransactionalService):
         compressed_bytes, img_format = compress_and_resize_image(img_bytes)
 
         thumbnail_key = generate_unique_datatime_uuid_key(
-            prefix=aws_s3_setting.GENERATED_IMAGE_GROUP_S3KEY_PREFIX
+            prefix=aws_s3_settings.GENERATED_IMAGE_GROUP_S3KEY_PREFIX
         )
 
         self.s3_client.upload_to_s3(thumbnail_key, compressed_bytes, img_format)

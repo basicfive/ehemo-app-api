@@ -1,7 +1,7 @@
 from sqlalchemy import String, Column, Integer, Boolean, ForeignKey, Index
 from sqlalchemy.orm import relationship
 
-from app.core.db.time_stamp_model import TimeStampModel
+from app.domain.time_stamp_model import TimeStampModel
 
 class Gender(TimeStampModel):
     __tablename__ = "gender"

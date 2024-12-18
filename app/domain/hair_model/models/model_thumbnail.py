@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, ForeignKey, Integer
 
-from app.core.db.time_stamp_model import TimeStampModel
+from app.domain.time_stamp_model import TimeStampModel
 
 class ModelThumbnail(TimeStampModel):
     __tablename__ = "model_thumbnail"

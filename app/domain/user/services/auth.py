@@ -3,7 +3,7 @@ from datetime import datetime, UTC, timedelta
 from uuid import uuid4
 import jwt
 
-from app.core.config import jwt_setting
+from app.core.config import jwt_settings
 from app.core.errors.http_exceptions import AccessUnauthorizedException
 
 logger = logging.getLogger()
@@ -12,12 +12,12 @@ class AuthTokenService:
     @staticmethod
     def create_tokens(
             user_id: int,
-            expire_minutes: int = jwt_setting.ACCESS_TOKEN_EXPIRE_MINUTES
+            expire_minutes: int = jwt_settings.ACCESS_TOKEN_EXPIRE_MINUTES
     ) -> tuple[str, str]:
         exp = datetime.now(UTC) + timedelta(minutes=expire_minutes)
         access_token = jwt.encode(
             {"sub": str(user_id), "exp": exp},
-            jwt_setting.JWT_SECRET_KEY,
+            jwt_settings.JWT_SECRET_KEY,
             algorithm="HS256"
         )
         refresh_token = str(uuid4())
@@ -29,7 +29,7 @@ class AuthTokenService:
             # Decode JWT
             payload: dict = jwt.decode(
                 token,
-                jwt_setting.JWT_SECRET_KEY,
+                jwt_settings.JWT_SECRET_KEY,
                 algorithms=["HS256"]
             )
 

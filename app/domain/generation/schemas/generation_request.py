@@ -2,7 +2,7 @@
 from pydantic import BaseModel
 from typing_extensions import Optional
 
-from app.core.enums.generation_status import GenerationResultEnum
+from app.domain.generation.models.enums.generation_status import GenerationResultEnum
 
 
 class GenerationRequestInDB(BaseModel):

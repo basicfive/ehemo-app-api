@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Integer, ForeignKey
 
-from app.core.db.time_stamp_model import TimeStampModel
+from app.domain.time_stamp_model import TimeStampModel
 
 class Background(TimeStampModel):
     __tablename__ = "background"

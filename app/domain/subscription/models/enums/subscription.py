@@ -19,3 +19,9 @@ class SubscriptionStatus(Enum):
     CANCELED = "CANCELED"
     PENDING = "PENDING"
     TRIAL = "TRIAL"
+
+class Currency(Enum):
+    USD = "USD"
+    KRW = "KRW"
+    JPY = "JPY"
+    EUR = "EUR"

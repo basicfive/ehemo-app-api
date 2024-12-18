@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 
-from app.core.db.time_stamp_model import TimeStampModel
+from app.domain.time_stamp_model import TimeStampModel
 
 class User(TimeStampModel):
     __tablename__ = "user"
@@ -16,8 +16,10 @@ class User(TimeStampModel):
     social_id = Column(String(255), nullable=False)
 
     deleted = Column(Boolean, default=False, nullable=False)
+    timezone = Column(String(20), nullable=True)
 
-    subscription = relationship("Subscription", back_populates="user")
+    user_subscription = relationship("UserSubscription", back_populates="user")
+    token_wallet = relationship("TokenWallet", back_populates="user")
 
     __table_args__ = (
         Index(

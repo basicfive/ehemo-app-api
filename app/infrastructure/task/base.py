@@ -4,7 +4,7 @@ from logging import getLogger
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from app.core.config import timezone_config
+from app.core.config import timezone_settings
 
 logger = getLogger(__name__)
 
@@ -53,7 +53,7 @@ class AsyncTaskManager(TaskManager):
 class DailyTaskManager(TaskManager):
     """매일 특정 시간에 실행되는 태스크를 위한 기본 클래스"""
 
-    def __init__(self, target_hour: int, timezone: str = timezone_config.SEOUL):
+    def __init__(self, target_hour: int, timezone: str = timezone_settings.SEOUL):
         self.target_hour = target_hour
         self.timezone = ZoneInfo(timezone)
         self.is_running = False

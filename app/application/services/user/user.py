@@ -20,14 +20,14 @@ class UserApplicationService(TransactionalService):
 
     def get_user_token(self, user_id: int) -> UserTokenResponse:
         user_with_subscription: User = self.user_repo.get_with_subscription(user_id=user_id)
-        return UserTokenResponse(token=user_with_subscription.subscription.token)
+        return UserTokenResponse(token=user_with_subscription.subscription.remaining_token)
 
     def get_user_info(self, user_id: int) -> UserInfoResponse:
         user_with_subscription: User = self.user_repo.get_with_subscription(user_id=user_id)
         return UserInfoResponse(
             uuid=str(user_with_subscription.uuid),
             email=user_with_subscription.email,
-            token=user_with_subscription.subscription.token,
+            token=user_with_subscription.subscription.remaining_token,
         )
 
     @transactional
@@ -44,7 +44,7 @@ class UserApplicationService(TransactionalService):
         return UserInfoResponse(
             uuid=str(user_with_subscription.uuid),
             email=user_with_subscription.email,
-            token=user_with_subscription.subscription.token,
+            token=user_with_subscription.subscription.remaining_token,
         )
 
 def get_user_application_service(

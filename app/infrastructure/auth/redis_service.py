@@ -1,7 +1,7 @@
 from fastapi import Depends
 from redis import Redis
 
-from app.core.config import jwt_setting
+from app.core.config import jwt_settings
 from app.core.errors.http_exceptions import ForbiddenRequestException
 from app.infrastructure.auth.redis_client import get_redis_client
 
@@ -12,7 +12,7 @@ class RedisService:
     def save_refresh_token(self, user_id: int, refresh_token: str) -> str:
         self._redis.setex(
             f"refresh_token:{refresh_token}",
-            jwt_setting.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+            jwt_settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
             str(user_id)
         )
         return refresh_token

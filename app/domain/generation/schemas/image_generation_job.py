@@ -2,7 +2,7 @@ from typing import Optional
 from pydantic import BaseModel
 from datetime import datetime
 
-from app.core.enums.generation_status import GenerationStatusEnum
+from app.domain.generation.models.enums.generation_status import GenerationStatusEnum
 
 
 class ImageGenerationJobCreate(BaseModel):

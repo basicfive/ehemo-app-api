@@ -1,8 +1,8 @@
 from sqlalchemy import Column, String, Integer, DateTime, Float, Enum, ForeignKey
 from sqlalchemy.orm import relationship
 
-from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
-from app.core.db.time_stamp_model import TimeStampModel
+from app.domain.generation.models.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
+from app.domain.time_stamp_model import TimeStampModel
 
 class GenerationRequest(TimeStampModel):
     __tablename__ = "generation_request"

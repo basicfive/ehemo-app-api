@@ -3,7 +3,7 @@ import logging
 from firebase_admin import messaging, credentials, initialize_app
 import firebase_admin
 
-from app.core.config import oauth_setting
+from app.core.config import oauth_settings
 from app.core.errors.exceptions import FCMException
 
 logger = logging.getLogger()
@@ -13,7 +13,7 @@ class FCMService:
 
     def __init__(self):
         try:
-            cred = credentials.Certificate(oauth_setting.FIREBASE_CREDENTIALS_PATH)
+            cred = credentials.Certificate(oauth_settings.FIREBASE_CREDENTIALS_PATH)
             if not firebase_admin._apps:
                 initialize_app(cred)
         except Exception as e:

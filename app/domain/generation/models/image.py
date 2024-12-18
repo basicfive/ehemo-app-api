@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Integer, ForeignKey, Boolean
 
-from app.core.db.time_stamp_model import TimeStampModel
+from app.domain.time_stamp_model import TimeStampModel
 
 class GeneratedImage(TimeStampModel):
     __tablename__ = "generated_image"

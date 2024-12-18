@@ -3,9 +3,6 @@ import os
 
 from dotenv import load_dotenv
 from pathlib import Path
-import logging
-
-logging.basicConfig(level=logging.INFO)
 
 load_dotenv()
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
@@ -36,7 +33,7 @@ class AWSS3Setting(BaseSetting):
     GENERATED_IMAGE_S3KEY_PREFIX: str = "generated_image/"
     GENERATED_IMAGE_GROUP_S3KEY_PREFIX: str = "generated_image_group_thumbnail/"
 
-    PRESIGNED_URL_EXPIRATION_SEC: int = 3600;
+    PRESIGNED_URL_EXPIRATION_SEC: int = 3600
 
 class JwtSetting(BaseModel):
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY")
@@ -82,35 +79,22 @@ class TokenSetting(BaseModel):
     MONTHLY_REFILLED_TOKEN: int = 15
     FREE_TRIAL_TOKEN: int = 1
 
-class FCMSetting(BaseModel):
-    SUCCESS_TITLE: str = "AI 모델 이미지 생성이 완료되었어요"
-    SUCCESS_BODY: str = "생성된 이미지를 확인해보세요"
-
-    CATEGORY: str = "GENERATION_RESULT"
-    IDENTIFIER_PREFIX: str = "request_"
-
-    FAILURE_TITLE: str = "AI 모델 이미지 생성에 실패했어요"
-    FAILURE_BODY: str = "토큰은 반환되었으니, 잠시 후에 다시 시도해주세요"
-
-    TOKEN_REFILL_TITLE: str = "토큰이 리필되었어요"
-    TOKEN_REFILL_BODY: str = "토큰이 리필되었어요"
+    TOKENS_PER_GENERATION: int = 1
 
 class RevenueCatSetting(BaseModel):
     AUTHORIZATION_HEADER_UUID: str = os.getenv("REVENUECAT_UUID")
 
-
-class TimezoneConfig(BaseModel):
+class TimezoneSetting(BaseModel):
     SEOUL: str = "Asia/Seoul"
     UTC: str = "UTC"
 
 
 base_settings = BaseSetting()
-rabbit_mq_setting = RabbitMQSetting()
-redis_setting = RedisSetting()
-aws_s3_setting = AWSS3Setting()
-jwt_setting = JwtSetting()
-oauth_setting = OAuthSetting()
-image_generation_setting = ImageGenerationSetting()
-token_setting = TokenSetting()
-fcm_setting = FCMSetting()
-timezone_config = TimezoneConfig()
+rabbit_mq_settings = RabbitMQSetting()
+redis_settings = RedisSetting()
+aws_s3_settings = AWSS3Setting()
+jwt_settings = JwtSetting()
+oauth_settings = OAuthSetting()
+image_generation_settings = ImageGenerationSetting()
+token_settings = TokenSetting()
+timezone_settings = TimezoneSetting()

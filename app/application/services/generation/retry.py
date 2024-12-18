@@ -4,30 +4,30 @@ from typing import List
 
 from sqlalchemy.orm import Session
 
+from app import fcm_consts, token_settings
 from app.application.services.generation.dto.mq import MQPublishMessage
 from app.application.services.transactional_service import TransactionalService
 from app.core.db.base import get_db
-from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
+from app.domain.generation.models.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
 from app.core.enums.message_priority import MessagePriority
 from app.core.errors.exceptions import NoInferenceConsumerException
 from app.domain.generation.models.generation import ImageGenerationJob, GenerationRequest
 from app.domain.generation.schemas.generation_request import GenerationRequestUpdate
 from app.domain.generation.schemas.image_generation_job import ImageGenerationJobUpdate, ImageGenerationJobInDB
 from app.domain.generation.services.generation_domain_service import estimate_high_priority_message_wait_sec, calculate_retry_message_ttl_sec
-from app.domain.subscription.models.subscription import Subscription
-from app.domain.subscription.schemas.subscription import SubscriptionUpdate
+from app.domain.token.models.enums.token import TokenSourceType
+from app.domain.token.models.token import TokenWallet
+from app.domain.token.services.token_domain_sevice import TokenDomainService, get_token_domain_service
 from app.domain.user.models.user import User
-from app.domain.user.schemas.user import UserUpdate
 from app.infrastructure.database.transaction import transactional
-from app.infrastructure.database.unit_of_work import UnitOfWork
+from app.infrastructure.database.unit_of_work import UnitOfWork, get_unit_of_work
 from app.infrastructure.fcm.dto.fcm_message import FCMGenerationResultData
-from app.infrastructure.fcm.fcm_service import FCMService
+from app.infrastructure.fcm.fcm_service import FCMService, get_fcm_service
 from app.infrastructure.mq.rabbit_mq_service import RabbitMQService
 from app.infrastructure.repositories.generation.generation import ImageGenerationJobRepository, \
     GenerationRequestRepository, get_image_generation_job_repository, get_generation_request_repository
-from app.core.config import image_generation_setting, fcm_setting
-from app.infrastructure.repositories.subscription.subscription import SubscriptionRepository, \
-    get_subscription_repository
+from app.core.config import image_generation_settings
+from app.infrastructure.repositories.token.token import get_token_wallet_repository, get_token_transaction_repository
 from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
 
 logger = logging.getLogger()
@@ -38,7 +38,7 @@ class ImageGenerationRetryService(TransactionalService):
             image_generation_job_repo: ImageGenerationJobRepository,
             generation_request_repo: GenerationRequestRepository,
             user_repo: UserRepository,
-            subscription_repo: SubscriptionRepository,
+            token_domain_service: TokenDomainService,
             rabbit_mq_service: RabbitMQService,
             fcm_service: FCMService,
             unit_of_work: UnitOfWork,
@@ -47,7 +47,7 @@ class ImageGenerationRetryService(TransactionalService):
         self.image_generation_job_repo = image_generation_job_repo
         self.generation_request_repo = generation_request_repo
         self.user_repo = user_repo
-        self.subscription_repo = subscription_repo
+        self.token_domain_service = token_domain_service
         self.rabbit_mq_service = rabbit_mq_service
         self.fcm_service = fcm_service
 
@@ -70,7 +70,7 @@ class ImageGenerationRetryService(TransactionalService):
 
         for expired_job in expired_jobs:
             # [FAILED 처리]
-            if expired_job.retry_count >= image_generation_setting.MAX_RETRIES:
+            if expired_job.retry_count >= image_generation_settings.MAX_RETRIES:
                 self._mark_request_failed_and_notify_fcm(expired_job)
                 continue
 
@@ -110,18 +110,23 @@ class ImageGenerationRetryService(TransactionalService):
         generation_request: GenerationRequest = self.generation_request_repo.get(expired_job.generation_request_id)
         if generation_request.generation_result == GenerationResultEnum.PENDING:
 
-            user_with_sub: User = self.user_repo.get_with_subscription(generation_request.user_id)
-            fcm_data = FCMGenerationResultData(generation_status=GenerationResultEnum.FAILED)
-            self.fcm_service.send_to_token(
-                token=user_with_sub.fcm_token,
-                title=fcm_setting.FAILURE_TITLE,
-                body=fcm_setting.FAILURE_BODY,
-                data=fcm_data.to_fcm_data(),
-            )
+            user_with_wallet: User = self.user_repo.get_with_token_wallet(generation_request.user_id)
 
             # 구독 토큰 반환
-            subscription: Subscription = user_with_sub.subscription
-            self.subscription_repo.update(obj_id=subscription.id, obj_in=SubscriptionUpdate(token=subscription.token + 1))
+            token_wallet: TokenWallet = user_with_wallet.token_wallet
+            self.token_domain_service.refund_token(
+                token_wallet=token_wallet,
+                amount=token_settings.TOKENS_PER_GENERATION,
+                source_type=TokenSourceType.IMAGE_GENERATION,
+            )
+
+            fcm_data = FCMGenerationResultData(generation_status=GenerationResultEnum.FAILED)
+            self.fcm_service.send_to_token(
+                token=user_with_wallet.fcm_token,
+                title=fcm_consts.FAILURE_TITLE,
+                body=fcm_consts.FAILURE_BODY,
+                data=fcm_data.to_fcm_data(),
+            )
 
             self.generation_request_repo.update(
                 obj_id=generation_request.id,
@@ -137,10 +142,13 @@ async def retry_expired_jobs(
             image_generation_job_repo = get_image_generation_job_repository(db),
             generation_request_repo = get_generation_request_repository(db),
             user_repo=get_user_repository(db),
-            subscription_repo=get_subscription_repository(db),
+            token_domain_service=get_token_domain_service(
+                token_wallet_repo=get_token_wallet_repository(db),
+                token_transaction_repo=get_token_transaction_repository(db),
+            ),
             rabbit_mq_service=rabbit_mq_service,
-            fcm_service=FCMService(),
-            unit_of_work=UnitOfWork(db),
+            fcm_service=get_fcm_service(),
+            unit_of_work=get_unit_of_work(db),
         )
         await service.retry_expired_jobs()
     finally:

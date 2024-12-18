@@ -10,7 +10,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.application.services.generation.dto.mq import MQPublishMessage
 from app.core.decorators import log_errors
-from app.core.config import rabbit_mq_setting
+from app.core.config import rabbit_mq_settings
 from app.core.enums.message_priority import MessagePriority
 
 logger = logging.getLogger()
@@ -22,12 +22,12 @@ class RabbitMQService:
     def __init__(
             self,
             connection_name: str,
-            hostname: str = rabbit_mq_setting.RABBITMQ_HOST,
-            vhost: str = rabbit_mq_setting.RABBITMQ_VHOST,
-            username: str = rabbit_mq_setting.RABBITMQ_USERNAME,
-            password: str = rabbit_mq_setting.RABBITMQ_PASSWORD,
-            publish_queue: str = rabbit_mq_setting.RABBITMQ_PUBLISH_QUEUE,
-            consume_queue: str = rabbit_mq_setting.RABBITMQ_CONSUME_QUEUE
+            hostname: str = rabbit_mq_settings.RABBITMQ_HOST,
+            vhost: str = rabbit_mq_settings.RABBITMQ_VHOST,
+            username: str = rabbit_mq_settings.RABBITMQ_USERNAME,
+            password: str = rabbit_mq_settings.RABBITMQ_PASSWORD,
+            publish_queue: str = rabbit_mq_settings.RABBITMQ_PUBLISH_QUEUE,
+            consume_queue: str = rabbit_mq_settings.RABBITMQ_CONSUME_QUEUE
     ):
         self.connection_name = connection_name
         self.publish_queue = publish_queue

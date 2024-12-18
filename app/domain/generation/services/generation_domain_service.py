@@ -1,8 +1,8 @@
 from typing import List, Optional
 from datetime import datetime, UTC
 
-from app.core.config import image_generation_setting
-from app.core.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
+from app.core.config import image_generation_settings
+from app.domain.generation.models.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
 from app.domain.generation.models.generation import ImageGenerationJob, GenerationRequest
 
 
@@ -21,14 +21,14 @@ def _estimate_queue_wait_sec(
     """
     # ETA_BUFFER_MULTIPLIER * ((이미지 1개 생성 시간) * (현재 mq queue 에 존재하는 요청 수 + 추론 서버 수(현재 처리 갯수))) / (추론 서버 수)
     return int(
-        buffer_mult * image_generation_setting.SINGLE_INFERENCE_SEC_EST * (image_count + processor_count) / processor_count
+        buffer_mult * image_generation_settings.SINGLE_INFERENCE_SEC_EST * (image_count + processor_count) / processor_count
     )
 
 def estimate_normal_priority_message_wait_sec(
         image_count: int,
         processor_count: int,
 ) -> int:
-    return _estimate_queue_wait_sec(image_count, processor_count, buffer_mult=image_generation_setting.WAIT_TIME_BUFFER_MULT)
+    return _estimate_queue_wait_sec(image_count, processor_count, buffer_mult=image_generation_settings.WAIT_TIME_BUFFER_MULT)
 
 def estimate_high_priority_message_wait_sec(
         image_count: int,
@@ -36,20 +36,20 @@ def estimate_high_priority_message_wait_sec(
 ) -> int:
     # 재시도 시 우선순위 높은 메시지만 고려하므로, queue에 모든 메시지가 높은 우선순위를 갖고 있다는 최악의 경우로 계산
     # 사실 그렇게 따지면 일반 우선순위와 계산 동일하게 하는게 맞긴함.
-    return _estimate_queue_wait_sec(image_count, processor_count, buffer_mult=image_generation_setting.RETRY_WAIT_TIME_BUFFER_MULT)
+    return _estimate_queue_wait_sec(image_count, processor_count, buffer_mult=image_generation_settings.RETRY_WAIT_TIME_BUFFER_MULT)
 
 def _calculate_message_ttl_sec(
         multiplier: float
 ) -> int:
     return int(
-        image_generation_setting.SINGLE_INFERENCE_SEC_EST * multiplier
+        image_generation_settings.SINGLE_INFERENCE_SEC_EST * multiplier
     )
 
 def calculate_normal_message_ttl_sec():
-    return _calculate_message_ttl_sec(multiplier=image_generation_setting.MESSAGE_TTL_MULTIPLIER)
+    return _calculate_message_ttl_sec(multiplier=image_generation_settings.MESSAGE_TTL_MULTIPLIER)
 
 def calculate_retry_message_ttl_sec():
-    return _calculate_message_ttl_sec(multiplier=image_generation_setting.RETRY_MESSAGE_TTL_MULTIPLIER)
+    return _calculate_message_ttl_sec(multiplier=image_generation_settings.RETRY_MESSAGE_TTL_MULTIPLIER)
 
 def are_all_image_generation_jobs_complete(image_generation_job_list: List[ImageGenerationJob]):
     for image_generation_job in image_generation_job_list:

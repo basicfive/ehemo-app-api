@@ -22,6 +22,10 @@ class UserRepository(CRUDRepository[User, UserCreate, UserUpdate]):
         stmt = select(User).options(joinedload(User.subscription)).where(User.id == user_id)
         return self.db.execute(stmt).scalar_one()
 
+    def get_with_token_wallet(self, user_id: int):
+        stmt = select(User).options(joinedload(User.token_wallet)).where(User.id == user_id)
+        return self.db.execute(stmt).scalar_one()
+
     def get_users_by_ids(self, user_ids: List[int]) -> List[User]:
         stmt = select(User).where(User.id.in_(user_ids))
         return list(self.db.scalars(stmt).all())
