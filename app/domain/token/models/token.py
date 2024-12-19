@@ -1,5 +1,3 @@
-from enum import unique
-
 from sqlalchemy import Column, DateTime, Integer, String, ForeignKey, Enum, Index
 from sqlalchemy.orm import relationship
 

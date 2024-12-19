@@ -108,9 +108,13 @@ class RabbitMQService:
 
                 async def async_wrapper(message):
                     try:
-                        async with message.process(requeue=True):  # requeue 옵션 추가
+                        async with message.process(requeue=False):  # requeue 옵션 추가
                             loop = asyncio.get_event_loop()
-                            await loop.run_in_executor(None, sync_callback, message.body)
+                            try:
+                                # 메시지 처리는 try-except로 감싸서 로깅만 하고 넘어감
+                                await loop.run_in_executor(None, sync_callback, message.body)
+                            except Exception as e:
+                                logger.error(f"Error processing message: {e}", exc_info=True)
                     except Exception as e:
                         logger.error(f"Error processing message: {e}", exc_info=True)
                         # connection 문제면 재연결 시도
@@ -118,7 +122,7 @@ class RabbitMQService:
                             await self._reconnect()
                         raise  # 다시 throw해서 메시지가 requeue되도록 함
 
-                await queue.consume(async_wrapper)
+                await queue.consume(async_wrapper, no_ack=True)
 
                 # consume이 시작된 후 connection 상태 모니터링
                 while not (self.connection.is_closed or self.channel.is_closed):
