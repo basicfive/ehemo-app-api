@@ -64,7 +64,7 @@ class FCMService:
             response = messaging.send(message)
             return {"success": True, "message_id": response}
         except Exception as e:
-            raise FCMException(context=f"Failed to send FCM message: {str(e)}")
+            raise FCMException(context=f"Failed to send FCM message - fcm token: {token} / error: {str(e)}")
 
     def send_to_tokens(
             self,

@@ -1,11 +1,12 @@
 import logging
 from datetime import datetime, timedelta, UTC
-from typing import List
+from typing import List, Tuple, Optional
 
 from sqlalchemy.orm import Session
 
 from app import fcm_consts, token_settings
 from app.application.services.generation.dto.mq import MQPublishMessage
+from app.application.services.generation.dto.retry import FailedJobResult
 from app.application.services.transactional_service import TransactionalService
 from app.core.db.base import get_db
 from app.domain.generation.models.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
@@ -51,40 +52,48 @@ class ImageGenerationRetryService(TransactionalService):
         self.rabbit_mq_service = rabbit_mq_service
         self.fcm_service = fcm_service
 
-    @transactional
     async def retry_expired_jobs(self):
-        expired_jobs: List[ImageGenerationJob] = self.image_generation_job_repo.get_all_expired_but_to_process_jobs()
-
+        expired_jobs = self._get_expired_jobs()
         logger.info(f"Found {len(expired_jobs)} expired jobs to process...")
         if not expired_jobs:
             return
 
-        message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
-        if consumer_count < 1:
-            raise NoInferenceConsumerException()
-
+        message_count, consumer_count = await self._validate_queue_state()
         current_message_expire_at = estimate_high_priority_message_wait_sec(
             image_count=message_count,
             processor_count=consumer_count
         )
 
         for expired_job in expired_jobs:
-            # [FAILED 처리]
             if expired_job.retry_count >= image_generation_settings.MAX_RETRIES:
-                self._mark_request_failed_and_notify_fcm(expired_job)
-                continue
+                # [FAILED 처리]
+                self._handle_failed_job(expired_job)
+            else:
+                current_message_expire_at = await self._retry_job(expired_job, current_message_expire_at)
 
-            current_message_expire_at += calculate_retry_message_ttl_sec()
 
-            print("Currently updating expire time with retry: ")
-            print(f"current time : {datetime.now(UTC)}")
+    def _get_expired_jobs(self) -> List[ImageGenerationJob]:
+        return self.image_generation_job_repo.get_all_expired_but_to_process_jobs()
+
+    async def _validate_queue_state(self) -> Tuple[int, int]:
+        message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
+        if consumer_count < 1:
+            raise NoInferenceConsumerException()
+        return message_count, consumer_count
+
+
+    @transactional
+    async def _retry_job(self, expired_job: ImageGenerationJob, current_message_expire_at: int) -> int:
+
+            print(f"Currently updating expire time with retry - current time : {datetime.now(UTC)}")
+            new_expire_at = current_message_expire_at + calculate_retry_message_ttl_sec()
 
             # 재요청 - mq 높은 우선순위
             db_retry_job = self.image_generation_job_repo.update_with_flush(
                 obj_id=expired_job.id,
                 obj_in=ImageGenerationJobUpdate(
                     retry_count=expired_job.retry_count + 1,
-                    expires_at=datetime.now(UTC) + timedelta(seconds=current_message_expire_at)
+                    expires_at=datetime.now(UTC) + timedelta(seconds=new_expire_at)
                 )
             )
             retry_job = ImageGenerationJobInDB.model_validate(db_retry_job)
@@ -95,11 +104,28 @@ class ImageGenerationRetryService(TransactionalService):
 
             await self.rabbit_mq_service.publish(
                 message=message,
-                expiration_sec=current_message_expire_at,
+                expiration_sec=new_expire_at,
                 priority=MessagePriority.URGENT
             )
 
-    def _mark_request_failed_and_notify_fcm(self, expired_job: ImageGenerationJob):
+            return new_expire_at
+
+    def _handle_failed_job(self, expired_job: ImageGenerationJob):
+        failed_result: Optional[FailedJobResult] = self._mark_as_job_failed(expired_job)
+
+        # generation request 중 최초라면
+        if failed_result:
+            try:
+                self._send_failure_notification(failed_result.user.fcm_token)
+            except Exception:
+                logger.error(
+                    f"Failed to send FCM notification for job {failed_result.image_generation_job_id} "
+                    f"(request: {failed_result.generation_request_id})"
+                )
+                raise
+
+    @transactional
+    def _mark_as_job_failed(self, expired_job: ImageGenerationJob) -> Optional[FailedJobResult]:
         self.image_generation_job_repo.update(
             obj_id=expired_job.id,
             obj_in=ImageGenerationJobUpdate(status=GenerationStatusEnum.FAILED)
@@ -120,18 +146,27 @@ class ImageGenerationRetryService(TransactionalService):
                 source_type=TokenSourceType.IMAGE_GENERATION,
             )
 
-            fcm_data = FCMGenerationResultData(generation_status=GenerationResultEnum.FAILED)
-            self.fcm_service.send_to_token(
-                token=user_with_wallet.fcm_token,
-                title=fcm_consts.FAILURE_TITLE,
-                body=fcm_consts.FAILURE_BODY,
-                data=fcm_data.to_fcm_data(),
-            )
-
             self.generation_request_repo.update(
                 obj_id=generation_request.id,
                 obj_in=GenerationRequestUpdate(generation_result=GenerationResultEnum.FAILED)
             )
+            logger.info(f"Generation Request: {generation_request.id} is marked as failed.")
+
+            return FailedJobResult(
+                user=user_with_wallet,
+                image_generation_job_id=expired_job.id,
+                generation_request_id=generation_request.id,
+            )
+        return None
+
+    def _send_failure_notification(self, fcm_token: str):
+        fcm_data = FCMGenerationResultData(generation_status=GenerationResultEnum.FAILED)
+        self.fcm_service.send_to_token(
+            token=fcm_token,
+            title=fcm_consts.FAILURE_TITLE,
+            body=fcm_consts.FAILURE_BODY,
+            data=fcm_data.to_fcm_data(),
+        )
 
 async def retry_expired_jobs(
         rabbit_mq_service: RabbitMQService,
