@@ -4,7 +4,7 @@ from datetime import datetime, UTC
 from dateutil.relativedelta import relativedelta
 
 from app import token_settings
-from app.application.services.subscription.dto.subscription import UserSubscriptionInfo
+from app.application.services.subscription.dto.subscription import UserSubscriptionInfo, UserSubscriptionStatus
 from app.application.services.transactional_service import TransactionalService
 from app.domain import SubscriptionPlan
 from app.domain.subscription.models.enums.subscription import SubscriptionStatus
@@ -40,7 +40,7 @@ class UserSubscribeApplicationService(TransactionalService):
     # TODO: timezone config 사용?
     # 무료 구독 api
     @transactional
-    def create_user_sub(self, subscription_plan_id: int, user_id: int) -> UserSubscriptionInfo:
+    def create_user_sub(self, subscription_plan_id: int, user_id: int) -> UserSubscriptionStatus:
 
         # TODO: 이미 구독이 있는 경우에는 validation
 
@@ -78,12 +78,15 @@ class UserSubscribeApplicationService(TransactionalService):
 
         user_sub = UserSubscriptionInDB.model_validate(db_user_sub)
 
-        return UserSubscriptionInfo(
-            original_transaction_id=user_sub.original_transaction_id,
-            plan_type=subscription_plan.plan_type,
-            name=subscription_plan.name,
-            description=subscription_plan.description,
-            next_billing_date=hundred_years_later,
+        return UserSubscriptionStatus(
+            is_subscribed=True,
+            info=UserSubscriptionInfo(
+                original_transaction_id=user_sub.original_transaction_id,
+                plan_type=subscription_plan.plan_type,
+                name=subscription_plan.name,
+                description=subscription_plan.description,
+                next_billing_date=hundred_years_later,
+            )
         )
 
 def get_subscription_application_service(

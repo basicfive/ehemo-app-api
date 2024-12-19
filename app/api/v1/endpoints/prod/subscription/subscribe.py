@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status, Depends
 
-from app.application.services.subscription.dto.subscription import UserSubscriptionInfo
+from app.application.services.subscription.dto.subscription import UserSubscriptionStatus
 from app.application.services.subscription.user_subscribe import UserSubscribeApplicationService, \
     get_subscription_application_service
 from app.application.services.user.auth import validate_user_token
@@ -9,12 +9,12 @@ router = APIRouter()
 
 # /prod/subscription/
 
-@router.post("/subscribe/free-plan", response_model=UserSubscriptionInfo, status_code=status.HTTP_200_OK)
+@router.post("/subscribe/free-plan", response_model=UserSubscriptionStatus, status_code=status.HTTP_200_OK)
 def create_free_plan(
         subscription_plan_id: int,
         user_id: int = Depends(validate_user_token),
         service: UserSubscribeApplicationService = Depends(get_subscription_application_service),
-) -> UserSubscriptionInfo:
+) -> UserSubscriptionStatus:
     return service.create_user_sub(subscription_plan_id, user_id)
 
 
