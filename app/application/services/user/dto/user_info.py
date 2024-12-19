@@ -6,4 +6,3 @@ class UserTokenResponse(BaseModel):
 class UserInfoResponse(BaseModel):
     uuid: str
     email: str
-    token: int

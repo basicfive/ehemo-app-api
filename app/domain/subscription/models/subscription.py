@@ -43,7 +43,7 @@ class UserSubscription(TimeStampModel):
     canceled_at = Column(DateTime, nullable=True)
 
     user_id = Column(ForeignKey("user.id"), unique=True, nullable=False, index=True)
-    subscription_plan_id = Column(ForeignKey("subscription_plan.id"), unique=True, nullable=False, index=True)
+    subscription_plan_id = Column(ForeignKey("subscription_plan.id"), nullable=False, index=True)
 
     user = relationship("User", back_populates="user_subscription")
     subscription_plan = relationship("SubscriptionPlan", back_populates="user_subscription")

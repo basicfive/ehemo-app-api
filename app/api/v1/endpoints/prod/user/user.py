@@ -16,7 +16,7 @@ def get_user_token(
     return service.get_user_token(user_id=user_id)
 
 @router.get("/info", response_model=UserInfoResponse, status_code=status.HTTP_200_OK)
-def get_user_token(
+def get_user_info(
         user_id: int = Depends(validate_user_token),
         service: UserApplicationService = Depends(get_user_application_service)
 ) -> UserInfoResponse:
