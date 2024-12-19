@@ -9,7 +9,7 @@ from app.domain.subscription.models.enums.subscription import SubscriptionStatus
 class SubscriptionPlan(TimeStampModel):
     __tablename__ = "subscription_plan"
     name = Column(String, nullable=False)
-    description = Column(String, nullable=False)
+    description = Column(String, nullable=True)
 
     plan_type = Column(Enum(SubscriptionPlanType), nullable=False)
     billing_interval = Column(Enum(BillingInterval), nullable=True)
@@ -23,7 +23,7 @@ class SubscriptionPlan(TimeStampModel):
     has_discount = Column(Boolean, default=False, nullable=False)
     discount_description = Column(String)
 
-    store_type = Column(Enum(StoreType), nullable=True)
+    store_type = Column(Enum(StoreType), nullable=False)
     product_id = Column(String, nullable=True)
 
     user_subscription = relationship("UserSubscription", back_populates="subscription_plan")

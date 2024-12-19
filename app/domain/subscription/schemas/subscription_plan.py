@@ -7,7 +7,7 @@ from app.domain.subscription.models.enums.subscription import BillingInterval, S
 
 class SubscriptionPlanCreate(BaseModel):
     name: str
-    description: str
+    description: Optional[str]
 
     plan_type: SubscriptionPlanType
     billing_interval: Optional[BillingInterval]
@@ -21,7 +21,7 @@ class SubscriptionPlanCreate(BaseModel):
     has_discount: Optional[bool]
     discount_description: Optional[str]
 
-    store_type: Optional[StoreType]
+    store_type: StoreType
     product_id: Optional[str]
 
 
@@ -48,7 +48,7 @@ class SubscriptionPlanUpdate(BaseModel):
 class SubscriptionPlanInDB(BaseModel):
     id: int
     name: str
-    description: str
+    description: Optional[str]
 
     plan_type: SubscriptionPlanType
     billing_interval: Optional[BillingInterval]
@@ -62,7 +62,7 @@ class SubscriptionPlanInDB(BaseModel):
     has_discount: bool
     discount_description: Optional[str]
 
-    store_type: Optional[StoreType]
+    store_type: StoreType
     product_id: Optional[str]
 
     class Config:
