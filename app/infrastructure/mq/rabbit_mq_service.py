@@ -78,6 +78,7 @@ class RabbitMQService:
     )
     async def _reconnect(self):
         logging.warning("RabbitMQ connection is closed. Trying Reconnection...")
+        await self.close()  # 기존 연결 정리 후
         await self.connect()
 
     @log_errors("RabbitMQ publish failed")
@@ -96,6 +97,7 @@ class RabbitMQService:
         )
         logger.info(f"[MQ] Published Job ID: {message.image_generation_job_id}. DETAILS: {message.to_str()}")
 
+    @log_errors("RabbitMQ consume failed")
     async def consume(self, sync_callback: Callable):
         while True:  # 지속적인 재시도를 위한 루프
             try:
@@ -127,20 +129,6 @@ class RabbitMQService:
             except Exception as e:
                 logger.error(f"Consumer encountered an error: {e}", exc_info=True)
                 await asyncio.sleep(5)  # 에러 발생 시 잠시 대기 후 재시도
-
-    @log_errors("RabbitMQ consume failed")
-    async def consume(self, sync_callback: Callable):
-        if self.connection.is_closed or self.channel.is_closed:
-            await self._reconnect()
-
-        async def async_wrapper(message):
-            async with message.process():
-                loop = asyncio.get_event_loop()
-                await loop.run_in_executor(None, sync_callback, message.body)
-
-        queue = await self.channel.declare_queue(self.consume_queue, passive=True)
-
-        await queue.consume(async_wrapper)
 
     async def get_queue_info(self):
         if self.connection.is_closed or self.channel.is_closed:
