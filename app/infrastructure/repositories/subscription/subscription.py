@@ -1,5 +1,4 @@
 from fastapi import Depends
-from httplib2.auth import token
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
@@ -48,7 +47,7 @@ class UserSubscriptionRepository(CRUDRepository[UserSubscription, UserSubscripti
                 joinedload(UserSubscription.subscription_plan),
             )
         )
-        return self.db.execute(stmt).scalar_one()
+        return self.db.execute(stmt).unique().scalar_one()
 
     def get_with_user(self, original_transaction_id: str):
         stmt = (
@@ -56,7 +55,7 @@ class UserSubscriptionRepository(CRUDRepository[UserSubscription, UserSubscripti
             .options(joinedload(UserSubscription.user))
             .where(UserSubscription.original_transaction_id == original_transaction_id)
         )
-        return self.db.execute(stmt).scalar_one()
+        return self.db.execute(stmt).unique().scalar_one()
 
     def get_active_subscriptions_for_refill_with_relations(self, current_time: datetime) -> List[UserSubscription]:
         stmt = (
