@@ -51,7 +51,7 @@ class TokenDomainService:
 
        token_transaction: TokenTransaction = self.token_transaction_repo.create_with_flush(
            obj_in=TokenTransactionCreate(
-               transaction_type=TokenTransactionType.CONSUME,
+               transaction_type=TokenTransactionType.USE,
                source_type=source_type,
                amount=-amount,
                balance_before=current_token,

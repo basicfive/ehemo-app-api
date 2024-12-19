@@ -159,6 +159,13 @@ class RequestGenerationApplicationService(TransactionalService):
 
         image_generation_job_list: List[ImageGenerationJob] = []
 
+        # 구독권 토큰 감소
+        self.token_domain_service.consume_token(
+            token_wallet=token_wallet,
+            amount=token_settings.TOKENS_PER_GENERATION,
+            source_type=TokenSourceType.IMAGE_GENERATION,
+        )
+
         for idx, prompt in enumerate(prompt_list):
             message_time_to_live_sec += calculate_normal_message_ttl_sec()
             # job 생성
@@ -174,13 +181,6 @@ class RequestGenerationApplicationService(TransactionalService):
                 ImageGenerationJobInDB.model_validate(image_generation_job),
                 message_time_to_live_sec
             )
-
-        # 구독권 토큰 감소
-        self.token_domain_service.consume_token(
-            token_wallet=token_wallet,
-            amount=token_settings.TOKENS_PER_GENERATION,
-            source_type=TokenSourceType.IMAGE_GENERATION,
-        )
 
         return GenerationRequestResponse(
             generation_request_id=generation_request_with_relation.id,

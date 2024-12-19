@@ -99,7 +99,7 @@ class RabbitMQService:
 
     @log_errors("RabbitMQ consume failed")
     async def consume(self, sync_callback: Callable):
-        while True:  # 지속적인 재시도를 위한 루프
+        while True:
             try:
                 if self.connection.is_closed or self.channel.is_closed:
                     await self._reconnect()
@@ -108,31 +108,22 @@ class RabbitMQService:
 
                 async def async_wrapper(message):
                     try:
-                        async with message.process(requeue=False):  # requeue 옵션 추가
-                            loop = asyncio.get_event_loop()
-                            try:
-                                # 메시지 처리는 try-except로 감싸서 로깅만 하고 넘어감
-                                await loop.run_in_executor(None, sync_callback, message.body)
-                            except Exception as e:
-                                logger.error(f"Error processing message: {e}", exc_info=True)
+                        loop = asyncio.get_event_loop()
+                        await loop.run_in_executor(None, sync_callback, message.body)
                     except Exception as e:
                         logger.error(f"Error processing message: {e}", exc_info=True)
-                        # connection 문제면 재연결 시도
-                        if isinstance(e, (ConnectionError, TimeoutError)):
-                            await self._reconnect()
-                        raise  # 다시 throw해서 메시지가 requeue되도록 함
 
+                # no_ack=True로 설정, context manager 사용하지 않음
                 await queue.consume(async_wrapper, no_ack=True)
 
-                # consume이 시작된 후 connection 상태 모니터링
                 while not (self.connection.is_closed or self.channel.is_closed):
-                    await asyncio.sleep(30)  # 30초마다 체크
+                    await asyncio.sleep(30)
 
                 logger.warning("Connection or channel closed, restarting consumer...")
 
             except Exception as e:
                 logger.error(f"Consumer encountered an error: {e}", exc_info=True)
-                await asyncio.sleep(5)  # 에러 발생 시 잠시 대기 후 재시도
+                await asyncio.sleep(5)
 
     async def get_queue_info(self):
         if self.connection.is_closed or self.channel.is_closed:
