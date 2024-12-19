@@ -48,7 +48,7 @@ class UserSubscription(TimeStampModel):
     user = relationship("User", back_populates="user_subscription")
     subscription_plan = relationship("SubscriptionPlan", back_populates="user_subscription")
 
-    token_wallet = relationship("TokenWallet", back_populates="user_subscription")
+    token_wallet = relationship("TokenWallet", back_populates="user_subscription", uselist=False)
 
     __table_args__ = (
         Index('idx_subscription_status_expire', 'status', 'expire_date'),

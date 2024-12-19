@@ -18,8 +18,8 @@ class User(TimeStampModel):
     deleted = Column(Boolean, default=False, nullable=False)
     timezone = Column(String(20), nullable=True)
 
-    user_subscription = relationship("UserSubscription", back_populates="user")
-    token_wallet = relationship("TokenWallet", back_populates="user")
+    user_subscription = relationship("UserSubscription", back_populates="user", uselist=False)
+    token_wallet = relationship("TokenWallet", back_populates="user", uselist=False)
 
     __table_args__ = (
         Index(

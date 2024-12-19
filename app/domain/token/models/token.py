@@ -1,3 +1,5 @@
+from enum import unique
+
 from sqlalchemy import Column, DateTime, Integer, String, ForeignKey, Enum, Index
 from sqlalchemy.orm import relationship
 
@@ -14,8 +16,8 @@ class TokenWallet(TimeStampModel):
     next_refill_date = Column(DateTime(timezone=True), nullable=False)
     last_refill_date = Column(DateTime(timezone=True), nullable=False)
 
-    user_id = Column(Integer, ForeignKey("user.id"), index=True)
-    user_subscription_id = Column(Integer, ForeignKey("user_subscription.id"), index=True)
+    user_id = Column(Integer, ForeignKey("user.id"), unique=True, index=True)
+    user_subscription_id = Column(Integer, ForeignKey("user_subscription.id"), unique=True, index=True)
 
     user = relationship("User", back_populates="token_wallet")
     user_subscription = relationship("UserSubscription", back_populates="token_wallet")
