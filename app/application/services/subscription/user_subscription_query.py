@@ -1,7 +1,7 @@
 from fastapi import Depends
 from sqlalchemy.exc import NoResultFound
 
-from app.application.services.subscription.dto.subscription import UserSubscriptionStatus, UserSubscriptionInfo
+from app.application.services.subscription.dto.subscription_status import UserSubscriptionStatus, UserSubscriptionInfo
 from app.domain import UserSubscription, SubscriptionPlan
 from app.infrastructure.repositories.subscription.subscription import UserSubscriptionRepository, \
     get_user_subscription_repository

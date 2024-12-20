@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, Enum, ForeignKey, Float, Boolean, UniqueConstraint, Index
+from sqlalchemy import Column, String, Integer, DateTime, Enum, ForeignKey, Float, Boolean, UniqueConstraint, Index, text
 from sqlalchemy.orm import relationship
 
 from app.domain.time_stamp_model import TimeStampModel
@@ -32,7 +32,7 @@ class SubscriptionPlan(TimeStampModel):
 class UserSubscription(TimeStampModel):
     __tablename__ = "user_subscription"
     # RevenueCat 관련 정보
-    original_transaction_id = Column(String(50), unique=True, nullable=False, index=True)
+    original_transaction_id = Column(String(50), nullable=False, index=True)
     latest_transaction_id = Column(String(50))
     purchase_date = Column(DateTime, nullable=False)
     expire_date = Column(DateTime, nullable=False)
@@ -42,7 +42,10 @@ class UserSubscription(TimeStampModel):
     auto_renew_status = Column(Boolean, default=True, nullable=False)
     canceled_at = Column(DateTime, nullable=True)
 
-    user_id = Column(ForeignKey("user.id"), unique=True, nullable=False, index=True)
+    # 현재 사용자와 연결된 구독
+    is_current_subscription = Column(Boolean, nullable=True) # nullable=False 로 전환할 것.
+
+    user_id = Column(ForeignKey("user.id"), nullable=False, index=True)
     subscription_plan_id = Column(ForeignKey("subscription_plan.id"), nullable=False, index=True)
 
     user = relationship("User", back_populates="user_subscription")
@@ -51,6 +54,16 @@ class UserSubscription(TimeStampModel):
     token_wallet = relationship("TokenWallet", back_populates="user_subscription", uselist=False)
 
     __table_args__ = (
+        # 한 유저는 활성 구독을 하나만 가질 수 있도록 제약
+        UniqueConstraint(
+            'original_transaction_id',
+            'user_id',
+            'is_current_subscription',
+            name='uq_user_original_transaction_current',
+            deferrable=True,
+            initially='DEFERRED',
+            info=dict(where=text("is_current_subscription"))
+        ),
         Index('idx_subscription_status_expire', 'status', 'expire_date'),
     )
 

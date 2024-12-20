@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import APIRouter, Depends, status
 
-from app.application.services.subscription.dto.subscription import UserSubscriptionInfo, UserSubscriptionStatus
+from app.application.services.subscription.dto.subscription_status import UserSubscriptionInfo, UserSubscriptionStatus
 from app.application.services.subscription.subscription_options import SubscriptionPlanQueryService, \
     get_subscription_plan_query_service
 from app.application.services.subscription.user_subscription_query import UserSubscriptionQueryService, \

@@ -26,3 +26,4 @@ aio-pika~=9.4.3
 protobuf~=5.28.3
 pytz
 python-dateutil
+python-jose[cryptography]

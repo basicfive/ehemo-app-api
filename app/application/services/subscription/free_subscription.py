@@ -4,7 +4,7 @@ from datetime import datetime, UTC
 from dateutil.relativedelta import relativedelta
 
 from app import token_settings
-from app.application.services.subscription.dto.subscription import UserSubscriptionInfo, UserSubscriptionStatus
+from app.application.services.subscription.dto.subscription_status import UserSubscriptionInfo, UserSubscriptionStatus
 from app.application.services.transactional_service import TransactionalService
 from app.domain import SubscriptionPlan
 from app.domain.subscription.models.enums.subscription import SubscriptionStatus
@@ -19,7 +19,7 @@ from app.infrastructure.repositories.subscription.subscription import UserSubscr
 from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
 
 
-class UserSubscribeApplicationService(TransactionalService):
+class FreeSubscriptionApplicationService(TransactionalService):
     def __init__(
             self,
             user_sub_repo: UserSubscriptionRepository,
@@ -34,10 +34,22 @@ class UserSubscribeApplicationService(TransactionalService):
         self.token_domain_service = token_domain_service
         self.user_repo = user_repo
 
-    # 웹훅으로 처리해야하는 api
+    # 초기 구매
+    def initial_purchase(self):
+        pass
 
+    def expiration(self):
+        pass
 
-    # TODO: timezone config 사용?
+    def cancellation(self):
+        pass
+
+    def un_cancellation(self):
+        pass
+
+    def product_change(self):
+        pass
+
     # 무료 구독 api
     @transactional
     def create_user_sub(self, subscription_plan_id: int, user_id: int) -> UserSubscriptionStatus:
@@ -89,14 +101,14 @@ class UserSubscribeApplicationService(TransactionalService):
             )
         )
 
-def get_subscription_application_service(
+def get_free_subscription_application_service(
         user_sub_repo: UserSubscriptionRepository = Depends(get_user_subscription_repository),
         subscription_plan_repo: SubscriptionPlanRepository = Depends(get_subscription_plan_repository),
         token_domain_service: TokenDomainService = Depends(get_token_domain_service),
         user_repo: UserRepository = Depends(get_user_repository),
         unit_of_work: UnitOfWork = Depends(get_unit_of_work),
-) -> UserSubscribeApplicationService:
-    return UserSubscribeApplicationService(
+) -> FreeSubscriptionApplicationService:
+    return FreeSubscriptionApplicationService(
         user_sub_repo=user_sub_repo,
         subscription_plan_repo=subscription_plan_repo,
         token_domain_service=token_domain_service,
