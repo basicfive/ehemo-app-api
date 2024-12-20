@@ -50,7 +50,7 @@ async def handle_revenuecat_webhook(
             service.handle_product_change(event)
 
         elif isinstance(event, Test):
-            service.handle_product_change(event)
+            service.handle_test_event(event)
 
         else:
             raise ValueError(f"Unsupported event type: {event.type}")
