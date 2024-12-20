@@ -10,14 +10,16 @@ from app.application.services.subscription.paid_subscription import PaidSubscrip
 router = APIRouter()
 security = HTTPBearer()
 
-def verify_webhook_auth(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def verify_webhook_auth(request: Request):
     """웹훅 Authorization 헤더 검증"""
-    if credentials.credentials != revenuecat_settings.AUTHORIZATION_HEADER_UUID:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid authorization token"
-        )
-    return credentials.credentials
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Authorization header missing")
+
+    if auth_header != revenuecat_settings.AUTHORIZATION_HEADER_UUID:
+        raise HTTPException(status_code=401, detail="Invalid authorization token")
+
+    return auth_header
 
 # revenue cat webhook
 @router.post("/revenuecat/webhook", status_code=status.HTTP_200_OK)
