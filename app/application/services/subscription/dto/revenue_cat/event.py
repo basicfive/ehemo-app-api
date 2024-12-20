@@ -8,6 +8,7 @@ class EventType(str, Enum):
     UNCANCELLATION = "UNCANCELLATION"
     RENEWAL = "RENEWAL"
     PRODUCT_CHANGE = "PRODUCT_CHANGE"
+    TEST = "TEST"
 
 class SubscriberAttribute(BaseModel):
     updated_at_ms: int
@@ -51,6 +52,20 @@ class BaseEvent(BaseModel):
     country_code: Optional[str]
 
 
+class Test(BaseEvent):
+    """테스트 이벤트를 위한 모델"""
+    commission_percentage: Optional[float] = None
+    renewal_number: Optional[int] = None
+    tax_percentage: Optional[float] = None
+    currency: Optional[str] = None
+    price: Optional[float] = None
+    price_in_purchased_currency: Optional[float] = None
+    transaction_id: Optional[str] = None
+    original_transaction_id: Optional[str] = None
+    is_family_share: Optional[bool] = None
+    entitlement_ids: Optional[List[str]] = None
+
+
 class InitialPurchase(BaseEvent):
     is_trial_conversion: Optional[bool]
 
@@ -71,6 +86,7 @@ class ProductChange(BaseEvent):
     new_product_id: str
 
 
+
 class WebhookEvent(BaseModel):
     api_version: str
     event: dict
@@ -84,7 +100,8 @@ class WebhookEvent(BaseModel):
             EventType.CANCELLATION: Cancellation,
             EventType.UNCANCELLATION: Uncancellation,
             EventType.RENEWAL: Renewal,
-            EventType.PRODUCT_CHANGE: ProductChange
+            EventType.PRODUCT_CHANGE: ProductChange,
+            EventType.TEST: Test,
         }
 
         event_class = event_models[event_type]

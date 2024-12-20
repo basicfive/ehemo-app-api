@@ -1,5 +1,5 @@
 from fastapi import APIRouter, status, Depends, Request, HTTPException
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import HTTPBearer
 from pydantic import ValidationError
 
 from app import revenuecat_settings
@@ -47,6 +47,9 @@ async def handle_revenuecat_webhook(
             service.handle_renewal(event)
 
         elif isinstance(event, ProductChange):
+            service.handle_product_change(event)
+
+        elif isinstance(event, Test):
             service.handle_product_change(event)
 
         else:
