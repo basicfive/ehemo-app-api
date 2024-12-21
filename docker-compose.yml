@@ -2,7 +2,7 @@ version: '3.8'
 services:
   api:
     container_name: ehemo-app-api
-    image: ${DOCKER_IMAGE:-ehemo-app-api}:latest
+    image: ghcr.io/ehemo-app-api:latest  # 고정된 이미지 이름 사용
     ports:
       - "8000:8000"
     depends_on:

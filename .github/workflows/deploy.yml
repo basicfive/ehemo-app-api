@@ -124,9 +124,9 @@ jobs:
             StrictHostKeyChecking no
         EOF
 
+
     - name: Deploy to Private Server
       run: |
-        # 배포 시작을 로깅
         echo "Starting deployment process..."
         
         # docker-compose.yml 파일을 서버로 전송
@@ -136,57 +136,34 @@ jobs:
         fi
 
         ssh target << 'ENDSSH'
-        # 컨테이너 상태 확인
         echo "=== Current Container Status ==="
         docker ps -a
         
-        # 이전 이미지 태그 저장 (롤백용)
-        PREVIOUS_IMAGE=$(docker inspect ehemo-app-api --format='{{.Config.Image}}' 2>/dev/null || echo "")
-        echo "Previous image: $PREVIOUS_IMAGE"
+        # 1. 컨테이너 중지
+        echo "Stopping containers..."
+        docker-compose down
         
-        # 새 이미지 풀
+        # 2. 기존 서버 이미지 삭제
+        echo "Removing existing server image..."
+        docker rmi ghcr.io/ehemo-app-api:latest || true
+        
+        # 3. 새 이미지 pull 및 태그 설정
         echo "Pulling new image..."
         if ! docker pull ${{ env.DOCKER_IMAGE }}:latest; then
           echo "Failed to pull new image"
           exit 1
         fi
+        docker tag ${{ env.DOCKER_IMAGE }}:latest ghcr.io/ehemo-app-api:latest
         
-        # 기존 컨테이너 정리
-        echo "Cleaning up existing containers..."
-        docker rm -f ehemo-app-api ehemo-app-redis || true
-        docker-compose down || true
-        
-        # GitHub 컨테이너 레지스트리 로그인
-        echo "Logging into GitHub Container Registry..."
-        if ! echo "${{ env.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin; then
-          echo "Failed to login to GitHub Container Registry"
-          exit 1
-        fi
-        
-        # 새 컨테이너 시작
-        echo "Starting new containers..."
-        if ! DOCKER_IMAGE=${{ env.DOCKER_IMAGE }} docker-compose up -d; then
-          echo "Failed to start new containers. Rolling back..."
-          if [ ! -z "$PREVIOUS_IMAGE" ]; then
-            docker tag $PREVIOUS_IMAGE ${{ env.DOCKER_IMAGE }}:latest
-            DOCKER_IMAGE=${{ env.DOCKER_IMAGE }} docker-compose up -d
-          fi
+        # 4. 컨테이너 시작
+        echo "Starting containers..."
+        if ! docker-compose up -d; then
+          echo "Failed to start containers"
           exit 1
         fi
         
         echo "=== Final Container Status ==="
         docker-compose ps
-        
-        # 컨테이너 실행 확인
-        if ! docker ps | grep -q "ehemo-app-api"; then
-          echo "Failed to start containers"
-          if [ ! -z "$PREVIOUS_IMAGE" ]; then
-            echo "Rolling back to previous version..."
-            docker tag $PREVIOUS_IMAGE ${{ env.DOCKER_IMAGE }}:latest
-            DOCKER_IMAGE=${{ env.DOCKER_IMAGE }} docker-compose up -d
-          fi
-          exit 1
-        fi
         ENDSSH
 
     - name: Remove IP from bastion security group
