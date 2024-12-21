@@ -54,12 +54,16 @@ async def handle_revenuecat_webhook(
        return {"status": "success"}
 
    except ValidationError as e:
-       raise HTTPException(
-           status_code=status.HTTP_400_BAD_REQUEST,
-           detail=f"Invalid payload format: {str(e)}"
-       )
+      error_detail = f"Validation error detail: {e.errors()}"
+      print(error_detail)  # 상세 에러 로깅
+      raise HTTPException(
+          status_code=status.HTTP_400_BAD_REQUEST,
+          detail=error_detail
+      )
    except ValueError as e:
-       raise HTTPException(
-           status_code=status.HTTP_400_BAD_REQUEST,
-           detail=str(e)
-       )
+      error_detail = f"Value error detail: {str(e)}"
+      print(error_detail)  # ValueError 로깅 추가
+      raise HTTPException(
+          status_code=status.HTTP_400_BAD_REQUEST,
+          detail=error_detail
+      )
