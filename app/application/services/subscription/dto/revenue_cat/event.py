@@ -9,6 +9,7 @@ class EventType(str, Enum):
     UNCANCELLATION = "UNCANCELLATION"
     RENEWAL = "RENEWAL"
     PRODUCT_CHANGE = "PRODUCT_CHANGE"
+    EXPIRATION = "EXPIRATION"
     TEST = "TEST"
 
 class SubscriberAttribute(BaseModel):
@@ -39,7 +40,6 @@ class BaseEvent(BaseModel):
     currency: Optional[str]
     price: Optional[float]
     price_in_purchased_currency: Optional[float]
-    store: str
     takehome_percentage: Optional[float]
     offer_code: Optional[str]
     subscriber_attributes: Optional[Dict[str, SubscriberAttribute]]
@@ -48,6 +48,9 @@ class BaseEvent(BaseModel):
     is_family_share: Optional[bool]
     country_code: Optional[str]
 
+    expiration_reason: Optional[str]  # 추가
+    tax_percentage: Optional[float]  # 추가
+    commission_percentage: Optional[float]  # 추가
 
 # 각 이벤트는 BaseEvent에 없는 추가 필드만 정의
 class InitialPurchase(BaseEvent):
@@ -69,6 +72,8 @@ class Renewal(BaseEvent):
 class ProductChange(BaseEvent):
     new_product_id: str
 
+class Expiration(BaseEvent):
+    pass
 
 class Test(BaseModel):
     # 기본 필드 (null이 아닌 필드들)
@@ -118,6 +123,7 @@ class WebhookEvent(BaseModel):
             EventType.UNCANCELLATION: Uncancellation,
             EventType.RENEWAL: Renewal,
             EventType.PRODUCT_CHANGE: ProductChange,
+            EventType.EXPIRATION: Expiration,
             EventType.TEST: Test,
         }
 

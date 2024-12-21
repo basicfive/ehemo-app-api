@@ -30,8 +30,11 @@ async def handle_revenuecat_webhook(
         service: PaidSubscriptionApplicationService = Depends(get_paid_subscription_application_service),
 ):
     payload = await request.json()
+    print("webhook payload : ")
+    print(payload)
     try:
         webhook_event = WebhookEvent.from_payload(payload)
+        from datetime import datetime
         event = webhook_event.parse_event()
 
         if isinstance(event, InitialPurchase):

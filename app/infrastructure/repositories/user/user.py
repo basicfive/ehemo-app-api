@@ -2,7 +2,6 @@ from typing import List
 from fastapi import Depends
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import select
-from datetime import datetime
 
 from app.core.db.base import get_db
 from app.infrastructure.repositories.crud_repository import CRUDRepository
@@ -29,6 +28,10 @@ class UserRepository(CRUDRepository[User, UserCreate, UserUpdate]):
     def get_users_by_ids(self, user_ids: List[int]) -> List[User]:
         stmt = select(User).where(User.id.in_(user_ids))
         return list(self.db.scalars(stmt).all())
+
+    def get_by_uuid(self, user_uuid: str):
+        stmt = select(User).where(User.uuid == user_uuid)
+        return self.db.execute(stmt).scalar_one()
 
 def get_user_repository(db: Session = Depends(get_db)):
     return UserRepository(db=db)
