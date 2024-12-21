@@ -23,50 +23,43 @@ async def verify_webhook_auth(request: Request):
 
 # revenue cat webhook
 @router.post("/revenuecat/webhook", status_code=status.HTTP_200_OK)
-# auth 검증 로직 추가해야함.
 async def handle_revenuecat_webhook(
-        request: Request,
-        auth_token: str = Depends(verify_webhook_auth),
-        service: PaidSubscriptionApplicationService = Depends(get_paid_subscription_application_service),
+       request: Request,
+       auth_token: str = Depends(verify_webhook_auth),
+       service: PaidSubscriptionApplicationService = Depends(get_paid_subscription_application_service),
 ):
-    payload = await request.json()
-    print("webhook payload : ")
-    print(payload)
-    try:
-        webhook_event = WebhookEvent.from_payload(payload)
-        from datetime import datetime
-        event = webhook_event.parse_event()
+   payload = await request.json()
+   print("webhook payload : ")
+   print(payload)
+   try:
+       # EventParser를 사용해 직접 변환
+       event = EventParser.parse(payload["event"])
 
-        if isinstance(event, InitialPurchase):
-            service.handle_initial_purchase(event)
+       # event type에 따른 핸들러 매핑
+       handlers = {
+           EventType.INITIAL_PURCHASE: service.handle_initial_purchase,
+           EventType.CANCELLATION: service.handle_cancellation,
+           EventType.UNCANCELLATION: service.handle_uncancellation,
+           EventType.RENEWAL: service.handle_renewal,
+           EventType.PRODUCT_CHANGE: service.handle_product_change,
+           # EventType.TEST: service.handle_test_event,
+           EventType.EXPIRATION: service.handle_expiration,  # 추가 필요
+       }
 
-        elif isinstance(event, Cancellation):
-            service.handle_cancellation(event)
+       handler = handlers.get(event.type)
+       if not handler:
+           raise ValueError(f"Unsupported event type: {event.type}")
 
-        elif isinstance(event, Uncancellation):
-            service.handle_uncancellation(event)
+       handler(event)
+       return {"status": "success"}
 
-        elif isinstance(event, Renewal):
-            service.handle_renewal(event)
-
-        elif isinstance(event, ProductChange):
-            service.handle_product_change(event)
-
-        elif isinstance(event, Test):
-            service.handle_test_event(event)
-
-        else:
-            raise ValueError(f"Unsupported event type: {event.type}")
-
-        return {"status": "success"}
-
-    except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid payload format: {str(e)}"
-        )
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+   except ValidationError as e:
+       raise HTTPException(
+           status_code=status.HTTP_400_BAD_REQUEST,
+           detail=f"Invalid payload format: {str(e)}"
+       )
+   except ValueError as e:
+       raise HTTPException(
+           status_code=status.HTTP_400_BAD_REQUEST,
+           detail=str(e)
+       )

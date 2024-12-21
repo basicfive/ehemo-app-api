@@ -1,6 +1,8 @@
 from enum import Enum
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Type
 from pydantic import BaseModel
+
+from app.domain import StoreType, Currency
 
 
 class EventType(str, Enum):
@@ -18,41 +20,38 @@ class SubscriberAttribute(BaseModel):
 
 
 class BaseEvent(BaseModel):
-    # 항상 존재하는 기본 이벤트 정보
-    event_timestamp_ms: int
-    environment: str
     type: EventType
     id: str
     app_id: str
+    event_timestamp_ms: int
     app_user_id: str
     original_app_user_id: str
     aliases: List[str]
-    period_type: str
-    product_id: str
-    store: str
-
-    # null이 올 수 있는 필드들
-    entitlement_id: Optional[str]
-    entitlement_ids: Optional[List[str]]
-    presented_offering_id: Optional[str]
-    transaction_id: Optional[str]
-    original_transaction_id: Optional[str]
-    currency: Optional[str]
-    price: Optional[float]
-    price_in_purchased_currency: Optional[float]
-    takehome_percentage: Optional[float]
-    offer_code: Optional[str]
     subscriber_attributes: Optional[Dict[str, SubscriberAttribute]]
-    purchased_at_ms: Optional[int]
-    expiration_at_ms: Optional[int]
-    is_family_share: Optional[bool]
-    country_code: Optional[str]
 
-    expiration_reason: Optional[str]  # 추가
+    product_id: str
+    entitlement_ids: Optional[List[str]]
+    period_type: str
+    purchased_at_ms: int
+
+    # It can be NULL for non-subscription purchases.
+    expiration_at_ms: Optional[int]
+
+    store: StoreType
+    environment: str
+
+    presented_offering_id: Optional[str]
+    price: Optional[float]
+    currency: Optional[Currency]
+    price_in_purchased_currency: Optional[float]
     tax_percentage: Optional[float]  # 추가
     commission_percentage: Optional[float]  # 추가
 
-# 각 이벤트는 BaseEvent에 없는 추가 필드만 정의
+    transaction_id: str
+    original_transaction_id: str
+    country_code: str
+
+
 class InitialPurchase(BaseEvent):
     is_trial_conversion: Optional[bool]
 
@@ -72,65 +71,39 @@ class Renewal(BaseEvent):
 class ProductChange(BaseEvent):
     new_product_id: str
 
+
 class Expiration(BaseEvent):
-    pass
+    expiration_reason: str
 
-class Test(BaseModel):
-    # 기본 필드 (null이 아닌 필드들)
-    event_timestamp_ms: int
-    environment: str
-    type: EventType
-    id: str
-    app_id: str
-    app_user_id: str
-    original_app_user_id: str
-    aliases: List[str]
-    period_type: str
-    product_id: str
-    store: str
-    purchased_at_ms: int
-    expiration_at_ms: int
-    subscriber_attributes: Dict[str, SubscriberAttribute]
 
-    # Optional 필드들 (null이 올 수 있는 필드들)
-    commission_percentage: Optional[float]
-    country_code: Optional[str]
-    currency: Optional[str]
-    entitlement_id: Optional[str]
-    entitlement_ids: Optional[List[str]]
-    is_family_share: Optional[bool]
-    offer_code: Optional[str]
-    original_transaction_id: Optional[str]
-    presented_offering_id: Optional[str]
-    price: Optional[float]
-    price_in_purchased_currency: Optional[float]
-    renewal_number: Optional[int]
-    takehome_percentage: Optional[float]
-    tax_percentage: Optional[float]
-    transaction_id: Optional[str]
-
-class WebhookEvent(BaseModel):
-    api_version: str
-    event: dict
-
-    def parse_event(self) -> BaseEvent:
-        event_type = EventType(self.event["type"])
-        event_data = self.event
-
-        event_models = {
-            EventType.INITIAL_PURCHASE: InitialPurchase,
-            EventType.CANCELLATION: Cancellation,
-            EventType.UNCANCELLATION: Uncancellation,
-            EventType.RENEWAL: Renewal,
-            EventType.PRODUCT_CHANGE: ProductChange,
-            EventType.EXPIRATION: Expiration,
-            EventType.TEST: Test,
-        }
-
-        event_class = event_models[event_type]
-        return event_class.model_validate(event_data)
+class EventParser:
+    _parsers: Dict[EventType, Type[BaseEvent]] = {
+        EventType.INITIAL_PURCHASE: InitialPurchase,
+        EventType.CANCELLATION: Cancellation,
+        EventType.UNCANCELLATION: Uncancellation,
+        EventType.RENEWAL: Renewal,
+        EventType.PRODUCT_CHANGE: ProductChange,
+        EventType.EXPIRATION: Expiration,
+        # EventType.TEST: Test
+    }
 
     @classmethod
-    def from_payload(cls, payload: dict) -> 'WebhookEvent':
-        return cls.model_validate(payload)
+    def parse(cls, event_data: dict) -> BaseEvent:
+        # 1. subscriber_attributes 전처리
+        if "subscriber_attributes" in event_data and event_data["subscriber_attributes"]:
+            event_data["subscriber_attributes"] = {
+                key: SubscriberAttribute.model_validate(value)
+                for key, value in event_data["subscriber_attributes"].items()
+            }
+
+        # 2. event_type 가져오기 (Enum은 자동변환됨)
+        event_type = EventType(event_data["type"])
+        parser = cls._parsers.get(event_type)
+
+        if not parser:
+            raise ValueError(f"Unsupported event type: {event_type}")
+
+        # 3. 해당 이벤트 타입의 모델로 변환
+        return parser.model_validate(event_data)
+
 

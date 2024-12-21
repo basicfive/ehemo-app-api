@@ -50,9 +50,13 @@ class PaidSubscriptionApplicationService(TransactionalService):
         """상품 변경 이벤트 처리"""
         pass
 
-    def handle_test_event(self, event: Test):
+    def handle_expiration(self, event: Expiration):
         print(event.model_dump())
         pass
+
+    # def handle_test_event(self, event: Test):
+    #     print(event.model_dump())
+    #     pass
 
 def get_paid_subscription_application_service(
         user_sub_repo: UserSubscriptionRepository = Depends(get_user_subscription_repository),
