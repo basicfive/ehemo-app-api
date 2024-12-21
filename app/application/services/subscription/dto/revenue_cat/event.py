@@ -53,7 +53,7 @@ class BaseEvent(BaseModel):
 
 
 class InitialPurchase(BaseEvent):
-    is_trial_conversion: Optional[bool]
+    pass
 
 
 class Cancellation(BaseEvent):
