@@ -50,6 +50,10 @@ class PaidSubscriptionApplicationService(TransactionalService):
         """상품 변경 이벤트 처리"""
         pass
 
+    def handle_transfer(self, event: Expiration):
+        print(event.model_dump())
+        pass
+
     def handle_expiration(self, event: Expiration):
         print(event.model_dump())
         pass

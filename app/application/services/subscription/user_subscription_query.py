@@ -26,6 +26,7 @@ class UserSubscriptionQueryService:
             is_subscribed=True,
             info=UserSubscriptionInfo(
                 original_transaction_id=user_sub_with_plan.original_transaction_id,
+                subscription_plan_id=subscription_plan.id,
                 plan_type=subscription_plan.plan_type,
                 name=subscription_plan.name,
                 description=subscription_plan.description,

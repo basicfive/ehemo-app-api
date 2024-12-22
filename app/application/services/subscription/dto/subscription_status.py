@@ -7,6 +7,7 @@ from app.domain.subscription.models.enums.subscription import SubscriptionPlanTy
 
 class UserSubscriptionInfo(BaseModel):
     original_transaction_id: str
+    subscription_plan_id: int
 
     plan_type: SubscriptionPlanType
     name: str

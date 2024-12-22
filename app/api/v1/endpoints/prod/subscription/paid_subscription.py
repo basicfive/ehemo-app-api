@@ -42,8 +42,9 @@ async def handle_revenuecat_webhook(
            EventType.UNCANCELLATION: service.handle_uncancellation,
            EventType.RENEWAL: service.handle_renewal,
            EventType.PRODUCT_CHANGE: service.handle_product_change,
+           EventType.TRANSFER: service.handle_transfer,
+           EventType.EXPIRATION: service.handle_expiration,
            # EventType.TEST: service.handle_test_event,
-           EventType.EXPIRATION: service.handle_expiration,  # 추가 필요
        }
 
        handler = handlers.get(event.type)
