@@ -17,10 +17,10 @@ router = APIRouter()
 @router.get("/plans", response_model=List[SubscriptionPlanInDB], status_code=status.HTTP_200_OK)
 def get_plan_options(
         store_type: StoreType,
-        _: int = Depends(validate_user_token),
+        user_id: int = Depends(validate_user_token),
         service: SubscriptionPlanQueryService = Depends(get_subscription_plan_query_service),
 ) -> List[SubscriptionPlanInDB]:
-    return service.get_all_sub_plans_by_store_type(store_type=store_type)
+    return service.get_sub_plans_by_store_type(store_type=store_type, user_id=user_id)
 
 
 @router.get("/status", response_model=UserSubscriptionStatus, status_code=status.HTTP_200_OK)
