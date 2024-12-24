@@ -12,6 +12,7 @@ class GenerationRequestInDB(BaseModel):
     background_id: int
     image_resolution_id: int
     generation_result: GenerationResultEnum
+    result_confirmed: Optional[bool]
 
     class Config:
         from_attributes=True
@@ -27,5 +28,6 @@ class GenerationRequestUpdate(BaseModel):
     background_id: Optional[int] = None
     image_resolution_id: Optional[int] = None
     generation_result: Optional[GenerationResultEnum] = None
+    result_confirmed: Optional[bool] = None
 
 

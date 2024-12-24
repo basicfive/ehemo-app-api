@@ -1,7 +1,10 @@
 from typing import List, Optional
 from fastapi import Depends
 
-from app import token_settings, token_transaction_consts
+from app import token_settings
+from app.application.services.generation.dto.query import GenerationRequestStatusWithDetails, \
+    GenerationRequestStatus
+from app.application.services.generation.query import get_generated_request_details
 from app.application.services.transactional_service import TransactionalService
 from app.domain import ImageGenerationJob
 from app.domain.hair_model.models.scene import ImageResolution
@@ -21,6 +24,9 @@ from app.domain.generation.schemas.image_generation_job import ImageGenerationJo
 from app.domain.generation.services.generation_domain_service import estimate_normal_priority_message_wait_sec, \
     calculate_normal_message_ttl_sec, is_generation_in_progress, calculate_remaining_generation_sec
 from app.domain.hair_model.models.hair import HairVariantModel, Length, SpecificColor
+from app.domain.hair_model.schemas.hair.gender import GenderInDB
+from app.domain.hair_model.schemas.hair.hair_style import HairStyleInDB
+from app.domain.hair_model.schemas.hair.length import LengthInDB
 from app.domain.hair_model.services.hair_model_prompt import create_prompts
 from app.domain.subscription.schemas.user_subscription import UserSubscriptionUpdate
 from app.domain.token.models.enums.token import TokenSourceType
@@ -79,13 +85,29 @@ class RequestGenerationApplicationService(TransactionalService):
             )
         )
 
+    @transactional
+    def confirm_generation_result(
+            self,
+            generation_request_id: int,
+            user_id: int,
+    ):
+        generation_request: GenerationRequest = self.generation_request_repo.get(generation_request_id)
+        if generation_request.user_id != user_id:
+            raise AccessUnauthorizedException()
+        self.generation_request_repo.update(
+            obj_id=generation_request.id,
+            obj_in=GenerationRequestUpdate(
+                result_confirmed=True,
+            )
+        )
+
     # TODO: 1회 메서드 실행 시 db 9 + 10 회 (10번은 job create x 10)
     @transactional
     async def request_generation(
             self,
             request: CreateGenerationRequestRequest,
             user_id: int
-    ) -> GenerationRequestResponse:
+    ) -> GenerationRequestStatusWithDetails:
 
         if self._is_generation_in_progress(user_id):
             raise ConcurrentGenerationRequestError()
@@ -132,7 +154,7 @@ class RequestGenerationApplicationService(TransactionalService):
             self,
             generation_request_id: int,
             token_wallet: TokenWallet,
-    ) -> GenerationRequestResponse:
+    ) -> GenerationRequestStatusWithDetails:
         """
         1. Prompt 를 n개 생성한다.
         2. image_generation_job 을 생성한다.
@@ -182,10 +204,13 @@ class RequestGenerationApplicationService(TransactionalService):
                 message_time_to_live_sec
             )
 
-        return GenerationRequestResponse(
-            generation_request_id=generation_request_with_relation.id,
-            remaining_sec=calculate_remaining_generation_sec(image_generation_job_list),
-            generated_image_cnt_per_request=image_generation_settings.GENERATED_IMAGE_CNT_PER_REQUEST
+        return GenerationRequestStatusWithDetails(
+            details=get_generated_request_details(generation_request_with_relation),
+            status=GenerationRequestStatus(
+                generation_status=GenerationResultEnum.PENDING,
+                result_confirmed=generation_request_with_relation.result_confirmed,
+                remaining_sec=calculate_remaining_generation_sec(image_generation_job_list),
+            )
         )
 
     def _create_prompts(self, generation_request_with_relations: GenerationRequest) -> List[str]:

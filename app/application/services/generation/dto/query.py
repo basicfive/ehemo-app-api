@@ -11,13 +11,15 @@ from app.domain.hair_model.schemas.scene.background import BackgroundInDB
 from app.domain.hair_model.schemas.scene.image_resolution import ImageResolutionInDB
 
 
-class GenerationRequestStatusResponse(BaseModel):
+class GenerationRequestStatus(BaseModel):
     generation_status: GenerationResultEnum
     remaining_sec: int
+    result_confirmed: bool
     generated_image_group_id: Optional[int] = None
 
 class GenerationRequestDetails(BaseModel):
     generation_request_id: int
+    generated_image_cnt_per_request: int
     gender: GenderInDB
     hair_style: HairStyleInDB
     length: Optional[LengthInDB]
@@ -25,15 +27,7 @@ class GenerationRequestDetails(BaseModel):
     background: BackgroundInDB
     image_resolution: ImageResolutionInDB
 
+# Optional 붙어있는 이유는 가장 마지막 생성 값이 없는 유저의 경우 None으로 반환
 class GenerationRequestStatusWithDetails(BaseModel):
-    generation_request_id: Optional[int] = None
-    gender: Optional[GenderInDB] = None
-    hair_style: Optional[HairStyleInDB] = None
-    length: Optional[LengthInDB] = None
-    color: Optional[ColorInDB] = None
-    background: Optional[BackgroundInDB] = None
-    image_resolution: Optional[ImageResolutionInDB] = None
-
-    generation_status: Optional[GenerationResultEnum] = None
-    remaining_sec: Optional[int] = None
-    generated_image_group_id: Optional[int] = None
+    status: Optional[GenerationRequestStatus] = None
+    details: Optional[GenerationRequestDetails] = None

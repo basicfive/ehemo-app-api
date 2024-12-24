@@ -1,8 +1,10 @@
+import logging
 from fastapi.params import Depends
 from typing import List, Optional
 
+from app import image_generation_settings
 from app.domain.hair_model.models.hair import HairVariantModel
-from app.application.services.generation.dto.query import GenerationRequestStatusResponse, GenerationRequestDetails, \
+from app.application.services.generation.dto.query import GenerationRequestStatus, GenerationRequestDetails, \
     GenerationRequestStatusWithDetails
 from app.domain.generation.models.enums.generation_status import GenerationResultEnum
 from app.core.errors.http_exceptions import AccessUnauthorizedException
@@ -18,6 +20,24 @@ from app.infrastructure.repositories.generation.generation import GenerationRequ
     get_generation_request_repository, ImageGenerationJobRepository, get_image_generation_job_repository, \
     GeneratedImageGroupRepository, get_generated_image_group_repository
 from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
+
+
+def get_generated_request_details(generation_request_with_relation: GenerationRequest) -> GenerationRequestDetails:
+    hair_variant_model_with_relation: HairVariantModel = generation_request_with_relation.hair_variant_model
+    length = (
+        LengthInDB.model_validate(hair_variant_model_with_relation.length)
+        if hair_variant_model_with_relation.length else None
+    )
+    return GenerationRequestDetails(
+        generation_request_id=generation_request_with_relation.id,
+        generated_image_cnt_per_request=image_generation_settings.GENERATED_IMAGE_CNT_PER_REQUEST,
+        gender=GenderInDB.model_validate(hair_variant_model_with_relation.gender),
+        hair_style=HairStyleInDB.model_validate(hair_variant_model_with_relation.hair_style),
+        length=length,
+        color=ColorInDB.model_validate(hair_variant_model_with_relation.color),
+        background=BackgroundInDB.model_validate(generation_request_with_relation.background),
+        image_resolution=ImageResolutionInDB.model_validate(generation_request_with_relation.image_resolution)
+    )
 
 
 class GenerationRequestQueryService:
@@ -52,13 +72,14 @@ class GenerationRequestQueryService:
             generated_image_group = self.generated_image_group_repo.get_by_generation_request(generation_request.id)
             generated_image_group_id = generated_image_group.id
 
-        print(f"generation result : {generation_request.generation_result}")
-        print(f"remaining sec : {remaining_sec}")
+        logging.info(f"generation result : {generation_request.generation_result}")
+        logging.info(f"remaining sec : {remaining_sec}")
 
-        return GenerationRequestStatusResponse(
+        return GenerationRequestStatus(
             generation_status=generation_request.generation_result,
+            result_confirmed=generation_request.result_confirmed,
             remaining_sec=remaining_sec,
-            generated_image_group_id=generated_image_group_id
+            generated_image_group_id=generated_image_group_id,
         )
 
     def get_generated_request_details(self, generation_request_id: int, user_id: int):
@@ -69,19 +90,7 @@ class GenerationRequestQueryService:
         if generation_request_with_relation.user_id != user_id:
             raise AccessUnauthorizedException()
 
-        return self._get_generated_request_details(generation_request_with_relation)
-
-    def _get_generated_request_details(self, generation_request_with_relation: GenerationRequest):
-        hair_variant_model_with_relation: HairVariantModel = generation_request_with_relation.hair_variant_model
-        return GenerationRequestDetails(
-            generation_request_id=generation_request_with_relation.id,
-            gender=GenderInDB.model_validate(hair_variant_model_with_relation.gender),
-            hair_style=HairStyleInDB.model_validate(hair_variant_model_with_relation.hair_style),
-            length=LengthInDB.model_validate(hair_variant_model_with_relation.length),
-            color=ColorInDB.model_validate(hair_variant_model_with_relation.color),
-            background=BackgroundInDB.model_validate(generation_request_with_relation.background),
-            image_resolution=ImageResolutionInDB.model_validate(generation_request_with_relation.image_resolution)
-        )
+        return get_generated_request_details(generation_request_with_relation)
 
     def get_latest_generation_request_status_with_details(self, user_id: int) -> GenerationRequestStatusWithDetails:
         latest_generation_request: Optional[GenerationRequest] = (
@@ -94,12 +103,9 @@ class GenerationRequestQueryService:
             self.generation_request_repo.get_with_all_relations(latest_generation_request.id)
         )
 
-        status: GenerationRequestStatusResponse = self._get_generation_request_status(generation_request_with_relation)
-        details: GenerationRequestDetails = self._get_generated_request_details(generation_request_with_relation)
-
         return GenerationRequestStatusWithDetails(
-            **status.model_dump(),
-            **details.model_dump(),
+            status=self._get_generation_request_status(generation_request_with_relation),
+            details=get_generated_request_details(generation_request_with_relation),
         )
 
 def get_generation_request_query_service(

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, Float, Enum, ForeignKey
+from sqlalchemy import Column, String, Integer, DateTime, Float, Enum, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 
 from app.domain.generation.models.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
@@ -7,6 +7,7 @@ from app.domain.time_stamp_model import TimeStampModel
 class GenerationRequest(TimeStampModel):
     __tablename__ = "generation_request"
     generation_result = Column(Enum(GenerationResultEnum), default=GenerationResultEnum.PENDING, nullable=False)
+    result_confirmed = Column(Boolean, default=False, nullable=True)
 
     user_id = Column(Integer, ForeignKey("user.id"), index=True)
     hair_variant_model_id = Column(Integer, ForeignKey("hair_variant_model.id"))
