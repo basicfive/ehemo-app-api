@@ -45,7 +45,10 @@ class HairModelOptionApplicationService:
             [
                 GenderOption(
                     **gender.model_dump(),
-                    presigned_image_url=self.s3_client.create_presigned_url(s3_key=gender.image_s3_key),
+                    presigned_image_url=self.s3_client.create_presigned_url(
+                        s3_key=gender.image_s3_key,
+                        expiration=24*60*60,
+                    ),
                 )
                 for gender in gender_list
             ],
@@ -59,7 +62,10 @@ class HairModelOptionApplicationService:
             [
                 HairStyleOption(
                     **hair_style.model_dump(),
-                    presigned_image_url=self.s3_client.create_presigned_url(s3_key=hair_style.image_s3_key)
+                    presigned_image_url=self.s3_client.create_presigned_url(
+                        s3_key=hair_style.image_s3_key,
+                        expiration=24*60*60,
+                    )
                 )
                 for hair_style in hair_style_list
             ],
@@ -77,7 +83,10 @@ class HairModelOptionApplicationService:
                     id=db_hair_style_length.length_id,
                     title=db_hair_style_length.length.title,
                     description=db_hair_style_length.length.description,
-                    presigned_image_url=self.s3_client.create_presigned_url(s3_key=db_hair_style_length.image_s3_key),
+                    presigned_image_url=self.s3_client.create_presigned_url(
+                        s3_key=db_hair_style_length.image_s3_key,
+                        expiration=24*60*60,
+                    ),
                     order=db_hair_style_length.length.order,
                 )
                 for db_hair_style_length in db_hair_style_length_list
@@ -99,7 +108,10 @@ class HairModelOptionApplicationService:
                     id=db_hair_design_color.color_id,
                     title=db_hair_design_color.color.title,
                     description=db_hair_design_color.color.description,
-                    presigned_image_url=self.s3_client.create_presigned_url(s3_key=db_hair_design_color.image_s3_key),
+                    presigned_image_url=self.s3_client.create_presigned_url(
+                        s3_key=db_hair_design_color.image_s3_key,
+                        expiration=24*60*60,
+                    ),
                     order=db_hair_design_color.color.order,
                 )
                 for db_hair_design_color in db_hair_design_color_list
@@ -114,7 +126,10 @@ class HairModelOptionApplicationService:
             [
                 BackgroundOption(
                     **background.model_dump(),
-                    presigned_image_url=self.s3_client.create_presigned_url(s3_key=background.image_s3_key)
+                    presigned_image_url=self.s3_client.create_presigned_url(
+                        s3_key=background.image_s3_key,
+                        expiration=24*60*60,
+                    )
                 )
                 for background in background_list
             ],
@@ -128,7 +143,10 @@ class HairModelOptionApplicationService:
             [
                 ImageResolutionOption(
                     **image_resolution.model_dump(),
-                    presigned_image_url=self.s3_client.create_presigned_url(s3_key=image_resolution.image_s3_key)
+                    presigned_image_url=self.s3_client.create_presigned_url(
+                        s3_key=image_resolution.image_s3_key,
+                        expiration=24*60*60,
+                    )
                 )
                 for image_resolution in image_resolution_list
             ],
