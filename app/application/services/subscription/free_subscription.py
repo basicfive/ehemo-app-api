@@ -53,6 +53,7 @@ class FreeSubscriptionApplicationService(TransactionalService):
                 original_transaction_id=new_transaction_id,
                 latest_transaction_id=new_transaction_id,
                 purchase_date=current_datetime,
+                initial_purchase_date=current_datetime,
                 expire_date=hundred_years_later,
                 is_current_subscription=True,
                 status=SubscriptionStatus.ACTIVE,
