@@ -4,7 +4,7 @@ from typing import List
 from app import token_transaction_consts, fcm_consts
 from app.application.services.transactional_service import TransactionalService
 from app.core.db.base import get_db
-from app.domain import User
+from app.domain import User, BillingInterval
 from app.domain.subscription.models.enums.subscription import SubscriptionPlanType
 from app.domain.token.models.token import TokenWallet
 from app.domain.token.services.refill import calculate_next_refill_date
@@ -38,10 +38,10 @@ class TokenRefillApplicationService(TransactionalService):
             self.user_sub_repo.get_active_subscriptions_for_refill_with_relations(current_time)
         )
 
-        # FREE 플랜 제외
+        # 유료 연간 플랜만 가져오기
         active_subs_with_relations = [
             sub for sub in active_subs_with_relations
-            if sub.subscription_plan.plan_type != SubscriptionPlanType.FREE
+            if sub.subscription_plan.billing_interval == BillingInterval.YEARLY
         ]
 
         for subscription in active_subs_with_relations:

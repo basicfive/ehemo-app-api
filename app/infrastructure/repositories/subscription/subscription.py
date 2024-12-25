@@ -21,6 +21,9 @@ class SubscriptionPlanRepository(CRUDRepository[SubscriptionPlan, SubscriptionPl
         stmt = select(SubscriptionPlan).where(SubscriptionPlan.store_type == store_type)
         return list(self.db.scalars(stmt).all())
 
+    def get_by_product_id(self, product_id: str) -> SubscriptionPlan:
+        stmt = select(SubscriptionPlan).where(SubscriptionPlan.product_id == product_id)
+        return self.db.execute(stmt).scalar_one()
 
 def get_subscription_plan_repository(db: Session = Depends(get_db)) -> SubscriptionPlanRepository:
     return SubscriptionPlanRepository(db=db)
@@ -31,12 +34,39 @@ class UserSubscriptionRepository(CRUDRepository[UserSubscription, UserSubscripti
         super().__init__(model=UserSubscription, db=db)
         self.db = db
 
-    def get_by_transaction_id(self, *, original_transaction_id: str):
-        stmt = select(UserSubscription).where(UserSubscription.original_transaction_id == original_transaction_id)
+    def get_active_sub_by_og_transaction_id(self, original_transaction_id: str):
+        stmt = (
+            select(UserSubscription)
+            .where(
+                UserSubscription.original_transaction_id == original_transaction_id,
+                UserSubscription.status == SubscriptionStatus.ACTIVE,
+            )
+        )
         return self.db.execute(stmt).scalar_one()
 
+    def get_by_og_transaction_id_current_sub_with_relations(self, original_transaction_id: str):
+        stmt = (
+            select(UserSubscription)
+            .where(
+                UserSubscription.original_transaction_id == original_transaction_id,
+                UserSubscription.status == SubscriptionStatus.ACTIVE,
+            )
+            .options(
+                joinedload(UserSubscription.subscription_plan),
+                joinedload(UserSubscription.token_wallet),
+                joinedload(UserSubscription.user),
+            )
+        )
+        return self.db.execute(stmt).unique().scalar_one()
+
     def get_by_user(self, user_id: int):
-        stmt = select(UserSubscription).where(UserSubscription.user_id == user_id)
+        stmt = (
+            select(UserSubscription)
+            .where(
+                UserSubscription.user_id == user_id,
+                UserSubscription.status == SubscriptionStatus.ACTIVE,
+            )
+        )
         return self.db.execute(stmt).scalar_one()
 
     def get_by_user_with_plan(self, user_id: int):
@@ -62,6 +92,7 @@ class UserSubscriptionRepository(CRUDRepository[UserSubscription, UserSubscripti
             select(UserSubscription)
             .join(UserSubscription.token_wallet)
             .where(
+                UserSubscription.is_current_subscription == True,
                 UserSubscription.status == SubscriptionStatus.ACTIVE,
                 TokenWallet.next_refill_date <= current_time
             )

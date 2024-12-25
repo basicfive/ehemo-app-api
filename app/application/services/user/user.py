@@ -23,7 +23,7 @@ class UserApplicationService(TransactionalService):
         return UserTokenResponse(token=user_with_wallet.token_wallet.remaining_token)
 
     def get_user_info(self, user_id: int) -> UserInfoResponse:
-        user_with_subscription: User = self.user_repo.get_with_subscription(user_id=user_id)
+        user_with_subscription: User = self.user_repo.get_by_uuid_with_subscription(user_id=user_id)
         return UserInfoResponse(
             uuid=str(user_with_subscription.uuid),
             email=user_with_subscription.email,

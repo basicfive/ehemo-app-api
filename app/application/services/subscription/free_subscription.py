@@ -34,21 +34,6 @@ class FreeSubscriptionApplicationService(TransactionalService):
         self.token_domain_service = token_domain_service
         self.user_repo = user_repo
 
-    # 초기 구매
-    def initial_purchase(self):
-        pass
-
-    def expiration(self):
-        pass
-
-    def cancellation(self):
-        pass
-
-    def un_cancellation(self):
-        pass
-
-    def product_change(self):
-        pass
 
     # 무료 구독 api
     @transactional
@@ -69,23 +54,20 @@ class FreeSubscriptionApplicationService(TransactionalService):
                 latest_transaction_id=new_transaction_id,
                 purchase_date=current_datetime,
                 expire_date=hundred_years_later,
+                is_current_subscription=True,
                 status=SubscriptionStatus.ACTIVE,
-                auto_renew_status=False,
                 user_id=user_id,
                 subscription_plan_id=subscription_plan_id,
             )
         )
 
         # token wallet 생성
-        token_wallet = self.token_domain_service.create_wallet_with_flush(
-            wallet_create=TokenWalletCreate(
-                remaining_token=token_settings.FREE_TRIAL_TOKEN,
-                total_received_tokens=token_settings.FREE_TRIAL_TOKEN,
-                next_refill_date=hundred_years_later,
-                last_refill_date=current_datetime,
-                user_id=user_id,
-                user_subscription_id=db_user_sub.id,
-            )
+        token_wallet = self.token_domain_service.create_and_init_wallet(
+            fill_amount=token_settings.FREE_TRIAL_TOKEN,
+            user_id=user_id,
+            user_subscription_id=db_user_sub.id,
+            next_refill_date=hundred_years_later,
+            current_time=current_datetime,
         )
 
         user_sub = UserSubscriptionInDB.model_validate(db_user_sub)

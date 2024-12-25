@@ -74,3 +74,7 @@ class ConcurrentGenerationRequestError(ResourceConflictException):
 class UserHasNotEnoughTokenException(CustomHttpException):
     def __init__(self, context: str = None):
         super().__init__(440, "UserToken", USER_HAS_NOT_ENOUGH_TOKEN_MESSAGE, context)
+
+class RevenuecatWebhookException(ValueException):
+    def __init__(self, context: str = None):
+        super().__init__("UserToken", context)

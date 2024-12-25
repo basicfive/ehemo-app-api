@@ -41,9 +41,9 @@ async def handle_revenuecat_webhook(
            EventType.CANCELLATION: service.handle_cancellation,
            EventType.UNCANCELLATION: service.handle_uncancellation,
            EventType.RENEWAL: service.handle_renewal,
-           EventType.PRODUCT_CHANGE: service.handle_product_change,
            EventType.TRANSFER: service.handle_transfer,
            EventType.EXPIRATION: service.handle_expiration,
+           # EventType.PRODUCT_CHANGE: service.handle_product_change,
            # EventType.TEST: service.handle_test_event,
        }
 

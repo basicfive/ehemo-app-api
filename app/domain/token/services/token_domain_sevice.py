@@ -4,6 +4,7 @@ from typing import Tuple, Optional
 from fastapi import Depends
 
 from app import token_transaction_consts
+from app.domain import UserSubscription, User
 from app.domain.token.models.enums.token import TokenTransactionType, TokenSourceType
 from app.domain.token.models.token import TokenWallet, TokenTransaction
 from app.domain.token.schemas.token_transaction import TokenTransactionCreate
@@ -28,8 +29,38 @@ class TokenDomainService:
    def get_wallet(self, user_id: int) -> TokenWallet:
        return self.token_wallet_repo.get_by_user(user_id)
 
-   def create_wallet_with_flush(self, wallet_create: TokenWalletCreate) -> TokenWallet:
-       return self.token_wallet_repo.create_with_flush(obj_in=wallet_create)
+   def change_wallet_user(self, token_wallet: TokenWallet, user_id: int):
+       return self.token_wallet_repo.update(
+           obj_id=token_wallet.id,
+           obj_in=TokenWalletUpdate(user_id=user_id)
+       )
+
+   def create_and_init_wallet(
+           self,
+           fill_amount: int,
+           user_id: int,
+           user_subscription_id: int,
+           next_refill_date: datetime,
+           current_time: datetime,
+   ) -> TokenWallet:
+       token_wallet = self.token_wallet_repo.create_with_flush(
+           obj_in=TokenWalletCreate(
+               remaining_token=0,
+               total_received_tokens=0,
+               next_refill_date=next_refill_date,
+               last_refill_date=current_time,
+               user_id=user_id,
+               user_subscription_id=user_subscription_id,
+           )
+       )
+       self.refill_token(
+           token_wallet=token_wallet,
+           amount=fill_amount,
+           next_refill_date=next_refill_date,
+           current_time=current_time,
+           source_type=TokenSourceType.INITIAL,
+       )
+       return token_wallet
 
    def consume_token(
            self,
@@ -102,7 +133,7 @@ class TokenDomainService:
            next_refill_date: datetime,
            current_time: datetime,
            source_type: TokenSourceType,
-           description: Optional[str] = token_transaction_consts.CONSUME_MESSAGE,
+           description: Optional[str] = token_transaction_consts.REFILL_MESSAGE,
    ) -> Tuple[TokenWallet, TokenTransaction]:
        if amount < 0:
            ValueError(f"amount should always be a positive number, amount: {amount}")

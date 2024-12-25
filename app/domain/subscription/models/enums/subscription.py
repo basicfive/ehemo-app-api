@@ -18,6 +18,7 @@ class SubscriptionStatus(Enum):
     EXPIRED = "EXPIRED"
     CANCELED = "CANCELED"
     PENDING = "PENDING"
+    CHANGED = "CHANGED"
     TRIAL = "TRIAL"
 
 class Currency(Enum):

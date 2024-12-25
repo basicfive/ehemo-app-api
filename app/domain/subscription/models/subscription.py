@@ -34,16 +34,12 @@ class UserSubscription(TimeStampModel):
     # RevenueCat 관련 정보
     original_transaction_id = Column(String(50), nullable=False, index=True)
     latest_transaction_id = Column(String(50))
+    initial_purchase_date = Column(DateTime, nullable=True)
     purchase_date = Column(DateTime, nullable=False)
     expire_date = Column(DateTime, nullable=False)
 
     # 구독 상태
     status = Column(Enum(SubscriptionStatus), nullable=False, index=True)
-    auto_renew_status = Column(Boolean, default=True, nullable=False)
-    canceled_at = Column(DateTime, nullable=True)
-
-    # 현재 사용자와 연결된 구독
-    is_current_subscription = Column(Boolean, nullable=True) # nullable=False 로 전환할 것.
 
     user_id = Column(ForeignKey("user.id"), nullable=False, index=True)
     subscription_plan_id = Column(ForeignKey("subscription_plan.id"), nullable=False, index=True)
@@ -54,15 +50,21 @@ class UserSubscription(TimeStampModel):
     token_wallet = relationship("TokenWallet", back_populates="user_subscription", uselist=False)
 
     __table_args__ = (
-        # 한 유저는 활성 구독을 하나만 가질 수 있도록 제약
+        # 활성 구독의 original_transaction_id 는 유일해야함
         UniqueConstraint(
             'original_transaction_id',
-            'user_id',
-            'is_current_subscription',
-            name='uq_user_original_transaction_current',
+            name='uq_active_original_transaction',
             deferrable=True,
             initially='DEFERRED',
-            info=dict(where=text("is_current_subscription"))
+            info=dict(where=text("status::text = 'ACTIVE'"))
+        ),
+        # 한 유저는 활성 구독을 하나만 가질 수 있도록 제약
+        UniqueConstraint(
+            'user_id',
+            name='uq_active_user',
+            deferrable=True,
+            initially='DEFERRED',
+            info=dict(where=text("status::text = 'ACTIVE'"))
         ),
         Index('idx_subscription_status_expire', 'status', 'expire_date'),
     )

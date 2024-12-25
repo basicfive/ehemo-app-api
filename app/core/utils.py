@@ -142,3 +142,12 @@ def compress_and_resize_image(image_bytes: bytes, scale_factor: float = 0.5, qua
     except Exception as e:
         logging.error(f"이미지 압축 중 오류 발생: {str(e)}")
         raise
+
+
+def ms_to_datetime(ms_timestamp):
+    if ms_timestamp is None:  # NULL 체크
+        return None
+    # 밀리초를 초로 변환 (1000으로 나눔)
+    seconds = ms_timestamp / 1000
+    # timestamp를 datetime으로 변환
+    return datetime.fromtimestamp(seconds)
