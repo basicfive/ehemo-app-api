@@ -64,7 +64,7 @@ class FreeSubscriptionApplicationService(TransactionalService):
 
         # token wallet 생성
         token_wallet = self.token_domain_service.create_and_init_wallet(
-            fill_amount=token_settings.FREE_TRIAL_TOKEN,
+            fill_amount=subscription_plan.tokens_per_period,
             user_id=user_id,
             user_subscription_id=db_user_sub.id,
             next_refill_date=hundred_years_later,
