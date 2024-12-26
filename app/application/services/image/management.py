@@ -39,6 +39,19 @@ class ImageManagementApplicationService(TransactionalService):
         return True
 
     @transactional
+    def report_group_and_images(self, generated_image_group_id: int, user_id: int) -> bool:
+
+        generated_image_group: GeneratedImageGroup = self.generated_image_group_repo.get(generated_image_group_id)
+        if generated_image_group.user_id != user_id:
+            raise AccessUnauthorizedException()
+
+        generated_image_list: List[GeneratedImage] = self.generated_image_repo.get_all_by_generate_image_group(generated_image_group_id)
+        generated_image_id_list: List[int] = [generated_image.id for generated_image in generated_image_list]
+        self.generated_image_repo.report_all_in(generated_image_id_list)
+        self.generated_image_group_repo.report(generated_image_group_id)
+        return True
+
+    @transactional
     def soft_delete_group_and_images(self, generated_image_group_id: int, user_id: int) -> bool:
 
         generated_image_group: GeneratedImageGroup = self.generated_image_group_repo.get(generated_image_group_id)

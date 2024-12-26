@@ -53,6 +53,14 @@ def update_rating_on_generated_image_group(
         user_id=user_id
     )
 
+@router.patch("/{generated_image_group_id}/report")
+def soft_delete_group_and_images(
+        generated_image_group_id: int,
+        user_id: int = Depends(validate_user_token),
+        service: ImageManagementApplicationService = Depends(get_image_management_application_service)
+) -> bool:
+    return service.report_group_and_images(generated_image_group_id, user_id)
+
 @router.patch("/{generated_image_group_id}/soft-delete")
 def soft_delete_group_and_images(
         generated_image_group_id: int,
