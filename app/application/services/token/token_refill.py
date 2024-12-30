@@ -1,7 +1,7 @@
 from datetime import datetime, UTC
 from typing import List
 
-from app import token_transaction_consts, fcm_consts
+from app import TokenTransactionConstants, FCMConstants
 from app.application.services.transactional_service import TransactionalService
 from app.core.db.base import get_db
 from app.domain import User, BillingInterval
@@ -68,8 +68,8 @@ class TokenRefillApplicationService(TransactionalService):
         if fcm_tokens:
             self.fcm_service.send_to_tokens(
                 tokens=fcm_tokens,
-                title=fcm_consts.TOKEN_REFILL_TITLE,
-                body=fcm_consts.TOKEN_REFILL_BODY,
+                title=FCMConstants.TOKEN_REFILL_TITLE,
+                body=FCMConstants.TOKEN_REFILL_BODY,
             )
 
 

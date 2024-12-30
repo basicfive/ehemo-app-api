@@ -4,7 +4,7 @@ from typing import List, Tuple, Optional
 
 from sqlalchemy.orm import Session
 
-from app import fcm_consts, token_settings
+from app import FCMConstants, token_settings
 from app.application.services.generation.dto.mq import MQPublishMessage
 from app.application.services.generation.dto.retry import FailedJobResult
 from app.application.services.transactional_service import TransactionalService
@@ -163,8 +163,8 @@ class ImageGenerationRetryService(TransactionalService):
         fcm_data = FCMGenerationResultData(generation_status=GenerationResultEnum.FAILED)
         self.fcm_service.send_to_token(
             token=fcm_token,
-            title=fcm_consts.FAILURE_TITLE,
-            body=fcm_consts.FAILURE_BODY,
+            title=FCMConstants.FAILURE_TITLE,
+            body=FCMConstants.FAILURE_BODY,
             data=fcm_data.to_fcm_data(),
         )
 

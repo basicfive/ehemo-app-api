@@ -9,12 +9,15 @@ from app.api.v1.endpoints.prod.user import auth as prod_auth
 from app.api.v1.endpoints.prod.user import user
 from app.api.v1.endpoints.prod.home import model_thumbnail
 from app.api.v1.endpoints.prod.versioning import app_version
+from app.api.v1.endpoints.prod.store import store_url
 from app.api.v1.endpoints.prod.subscription import free_subscription, paid_subscription, plans
 
 router = APIRouter()
 
 router.include_router(options.router, prefix="/dev/hair-model", tags=['dev/hair-model'])
 router.include_router(dev_auth.router, prefix="/dev/user", tags=['dev/user'])
+
+router.include_router(store_url.router, prefix="/prod/store", tags=['store'])
 
 router.include_router(request.router, prefix="/prod/generation", tags=['generation'])
 router.include_router(hair_model_options.router, prefix="/prod/generation", tags=['generation'])

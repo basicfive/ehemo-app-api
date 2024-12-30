@@ -1,6 +1,6 @@
 from enum import Enum
 
-class StoreType(Enum):
+class StoreType(str, Enum):
     APP_STORE = "APP_STORE"
     PLAY_STORE = "PLAY_STORE"
 
@@ -21,7 +21,7 @@ class SubscriptionStatus(Enum):
     CHANGED = "CHANGED"
     TRIAL = "TRIAL"
 
-class Currency(Enum):
+class Currency(str, Enum):
     USD = "USD"
     KRW = "KRW"
     JPY = "JPY"

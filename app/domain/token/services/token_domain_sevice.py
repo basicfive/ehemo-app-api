@@ -3,7 +3,7 @@ from typing import Tuple, Optional
 
 from fastapi import Depends
 
-from app import token_transaction_consts
+from app import TokenTransactionConstants
 from app.domain import UserSubscription, User
 from app.domain.token.models.enums.token import TokenTransactionType, TokenSourceType
 from app.domain.token.models.token import TokenWallet, TokenTransaction
@@ -67,7 +67,7 @@ class TokenDomainService:
            token_wallet: TokenWallet,
            amount: int,
            source_type: TokenSourceType,
-           description: Optional[str] = token_transaction_consts.CONSUME_MESSAGE,
+           description: Optional[str] = TokenTransactionConstants.CONSUME_MESSAGE,
    ) -> Tuple[TokenWallet, TokenTransaction]:
        if amount < 0:
            ValueError(f"amount should always be a positive number, amount: {amount}")
@@ -99,7 +99,7 @@ class TokenDomainService:
            token_wallet: TokenWallet,
            amount: int,
            source_type: TokenSourceType,
-           description: Optional[str] = token_transaction_consts.REFUND_MESSAGE,
+           description: Optional[str] = TokenTransactionConstants.REFUND_MESSAGE,
    ) -> Tuple[TokenWallet, TokenTransaction]:
        if amount < 0:
            ValueError(f"amount should always be a positive number, amount: {amount}")
@@ -133,7 +133,7 @@ class TokenDomainService:
            next_refill_date: datetime,
            current_time: datetime,
            source_type: TokenSourceType,
-           description: Optional[str] = token_transaction_consts.REFILL_MESSAGE,
+           description: Optional[str] = TokenTransactionConstants.REFILL_MESSAGE,
    ) -> Tuple[TokenWallet, TokenTransaction]:
        if amount < 0:
            ValueError(f"amount should always be a positive number, amount: {amount}")

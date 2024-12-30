@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import List, Optional, Dict, Type, Union
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.domain import StoreType, Currency
 
@@ -20,6 +20,7 @@ class SubscriberAttribute(BaseModel):
     value: str
 
 class BaseEvent(BaseModel):
+    model_config = ConfigDict(extra='ignore')
     event_timestamp_ms: int
     product_id: str
     period_type: str
@@ -51,30 +52,37 @@ class BaseEvent(BaseModel):
 
 
 class InitialPurchase(BaseEvent):
+    model_config = ConfigDict(extra='ignore')
     pass
 
 
 class Cancellation(BaseEvent):
+    model_config = ConfigDict(extra='ignore')
     cancel_reason: str
 
 
 class Uncancellation(BaseEvent):
+    model_config = ConfigDict(extra='ignore')
     pass
 
 
 class Renewal(BaseEvent):
+    model_config = ConfigDict(extra='ignore')
     is_trial_conversion: bool
 
 
 class ProductChange(BaseEvent):
+    model_config = ConfigDict(extra='ignore')
     new_product_id: str
 
 
 class Expiration(BaseEvent):
+    model_config = ConfigDict(extra='ignore')
     expiration_reason: str
 
 
 class Transfer(BaseModel):
+    model_config = ConfigDict(extra='ignore')
     event_timestamp_ms: int
     subscriber_attributes: Optional[Dict[str, SubscriberAttribute]]
 
@@ -110,7 +118,14 @@ class EventParser:
 
         # 2. event_type 확인
         event_type = EventType(event_data["type"])
+        print("event_type")
+        print(event_type)
         parser = cls._parsers.get(event_type)
+        print("parser")
+        print(parser)
+
+        print("event_data")
+        print(event_data)
 
         if not parser:
             raise ValueError(f"Unsupported event type: {event_type}")

@@ -1,6 +1,5 @@
-from anyio import current_time
 from fastapi import Depends
-from datetime import datetime, UTC
+from datetime import datetime
 import logging
 
 from sqlalchemy.exc import NoResultFound
@@ -57,6 +56,9 @@ class PaidSubscriptionApplicationService(TransactionalService):
                 self.user_sub_repo.get_active_sub_by_og_transaction_id(event.original_transaction_id)
             )
         except NoResultFound:
+            self.logger.error(
+                f"There is no active user subscription with original_transaction_id: {event.original_transaction_id}"
+            )
             raise RevenuecatWebhookException()
         return user_sub
 
@@ -66,6 +68,9 @@ class PaidSubscriptionApplicationService(TransactionalService):
                 self.user_sub_repo.get_by_og_transaction_id_current_sub_with_relations(event.original_transaction_id)
             )
         except NoResultFound:
+            self.logger.error(
+                f"There is no active user subscription with original_transaction_id: {event.original_transaction_id}"
+            )
             raise RevenuecatWebhookException()
         return user_sub
 

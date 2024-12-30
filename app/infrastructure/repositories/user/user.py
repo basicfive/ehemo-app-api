@@ -18,14 +18,14 @@ class UserRepository(CRUDRepository[User, UserCreate, UserUpdate]):
         return self.db.execute(stmt).scalar_one()
 
     def get_with_subscription(self, user_id: int):
-        stmt = select(User).options(joinedload(User.subscription)).where(User.id == user_id)
+        stmt = select(User).options(joinedload(User.user_subscription)).where(User.id == user_id)
         return self.db.execute(stmt).unique().scalar_one()
 
     def get_by_uuid_with_subscription(self, user_uuid: str):
         stmt = (
             select(User)
             .where(User.uuid == user_uuid)
-            .options(joinedload(User.subscription))
+            .options(joinedload(User.user_subscription))
         )
         return self.db.execute(stmt).unique().scalar_one()
 

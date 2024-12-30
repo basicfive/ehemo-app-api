@@ -2,7 +2,7 @@ import json
 import logging
 from typing import List
 
-from app import fcm_consts
+from app.core.constants import FCMConstants
 from app.application.services.generation.dto.mq import MQConsumeMessage
 from app.application.services.transactional_service import TransactionalService
 from app.core.config import aws_s3_settings
@@ -117,10 +117,10 @@ class MessageHandler(TransactionalService):
         fcm_data = FCMGenerationResultData(generation_status=GenerationResultEnum.SUCCEED)
         self.fcm_service.send_to_token(
             token=user.fcm_token,
-            title=fcm_consts.SUCCESS_TITLE,
-            body=fcm_consts.SUCCESS_BODY,
-            category=fcm_consts.CATEGORY,
-            identifier=fcm_consts.IDENTIFIER_PREFIX + str(generation_request_id),
+            title=FCMConstants.SUCCESS_TITLE,
+            body=FCMConstants.SUCCESS_BODY,
+            category=FCMConstants.CATEGORY,
+            identifier=FCMConstants.IDENTIFIER_PREFIX + str(generation_request_id),
             data=fcm_data.to_fcm_data(),
         )
 

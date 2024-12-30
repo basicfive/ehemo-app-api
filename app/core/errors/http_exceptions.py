@@ -77,4 +77,4 @@ class UserHasNotEnoughTokenException(CustomHttpException):
 
 class RevenuecatWebhookException(ValueException):
     def __init__(self, context: str = None):
-        super().__init__("UserToken", context)
+        super().__init__("RevenuecatWebhookException", context)
