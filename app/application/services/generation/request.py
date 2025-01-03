@@ -113,8 +113,8 @@ class RequestGenerationApplicationService(TransactionalService):
             raise ConcurrentGenerationRequestError()
 
         # TODO: id에 해당하는 user 존재하는 레코드인지 에러 처리필요
-        user_with_wallet: User = self.user_repo.get_with_token_wallet(user_id)
-        token_wallet: TokenWallet = user_with_wallet.token_wallet
+        user_with_wallet: User = self.user_repo.get_with_token_wallets(user_id)
+        token_wallet: TokenWallet = user_with_wallet.current_token_wallet
 
         if not token_wallet.has_available_token(token_settings.TOKENS_PER_GENERATION):
             raise UserHasNotEnoughTokenException()

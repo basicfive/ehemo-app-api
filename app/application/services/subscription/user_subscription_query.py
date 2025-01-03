@@ -2,7 +2,7 @@ from fastapi import Depends
 from sqlalchemy.exc import NoResultFound
 
 from app.application.services.subscription.dto.subscription_status import UserSubscriptionStatus, UserSubscriptionInfo
-from app.domain import UserSubscription, SubscriptionPlan
+from app.domain import UserSubscription, SubscriptionPlan, SubscriptionStatus
 from app.infrastructure.repositories.subscription.subscription import UserSubscriptionRepository, \
     get_user_subscription_repository
 
@@ -16,7 +16,7 @@ class UserSubscriptionQueryService:
 
     def get_user_subscription_status(self, user_id: int) -> UserSubscriptionStatus:
         try:
-            user_sub_with_plan: UserSubscription = self.user_sub_repo.get_by_user_with_plan(user_id)
+            user_sub_with_plan: UserSubscription = self.user_sub_repo.get_current_by_user_with_plan(user_id)
         except NoResultFound:
             return UserSubscriptionStatus(is_subscribed=False)
 
@@ -28,9 +28,11 @@ class UserSubscriptionQueryService:
                 original_transaction_id=user_sub_with_plan.original_transaction_id,
                 subscription_plan_id=subscription_plan.id,
                 plan_type=subscription_plan.plan_type,
+                status=user_sub_with_plan.status,
                 name=subscription_plan.name,
                 description=subscription_plan.description,
                 next_billing_date=user_sub_with_plan.expire_date,
+                updated_at=user_sub_with_plan.updated_at,
             )
         )
 

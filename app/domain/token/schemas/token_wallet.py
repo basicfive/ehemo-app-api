@@ -3,6 +3,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 class TokenWalletCreate(BaseModel):
+    is_current: bool
     remaining_token: int
     total_received_tokens: Optional[int]
 
@@ -14,6 +15,7 @@ class TokenWalletCreate(BaseModel):
 
 
 class TokenWalletUpdate(BaseModel):
+    is_current: Optional[bool] = None
     remaining_token: Optional[int] = None
     total_received_tokens: Optional[int] = None
 
@@ -26,6 +28,7 @@ class TokenWalletUpdate(BaseModel):
 
 class TokenWalletInDB(BaseModel):
     id: int
+    is_current: bool
     remaining_token: int
     total_received_tokens: int
 

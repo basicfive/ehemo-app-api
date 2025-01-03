@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, Integer, String, ForeignKey, Enum, Index
+from sqlalchemy import Column, DateTime, Integer, String, ForeignKey, Enum, Index, Boolean, text
 from sqlalchemy.orm import relationship
 
 from app.domain.time_stamp_model import TimeStampModel
@@ -8,23 +8,34 @@ from app.domain.token.models.enums.token import TokenTransactionType, TokenSourc
 class TokenWallet(TimeStampModel):
     __tablename__ = "token_wallet"
 
+    is_current = Column(Boolean, nullable=True)
+
     remaining_token = Column(Integer, default=0, nullable=False)
     total_received_tokens = Column(Integer, default=0, nullable=False)
 
     next_refill_date = Column(DateTime(timezone=True), nullable=False)
     last_refill_date = Column(DateTime(timezone=True), nullable=False)
 
-    user_id = Column(Integer, ForeignKey("user.id"), unique=True, index=True)
+    user_id = Column(Integer, ForeignKey("user.id"), index=True)
     user_subscription_id = Column(Integer, ForeignKey("user_subscription.id"), unique=True, index=True)
 
-    user = relationship("User", back_populates="token_wallet")
+    user = relationship("User", back_populates="token_wallets")
     user_subscription = relationship("UserSubscription", back_populates="token_wallet")
 
     token_transactions = relationship("TokenTransaction", back_populates="token_wallet")
 
     # Indexes
     __table_args__ = (
-        Index('idx_token_refill', 'next_refill_date', 'user_subscription_id'),
+        # 1) next_refill_date, user_subscription_id 인덱스
+        Index("idx_token_refill", "next_refill_date", "user_subscription_id"),
+
+        # 2) is_current = TRUE 일 때만 user_id 유니크
+        # Index(
+        #     "uq_current_user_tokenwallet",
+        #     "user_id",
+        #     unique=True,
+        #     postgresql_where=text("is_current = TRUE")
+        # ),
     )
 
     def has_available_token(self, required_token: int) -> bool:

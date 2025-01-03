@@ -79,6 +79,7 @@ class FreeSubscriptionApplicationService(TransactionalService):
                 original_transaction_id=user_sub.original_transaction_id,
                 subscription_plan_id=subscription_plan.id,
                 plan_type=subscription_plan.plan_type,
+                status=user_sub.status,
                 name=subscription_plan.name,
                 description=subscription_plan.description,
                 next_billing_date=user_sub.expire_date,

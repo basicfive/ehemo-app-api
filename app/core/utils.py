@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Tuple
 from sqlalchemy.orm import DeclarativeBase
-from datetime import datetime, date, UTC
+from datetime import datetime, date, UTC, timezone
 import uuid
 from PIL import Image
 import requests
@@ -143,11 +143,23 @@ def compress_and_resize_image(image_bytes: bytes, scale_factor: float = 0.5, qua
         logging.error(f"이미지 압축 중 오류 발생: {str(e)}")
         raise
 
-
 def ms_to_datetime(ms_timestamp):
     if ms_timestamp is None:  # NULL 체크
         return None
     # 밀리초를 초로 변환 (1000으로 나눔)
     seconds = ms_timestamp / 1000
     # timestamp를 datetime으로 변환
-    return datetime.fromtimestamp(seconds)
+    return datetime.fromtimestamp(seconds, tz=timezone.utc)
+
+
+def extract_valid_uuid(id_array: list[str]) -> str:
+    """Extract first valid UUID from array of IDs"""
+    for id_str in id_array:
+        try:
+            # UUID 형식이 유효한지 검증
+            uuid.UUID(id_str)
+            return id_str
+        except ValueError:
+            continue
+
+    raise ValueError("No valid UUID found in array")

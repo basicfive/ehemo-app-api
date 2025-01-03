@@ -12,6 +12,7 @@ class UserSubscriptionCreate(BaseModel):
     purchase_date: datetime
     expire_date: datetime
 
+    is_current: bool
     status: SubscriptionStatus
 
     user_id: int
@@ -24,6 +25,7 @@ class UserSubscriptionUpdate(BaseModel):
     purchase_date: Optional[datetime] = None
     expire_date: Optional[datetime] = None
 
+    is_current: Optional[bool] = None
     status: Optional[SubscriptionStatus] = None
 
     user_id: Optional[int] = None
@@ -37,6 +39,7 @@ class UserSubscriptionInDB(BaseModel):
     purchase_date: datetime
     expire_date: datetime
 
+    is_current: Optional[bool]
     status: SubscriptionStatus
 
     user_id: int

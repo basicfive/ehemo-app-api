@@ -20,21 +20,20 @@ class SubscriptionPlanQueryService:
 
     def get_sub_plans_by_store_type(self, store_type: StoreType, user_id: int) -> List[SubscriptionPlanInDB]:
         db_sub_plan_list: List[SubscriptionPlan] = self.subscription_plan_repo.get_all_by_store_type(store_type)
-        exclude_plan_id: int = -1
-
         try:
-            user_sub: UserSubscription = self.user_sub_repo.get_by_user_with_plan(user_id=user_id)
-            # 무료 플랜 구독 중이라면
-            sub_plan: SubscriptionPlan = user_sub.subscription_plan
-            if sub_plan.plan_type == SubscriptionPlanType.FREE:
-                exclude_plan_id = sub_plan.id
+            user_subs: List[UserSubscription] = self.user_sub_repo.get_all_by_user_with_plan(user_id=user_id)
+            # 한 번이라도 구독 한 적이 있다면
+            if user_subs:
+                db_sub_plan_list = [
+                    db_sub_plan for db_sub_plan in db_sub_plan_list
+                    if db_sub_plan.plan_type != SubscriptionPlanType.FREE
+                ]
         except NoResultFound:
             pass
 
         return [
             SubscriptionPlanInDB.model_validate(db_sub_plan)
             for db_sub_plan in db_sub_plan_list
-            if db_sub_plan.id != exclude_plan_id
         ]
 
 def get_subscription_plan_query_service(

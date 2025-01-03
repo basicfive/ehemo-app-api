@@ -14,30 +14,25 @@ def calculate_next_refill_date(
 
     Args:
         timezone (str): 사용자의 timezone (예: 'Asia/Seoul')
-        current_time (datetime): 기준이 되는 시간 (UTC)
-        initial_purchase_time (datetime): 구독권 첫 구매 날짜 (UTC)
+        current_time (datetime): 기준이 되는 시간 (naive 또는 UTC)
+        initial_purchase_time (datetime): 구독권 첫 구매 날짜 (naive 또는 UTC)
 
     Returns:
         datetime: 다음 리필 시간 (UTC)
     """
-    if not current_time.tzinfo:
-        raise ValueError("current_time must be timezone-aware datetime")
-    if not initial_purchase_time.tzinfo:
-        raise ValueError("initial_purchase_time must be timezone-aware datetime")
-    if current_time.tzinfo != pytz.UTC or initial_purchase_time.tzinfo != pytz.UTC:
-        raise ValueError("Both times must be in UTC")
+    # UTC가 아닌 다른 timezone이 지정된 경우 UTC로 변환
+    if current_time.tzinfo != pytz.UTC:
+        current_time = current_time.astimezone(pytz.UTC)
+    if initial_purchase_time.tzinfo != pytz.UTC:
+        initial_purchase_time = initial_purchase_time.astimezone(pytz.UTC)
 
     tz = pytz.timezone(timezone)
     local_current = current_time.astimezone(tz)
     local_initial = initial_purchase_time.astimezone(tz)
 
-    # 다음 달 계산
+    # 나머지 로직은 동일
     next_month = local_current + relativedelta(months=1)
-
-    # 다음 달의 마지막 날 계산
     _, last_day = calendar.monthrange(next_month.year, next_month.month)
-
-    # initial_purchase_time의 일자와 다음 달의 마지막 날을 비교
     target_day = min(local_initial.day, last_day)
 
     next_refill = next_month.replace(

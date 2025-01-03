@@ -7,8 +7,9 @@ from sqlalchemy.exc import NoResultFound
 from app.application.services.subscription.dto.revenue_cat.event import *
 from app.application.services.transactional_service import TransactionalService
 from app.core.errors.http_exceptions import RevenuecatWebhookException
-from app.core.utils import ms_to_datetime
-from app.domain import User, SubscriptionPlan, SubscriptionStatus, UserSubscription, TokenWallet, TokenSourceType
+from app.core.utils import ms_to_datetime, extract_valid_uuid
+from app.domain import User, SubscriptionPlan, SubscriptionStatus, UserSubscription, TokenWallet, TokenSourceType, \
+    SubscriptionPlanType
 from app.domain.subscription.schemas.user_subscription import UserSubscriptionCreate, UserSubscriptionUpdate
 from app.domain.token.services.refill import calculate_next_refill_date
 from app.domain.token.services.token_domain_sevice import TokenDomainService, get_token_domain_service
@@ -35,44 +36,31 @@ class PaidSubscriptionApplicationService(TransactionalService):
         self.user_repo = user_repo
         self.logger = logging.getLogger(__name__)
 
-    def _validate_initial_purchase_event(self, event: InitialPurchase):
-        try:
-            user_sub: UserSubscription = (
-                self.user_sub_repo.get_active_sub_by_og_transaction_id(event.original_transaction_id)
-            )
-            self.logger.error("Activate user subscription with same original_transaction_id exists.")
-            self.logger.error(
-                f"original_transaction_id: {event.original_transaction_id}\n"
-                f"user_id: {user_sub.user_id}\n"
-                f"app_user_id: {event.app_user_id}"
-            )
-            raise RevenuecatWebhookException()
-        except NoResultFound:
-            pass
-
     def _get_user_sub_with_validation(self, event: BaseEvent) -> UserSubscription:
         try:
             user_sub: UserSubscription = (
-                self.user_sub_repo.get_active_sub_by_og_transaction_id(event.original_transaction_id)
+                self.user_sub_repo.get_current_by_og_transaction_id(event.original_transaction_id)
             )
         except NoResultFound:
             self.logger.error(
-                f"There is no active user subscription with original_transaction_id: {event.original_transaction_id}"
+                f"There is no current user subscription with original_transaction_id: {event.original_transaction_id}"
             )
             raise RevenuecatWebhookException()
         return user_sub
 
-    def _get_user_sub_with_relations(self, event: BaseEvent) -> UserSubscription:
+    def _get_latest_user_sub_by_product_id(self, event: BaseEvent) -> UserSubscription:
         try:
+            user: User = self.user_repo.get_by_uuid(user_uuid=event.app_user_id)
             user_sub: UserSubscription = (
-                self.user_sub_repo.get_by_og_transaction_id_current_sub_with_relations(event.original_transaction_id)
+                self.user_sub_repo.get_latest_by_product_id(user.id, event.product_id)
             )
         except NoResultFound:
             self.logger.error(
-                f"There is no active user subscription with original_transaction_id: {event.original_transaction_id}"
+                f"There is no latest user subscription with product_id: {event.product_id}"
             )
             raise RevenuecatWebhookException()
         return user_sub
+
 
     def _create_new_subscription_for_user(self, user: User, event: BaseEvent):
         subscription_plan: SubscriptionPlan = self.subscription_plan_repo.get_by_product_id(event.product_id)
@@ -90,6 +78,7 @@ class PaidSubscriptionApplicationService(TransactionalService):
                 latest_transaction_id=event.transaction_id,
                 initial_purchase_date=ms_to_datetime(event.purchased_at_ms),
                 purchase_date=ms_to_datetime(event.purchased_at_ms),
+                is_current=True,
                 expire_date=ms_to_datetime(event.expiration_at_ms),
                 status=SubscriptionStatus.ACTIVE,
                 user_id=user.id,
@@ -108,17 +97,38 @@ class PaidSubscriptionApplicationService(TransactionalService):
     # 초기 구매
     @transactional
     def handle_initial_purchase(self, event: InitialPurchase):
-        # 이미 존재하는 original_transaction_id 값이 있다면 걸러야함.
-        self._validate_initial_purchase_event(event=event)
-
         try:
             user: User = self.user_repo.get_by_uuid(event.app_user_id)
         except NoResultFound:
             self.logger.error(
                 f"Initial Purchase Event error\n"
-                f"Cannot find user matching given user uuid from event\n"
+                f"Cannot find matching user given user uuid from event\n"
             )
             raise RevenuecatWebhookException()
+
+        # 존재하는 구독에 대해 현재 연결된 구독이 아닌 상태로 변경
+        try:
+            paid_user_sub: UserSubscription = (
+                self.user_sub_repo.get_current_by_og_t_id_w_wallet(event.original_transaction_id)
+            )
+            self.user_sub_repo.update_with_flush(
+                obj_id=paid_user_sub.id,
+                obj_in=UserSubscriptionUpdate(is_current=False, status=SubscriptionStatus.CHANGED)
+            )
+            self.token_domain_service.disable_wallet(token_wallet=paid_user_sub.token_wallet)
+        except NoResultFound:
+            pass
+        try:
+            free_user_sub: UserSubscription = (
+                self.user_sub_repo.get_current_by_user_with_wallet(user.id)
+            )
+            self.user_sub_repo.update_with_flush(
+                obj_id=free_user_sub.id,
+                obj_in=UserSubscriptionUpdate(is_current=False, status=SubscriptionStatus.CHANGED)
+            )
+            self.token_domain_service.disable_wallet(token_wallet=free_user_sub.token_wallet)
+        except NoResultFound:
+            pass
 
         self._create_new_subscription_for_user(user=user, event=event)
 
@@ -126,14 +136,19 @@ class PaidSubscriptionApplicationService(TransactionalService):
     @transactional
     def handle_renewal(self, event: Renewal):
         """구독 갱신 이벤트 처리"""
-        user_sub_with_relations = self._get_user_sub_with_relations(event)
+        try:
+            user_sub_with_relations = self.user_sub_repo.get_current_by_og_t_id_w_relations(event.original_transaction_id)
+        except NoResultFound:
+            self.logger.error(f"RENEWAL ERROR: There is no current user sub with original_transaction_id of : {event.original_transaction_id}")
+            raise RevenuecatWebhookException()
 
         subscription_plan: SubscriptionPlan = user_sub_with_relations.subscription_plan
         token_wallet: TokenWallet = user_sub_with_relations.token_wallet
         user: User = user_sub_with_relations.user
         purchase_date: datetime = ms_to_datetime(event.purchased_at_ms)
 
-        if user_sub_with_relations.subscription_plan.product_id != event.product_id:
+        # 새로운 plan 을 생성
+        if subscription_plan.product_id != event.product_id:
             # PRODUCT CHANGE 하고 RENEW 로 이벤트 오는 경우
             self._handle_product_change(user_sub_with_relations=user_sub_with_relations, event=event)
             return
@@ -142,12 +157,14 @@ class PaidSubscriptionApplicationService(TransactionalService):
             self._handle_resubscription(user_sub_with_relations=user_sub_with_relations, event=event)
             return
 
+        # 기존 plan 업데이트 (renew)
         self.user_sub_repo.update(
             obj_id=user_sub_with_relations.id,
             obj_in=UserSubscriptionUpdate(
                 latest_transaction_id=event.transaction_id,
                 purchase_date=purchase_date,
                 expire_date=ms_to_datetime(event.expiration_at_ms),
+                status=SubscriptionStatus.ACTIVE, # canceled 등의 경우 고려
             )
         )
 
@@ -173,13 +190,16 @@ class PaidSubscriptionApplicationService(TransactionalService):
     ):
         """PRODUCT CHANGE 하고 RENEW 로 이벤트 오는 경우"""
         user: User = user_sub_with_relations.user
+        token_wallet: TokenWallet = user_sub_with_relations.token_wallet
 
         self.user_sub_repo.update(
             obj_id=user_sub_with_relations.id,
             obj_in=UserSubscriptionUpdate(
+                is_current=False,
                 status=SubscriptionStatus.CHANGED
             )
         )
+        self.token_domain_service.disable_wallet(token_wallet=token_wallet)
 
         self._create_new_subscription_for_user(user=user, event=event)
 
@@ -189,13 +209,24 @@ class PaidSubscriptionApplicationService(TransactionalService):
             event: Renewal
     ):
         """EXPIRED -> RENEW 로 다시 구매한 유저에 대한 처리"""
-        self._create_new_subscription_for_user(user=user_sub_with_relations.user, event=event)
+        user: User = user_sub_with_relations.user
+        token_wallet: TokenWallet = user_sub_with_relations.token_wallet
+
+        self.user_sub_repo.update(
+            obj_id=user_sub_with_relations.id,
+            obj_in=UserSubscriptionUpdate(
+                is_current=False,
+            )
+        )
+        self.token_domain_service.disable_wallet(token_wallet=token_wallet)
+
+        self._create_new_subscription_for_user(user=user, event=event)
 
 
     @transactional
     def handle_cancellation(self, event: Cancellation):
         """구독 취소 이벤트 처리"""
-        user_sub = self._get_user_sub_with_validation(event)
+        user_sub = self._get_latest_user_sub_by_product_id(event)
 
         self.user_sub_repo.update(
             obj_id=user_sub.id,
@@ -232,8 +263,8 @@ class PaidSubscriptionApplicationService(TransactionalService):
 
     @transactional
     def handle_transfer(self, event: Transfer):
-        transfer_from_user_uuid: str = event.transferred_from[0]
-        transfer_to_user_uuid: str = event.transferred_to[0]
+        transfer_from_user_uuid: str = extract_valid_uuid(event.transferred_from)
+        transfer_to_user_uuid: str = extract_valid_uuid(event.transferred_to)
 
         if transfer_from_user_uuid == transfer_to_user_uuid:
             self.logger.info(
@@ -244,25 +275,29 @@ class PaidSubscriptionApplicationService(TransactionalService):
 
         # validation
         try:
-            from_user: User = self.user_repo.get_by_uuid_with_subscription(user_uuid=transfer_from_user_uuid)
-            to_user: User = self.user_repo.get_by_uuid_with_subscription(user_uuid=transfer_to_user_uuid)
+            from_user: User = self.user_repo.get_by_uuid_with_subscriptions(user_uuid=transfer_from_user_uuid)
+            to_user: User = self.user_repo.get_by_uuid_with_subscriptions(user_uuid=transfer_to_user_uuid)
+        except NoResultFound:
             self.logger.error(
                 f"Transfer Event validation error\n"
-                f"Cannot find user matching given user uuid from event\n"
+                f"Cannot find matching user given user uuid from event\n"
             )
-        except NoResultFound:
             raise RevenuecatWebhookException()
 
-        from_user_sub: UserSubscription = from_user.user_subscription
-        to_user_sub: UserSubscription = to_user.user_subscription
+        from_user_sub: UserSubscription = from_user.current_subscription
+        to_user_sub: UserSubscription = to_user.current_subscription
 
-        # 기존에 갖고 있던 구독 연결 해제
-        self.user_sub_repo.update(
-            obj_id=to_user_sub.id,
-            obj_in=UserSubscriptionUpdate(
-                is_current_subscription=False,
+        # 기존에 갖고 있던 구독 연결 해제 (있다면)
+        if to_user_sub:
+            self.user_sub_repo.update_with_flush(
+                obj_id=to_user_sub.id,
+                obj_in=UserSubscriptionUpdate(
+                    is_current=False,
+                    status=SubscriptionStatus.TRANSFERRED
+                )
             )
-        )
+            to_user_wallet: TokenWallet = self.token_domain_service.get_wallet(user_id=to_user.id)
+            self.token_domain_service.disable_wallet(token_wallet=to_user_wallet)
 
         # 구독 연결
         self.user_sub_repo.update(
@@ -273,8 +308,8 @@ class PaidSubscriptionApplicationService(TransactionalService):
         )
 
         # 지갑 연결
-        token_wallet: TokenWallet = self.token_domain_service.get_wallet(user_id=from_user.id)
-        self.token_domain_service.change_wallet_user(token_wallet=token_wallet, user_id=to_user.id)
+        from_user_wallet: TokenWallet = self.token_domain_service.get_wallet(user_id=from_user.id)
+        self.token_domain_service.change_wallet_user(token_wallet=from_user_wallet, user_id=to_user.id)
 
 
 def get_paid_subscription_application_service(

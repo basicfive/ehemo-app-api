@@ -13,8 +13,14 @@ class TokenWalletRepository(CRUDRepository[TokenWallet, TokenWalletCreate, Token
     def __init__(self, db: Session):
         super().__init__(db=db, model=TokenWallet)
 
-    def get_by_user(self, user_id: int) -> TokenWallet:
-        stmt = select(TokenWallet).where(TokenWallet.user_id == user_id)
+    def get_current_by_user(self, user_id: int) -> TokenWallet:
+        stmt = (
+            select(TokenWallet)
+            .where(
+                TokenWallet.user_id == user_id,
+                TokenWallet.is_current == True
+            )
+        )
         return self.db.execute(stmt).scalar_one()
 
 def get_token_wallet_repository(db: Session = Depends(get_db)) -> TokenWalletRepository:

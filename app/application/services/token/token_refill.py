@@ -50,7 +50,11 @@ class TokenRefillApplicationService(TransactionalService):
             refill_amount = subscription.subscription_plan.tokens_per_period
 
             # 다음 리필 날짜 계산
-            next_refill_date: datetime = calculate_next_refill_date(subscription.user.timezone)
+            next_refill_date: datetime = calculate_next_refill_date(
+                timezone=subscription.user.timezone,
+                current_time=current_time,
+                initial_purchase_time=subscription.initial_purchase_date,
+            )
 
             self.token_domain_service.refill_token(
                 token_wallet=wallet,

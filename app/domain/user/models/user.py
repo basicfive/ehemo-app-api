@@ -18,8 +18,8 @@ class User(TimeStampModel):
     deleted = Column(Boolean, default=False, nullable=False)
     timezone = Column(String(20), nullable=True)
 
-    user_subscription = relationship("UserSubscription", back_populates="user", uselist=False)
-    token_wallet = relationship("TokenWallet", back_populates="user", uselist=False)
+    user_subscriptions = relationship("UserSubscription", back_populates="user", uselist=True)
+    token_wallets = relationship("TokenWallet", back_populates="user", uselist=True)
 
     __table_args__ = (
         Index(
@@ -31,3 +31,18 @@ class User(TimeStampModel):
         ),
     )
 
+    @property
+    def current_subscription(self):
+        """
+        is_current = True 인 구독을 찾아서 반환.
+        없으면 None.
+        """
+        return next((sub for sub in self.user_subscriptions if sub.is_current), None)
+
+    @property
+    def current_token_wallet(self):
+        """
+        is_current = True 인 구독을 찾아서 반환.
+        없으면 None.
+        """
+        return next((wallet for wallet in self.token_wallets if wallet.is_current), None)

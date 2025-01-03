@@ -19,6 +19,7 @@ class SubscriptionStatus(Enum):
     CANCELED = "CANCELED"
     PENDING = "PENDING"
     CHANGED = "CHANGED"
+    TRANSFERRED = "TRANSFERRED"
     TRIAL = "TRIAL"
 
 class Currency(str, Enum):

@@ -17,20 +17,28 @@ class UserRepository(CRUDRepository[User, UserCreate, UserUpdate]):
         stmt = select(User).filter_by(provider=provider, social_id=social_id, deleted=False)
         return self.db.execute(stmt).scalar_one()
 
-    def get_with_subscription(self, user_id: int):
-        stmt = select(User).options(joinedload(User.user_subscription)).where(User.id == user_id)
-        return self.db.execute(stmt).unique().scalar_one()
-
-    def get_by_uuid_with_subscription(self, user_uuid: str):
+    def get_with_subscriptions(self, user_id: int) -> User:
         stmt = (
             select(User)
-            .where(User.uuid == user_uuid)
-            .options(joinedload(User.user_subscription))
+            .options(joinedload(User.user_subscriptions))
+            .where(User.id == user_id)
         )
         return self.db.execute(stmt).unique().scalar_one()
 
-    def get_with_token_wallet(self, user_id: int):
-        stmt = select(User).options(joinedload(User.token_wallet)).where(User.id == user_id)
+    def get_by_uuid_with_subscriptions(self, user_uuid: str) -> User:
+        stmt = (
+            select(User)
+            .options(joinedload(User.user_subscriptions))
+            .where(User.uuid == user_uuid)
+        )
+        return self.db.execute(stmt).unique().scalar_one()
+
+    def get_with_token_wallets(self, user_id: int) -> User:
+        stmt = (
+            select(User)
+            .options(joinedload(User.token_wallets))
+            .where(User.id == user_id)
+        )
         return self.db.execute(stmt).unique().scalar_one()
 
     def get_users_by_ids(self, user_ids: List[int]) -> List[User]:

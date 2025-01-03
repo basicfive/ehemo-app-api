@@ -39,33 +39,33 @@ class UserSubscription(TimeStampModel):
     expire_date = Column(DateTime, nullable=False)
 
     # 구독 상태
+    is_current = Column(Boolean, nullable=True)
     status = Column(Enum(SubscriptionStatus), nullable=False, index=True)
 
     user_id = Column(ForeignKey("user.id"), nullable=False, index=True)
     subscription_plan_id = Column(ForeignKey("subscription_plan.id"), nullable=False, index=True)
 
-    user = relationship("User", back_populates="user_subscription")
+    user = relationship("User", back_populates="user_subscriptions")
     subscription_plan = relationship("SubscriptionPlan", back_populates="user_subscription")
 
     token_wallet = relationship("TokenWallet", back_populates="user_subscription", uselist=False)
 
     __table_args__ = (
-        # 활성 구독의 original_transaction_id 는 유일해야함
-        UniqueConstraint(
-            'original_transaction_id',
-            name='uq_active_original_transaction',
-            deferrable=True,
-            initially='DEFERRED',
-            info=dict(where=text("status::text = 'ACTIVE'"))
+        # 1) is_current = TRUE 일 때만 original_transaction_id 유니크
+        Index(
+            "uq_current_original_transaction",
+            "original_transaction_id",
+            unique=True,
+            postgresql_where=text("is_current = TRUE"),
         ),
-        # 한 유저는 활성 구독을 하나만 가질 수 있도록 제약
-        UniqueConstraint(
-            'user_id',
-            name='uq_active_user',
-            deferrable=True,
-            initially='DEFERRED',
-            info=dict(where=text("status::text = 'ACTIVE'"))
-        ),
-        Index('idx_subscription_status_expire', 'status', 'expire_date'),
+        # # 2) is_current = TRUE 일 때만 user_id 유니크
+        # Index(
+        #     "uq_current_user",
+        #     "user_id",
+        #     unique=True,
+        #     postgresql_where=text("is_current = TRUE"),
+        # ),
+        # status, expire_date로 만든 일반 인덱스
+        Index("idx_subscription_status_expire", "status", "expire_date"),
     )
 

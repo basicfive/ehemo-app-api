@@ -27,12 +27,21 @@ class TokenDomainService:
        self.token_transaction_repo = token_transaction_repo
 
    def get_wallet(self, user_id: int) -> TokenWallet:
-       return self.token_wallet_repo.get_by_user(user_id)
+       return self.token_wallet_repo.get_current_by_user(user_id)
+
+   def create_wallet_with_flush(self, wallet_create: TokenWalletCreate) -> TokenWallet:
+       return self.token_wallet_repo.create_with_flush(obj_in=wallet_create)
 
    def change_wallet_user(self, token_wallet: TokenWallet, user_id: int):
        return self.token_wallet_repo.update(
            obj_id=token_wallet.id,
            obj_in=TokenWalletUpdate(user_id=user_id)
+       )
+
+   def disable_wallet(self, token_wallet: TokenWallet):
+       return self.token_wallet_repo.update(
+           obj_id=token_wallet.id,
+           obj_in=TokenWalletUpdate(is_current=False)
        )
 
    def create_and_init_wallet(
@@ -46,6 +55,7 @@ class TokenDomainService:
        token_wallet = self.token_wallet_repo.create_with_flush(
            obj_in=TokenWalletCreate(
                remaining_token=0,
+               is_current=True,
                total_received_tokens=0,
                next_refill_date=next_refill_date,
                last_refill_date=current_time,
@@ -142,7 +152,7 @@ class TokenDomainService:
        token_wallet: TokenWallet = self.token_wallet_repo.update_with_flush(
            obj_id=token_wallet.id,
            obj_in=TokenWalletUpdate(
-               remaining_token=current_token + amount,
+               remaining_token=amount,
                total_received_tokens=token_wallet.total_received_tokens + amount,
                next_refill_date=next_refill_date,
                last_refill_date=current_time,

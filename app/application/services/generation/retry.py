@@ -136,10 +136,10 @@ class ImageGenerationRetryService(TransactionalService):
         generation_request: GenerationRequest = self.generation_request_repo.get(expired_job.generation_request_id)
         if generation_request.generation_result == GenerationResultEnum.PENDING:
 
-            user_with_wallet: User = self.user_repo.get_with_token_wallet(generation_request.user_id)
+            user_with_wallet: User = self.user_repo.get_with_token_wallets(generation_request.user_id)
 
             # 구독 토큰 반환
-            token_wallet: TokenWallet = user_with_wallet.token_wallet
+            token_wallet: TokenWallet = user_with_wallet.current_token_wallet
             self.token_domain_service.refund_token(
                 token_wallet=token_wallet,
                 amount=token_settings.TOKENS_PER_GENERATION,

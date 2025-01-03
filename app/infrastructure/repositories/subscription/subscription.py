@@ -42,6 +42,9 @@ class UserSubscriptionRepository(CRUDRepository[UserSubscription, UserSubscripti
                 UserSubscription.status == SubscriptionStatus.ACTIVE,
             )
         )
+
+    def get_by_transaction_id(self, *, original_transaction_id: str):
+        stmt = select(UserSubscription).where(UserSubscription.original_transaction_id == original_transaction_id)
         return self.db.execute(stmt).scalar_one()
 
     def get_by_og_transaction_id_current_sub_with_relations(self, original_transaction_id: str):
@@ -69,15 +72,103 @@ class UserSubscriptionRepository(CRUDRepository[UserSubscription, UserSubscripti
         )
         return self.db.execute(stmt).scalar_one()
 
-    def get_by_user_with_plan(self, user_id: int):
+    # def get_by_user_with_plan(self, user_id: int):
+    #     stmt = select(UserSubscription).where(UserSubscription.user_id == user_id)
+    #
+    def get_current_by_og_transaction_id(self, original_transaction_id: str):
         stmt = (
             select(UserSubscription)
-            .where(UserSubscription.user_id == user_id)
+            .where(
+                UserSubscription.original_transaction_id == original_transaction_id,
+                UserSubscription.is_current == True,
+            )
+        )
+        return self.db.execute(stmt).scalar_one()
+
+    def get_latest_by_product_id(self, user_id: int, product_id: str):
+        stmt = (
+            select(UserSubscription)
+            .join(UserSubscription.subscription_plan)
+            .where(
+                UserSubscription.user_id == user_id,
+                SubscriptionPlan.product_id == product_id,
+            )
+            .order_by(UserSubscription.purchase_date.desc())  # 가장 최근 구매 순으로 정렬
+            .limit(1)  # 최상위 1개만 가져오기
+        )
+        return self.db.execute(stmt).scalar_one()
+
+    def get_current_by_og_t_id_w_wallet(self, original_transaction_id: str):
+        stmt = (
+            select(UserSubscription)
+            .where(
+                UserSubscription.original_transaction_id == original_transaction_id,
+                UserSubscription.is_current == True,
+            )
+            .options(joinedload(UserSubscription.token_wallet))
+        )
+        return self.db.execute(stmt).unique().scalar_one()
+
+    def get_current_by_og_t_id_w_relations(self, original_transaction_id: str):
+        stmt = (
+            select(UserSubscription)
+            .where(
+                UserSubscription.original_transaction_id == original_transaction_id,
+                UserSubscription.is_current == True,
+            )
+            .options(
+                joinedload(UserSubscription.subscription_plan),
+                joinedload(UserSubscription.token_wallet),
+                joinedload(UserSubscription.user),
+            )
+        )
+        return self.db.execute(stmt).unique().scalar_one()
+
+    def get_current_by_user_with_wallet(self, user_id: int):
+        stmt = (
+            select(UserSubscription)
+            .where(
+                UserSubscription.user_id == user_id,
+                UserSubscription.is_current == True,
+            )
+            .options(joinedload(UserSubscription.token_wallet))
+        )
+        return self.db.execute(stmt).scalar_one()
+
+    def get_current_by_user(self, user_id: int):
+        stmt = (
+            select(UserSubscription)
+            .where(
+                UserSubscription.user_id == user_id,
+                UserSubscription.is_current == True,
+            )
+        )
+        return self.db.execute(stmt).scalar_one()
+
+    def get_current_by_user_with_plan(self, user_id: int):
+        stmt = (
+            select(UserSubscription)
+            .where(
+                UserSubscription.user_id == user_id,
+                UserSubscription.is_current == True,
+            )
             .options(
                 joinedload(UserSubscription.subscription_plan),
             )
         )
         return self.db.execute(stmt).unique().scalar_one()
+
+    def get_all_by_user_with_plan(self, user_id: int) -> List[UserSubscription]:
+        stmt = (
+            select(UserSubscription)
+            .where(
+                UserSubscription.user_id == user_id,
+            )
+            .options(
+                joinedload(UserSubscription.subscription_plan),
+            )
+        )
+        return list(self.db.scalars(stmt).all())
 
     def get_with_user(self, original_transaction_id: str):
         stmt = (
@@ -92,7 +183,7 @@ class UserSubscriptionRepository(CRUDRepository[UserSubscription, UserSubscripti
             select(UserSubscription)
             .join(UserSubscription.token_wallet)
             .where(
-                UserSubscription.is_current_subscription == True,
+                UserSubscription.is_current == True,
                 UserSubscription.status == SubscriptionStatus.ACTIVE,
                 TokenWallet.next_refill_date <= current_time
             )
