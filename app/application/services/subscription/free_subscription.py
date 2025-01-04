@@ -3,14 +3,12 @@ from uuid import uuid4
 from datetime import datetime, UTC
 from dateutil.relativedelta import relativedelta
 
-from app import token_settings
 from app.application.services.subscription.dto.subscription_status import UserSubscriptionInfo, UserSubscriptionStatus
 from app.application.services.transactional_service import TransactionalService
 from app.domain import SubscriptionPlan
 from app.domain.subscription.models.enums.subscription import SubscriptionStatus
 from app.domain.subscription.models.subscription import UserSubscription
 from app.domain.subscription.schemas.user_subscription import UserSubscriptionCreate, UserSubscriptionInDB
-from app.domain.token.schemas.token_wallet import TokenWalletCreate
 from app.domain.token.services.token_domain_sevice import TokenDomainService, get_token_domain_service
 from app.infrastructure.database.transaction import transactional
 from app.infrastructure.database.unit_of_work import UnitOfWork, get_unit_of_work
@@ -55,7 +53,7 @@ class FreeSubscriptionApplicationService(TransactionalService):
                 purchase_date=current_datetime,
                 initial_purchase_date=current_datetime,
                 expire_date=hundred_years_later,
-                is_current_subscription=True,
+                is_current=True,
                 status=SubscriptionStatus.ACTIVE,
                 user_id=user_id,
                 subscription_plan_id=subscription_plan_id,

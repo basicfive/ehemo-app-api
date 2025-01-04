@@ -24,11 +24,7 @@ from app.domain.generation.schemas.image_generation_job import ImageGenerationJo
 from app.domain.generation.services.generation_domain_service import estimate_normal_priority_message_wait_sec, \
     calculate_normal_message_ttl_sec, is_generation_in_progress, calculate_remaining_generation_sec
 from app.domain.hair_model.models.hair import HairVariantModel, Length, SpecificColor
-from app.domain.hair_model.schemas.hair.gender import GenderInDB
-from app.domain.hair_model.schemas.hair.hair_style import HairStyleInDB
-from app.domain.hair_model.schemas.hair.length import LengthInDB
 from app.domain.hair_model.services.hair_model_prompt import create_prompts
-from app.domain.subscription.schemas.user_subscription import UserSubscriptionUpdate
 from app.domain.token.models.enums.token import TokenSourceType
 from app.domain.token.models.token import TokenWallet
 from app.domain.token.services.token_domain_sevice import TokenDomainService, get_token_domain_service
