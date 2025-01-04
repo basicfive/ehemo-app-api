@@ -118,14 +118,7 @@ class EventParser:
 
         # 2. event_type 확인
         event_type = EventType(event_data["type"])
-        print("event_type")
-        print(event_type)
         parser = cls._parsers.get(event_type)
-        print("parser")
-        print(parser)
-
-        print("event_data")
-        print(event_data)
 
         if not parser:
             raise ValueError(f"Unsupported event type: {event_type}")

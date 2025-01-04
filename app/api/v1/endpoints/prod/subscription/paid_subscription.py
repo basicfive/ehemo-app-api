@@ -29,7 +29,7 @@ async def handle_revenuecat_webhook(
        service: PaidSubscriptionApplicationService = Depends(get_paid_subscription_application_service),
 ):
    payload = await request.json()
-   print("webhook payload : ")
+   print("revenuecat webhook payload : ")
    print(payload)
    try:
        # EventParser를 사용해 직접 변환
