@@ -81,6 +81,7 @@ class FreeSubscriptionApplicationService(TransactionalService):
                 name=subscription_plan.name,
                 description=subscription_plan.description,
                 next_billing_date=user_sub.expire_date,
+                updated_at=user_sub.updated_at,
             )
         )
 

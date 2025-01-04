@@ -44,6 +44,7 @@ class UserSubscriptionInDB(BaseModel):
 
     user_id: int
     subscription_plan_id: int
+    updated_at: datetime
 
     class Config:
         from_attributes=True
