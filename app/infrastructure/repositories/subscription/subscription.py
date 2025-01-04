@@ -34,47 +34,6 @@ class UserSubscriptionRepository(CRUDRepository[UserSubscription, UserSubscripti
         super().__init__(model=UserSubscription, db=db)
         self.db = db
 
-    def get_active_sub_by_og_transaction_id(self, original_transaction_id: str):
-        stmt = (
-            select(UserSubscription)
-            .where(
-                UserSubscription.original_transaction_id == original_transaction_id,
-                UserSubscription.status == SubscriptionStatus.ACTIVE,
-            )
-        )
-
-    def get_by_transaction_id(self, *, original_transaction_id: str):
-        stmt = select(UserSubscription).where(UserSubscription.original_transaction_id == original_transaction_id)
-        return self.db.execute(stmt).scalar_one()
-
-    def get_by_og_transaction_id_current_sub_with_relations(self, original_transaction_id: str):
-        stmt = (
-            select(UserSubscription)
-            .where(
-                UserSubscription.original_transaction_id == original_transaction_id,
-                UserSubscription.status == SubscriptionStatus.ACTIVE,
-            )
-            .options(
-                joinedload(UserSubscription.subscription_plan),
-                joinedload(UserSubscription.token_wallet),
-                joinedload(UserSubscription.user),
-            )
-        )
-        return self.db.execute(stmt).unique().scalar_one()
-
-    def get_by_user(self, user_id: int):
-        stmt = (
-            select(UserSubscription)
-            .where(
-                UserSubscription.user_id == user_id,
-                UserSubscription.status == SubscriptionStatus.ACTIVE,
-            )
-        )
-        return self.db.execute(stmt).scalar_one()
-
-    # def get_by_user_with_plan(self, user_id: int):
-    #     stmt = select(UserSubscription).where(UserSubscription.user_id == user_id)
-    #
     def get_current_by_og_transaction_id(self, original_transaction_id: str):
         stmt = (
             select(UserSubscription)
@@ -169,14 +128,6 @@ class UserSubscriptionRepository(CRUDRepository[UserSubscription, UserSubscripti
             )
         )
         return list(self.db.scalars(stmt).all())
-
-    def get_with_user(self, original_transaction_id: str):
-        stmt = (
-            select(UserSubscription)
-            .options(joinedload(UserSubscription.user))
-            .where(UserSubscription.original_transaction_id == original_transaction_id)
-        )
-        return self.db.execute(stmt).unique().scalar_one()
 
     def get_active_subscriptions_for_refill_with_relations(self, current_time: datetime) -> List[UserSubscription]:
         stmt = (

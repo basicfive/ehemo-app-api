@@ -132,6 +132,33 @@ class PaidSubscriptionApplicationService(TransactionalService):
 
         self._create_new_subscription_for_user(user=user, event=event)
 
+    def _initial_purchase_but_renew(self, event: Renewal):
+        """
+        해당 (스토어)계정으로 구매한 적은 없으나, 애플 등 스토어 계정에 연동된 구매한 이력이 남아있어,
+        TRANSFER / RENEW 로 요청이 오는 경우 우선 구매 처리를 정상적으로 하기 위해서 구현함.
+        """
+        self.logger.info(
+            f"RENEWAL: There is no current user sub with original_transaction_id of : {event.original_transaction_id}\n"
+            f"Creating new user subscription for user (user_uuid): {event.app_user_id}"
+        )
+        try:
+            user: User = self.user_repo.get_by_uuid(event.app_user_id)
+        except NoResultFound:
+            self.logger.error(f"There is no user with user_uuid: {event.app_user_id}")
+            return
+        try:
+            # 이전에 구독하던 것이 있는 경우
+            existing_user_sub: UserSubscription = self.user_sub_repo.get_current_by_user(user.id)
+            self.user_sub_repo.update_with_flush(
+                obj_id=existing_user_sub.id,
+                obj_in=UserSubscriptionUpdate(
+                    is_current=False,
+                )
+            )
+        except NoResultFound:
+            pass
+        self._create_new_subscription_for_user(user=user, event=event)
+
 
     @transactional
     def handle_renewal(self, event: Renewal):
@@ -139,12 +166,8 @@ class PaidSubscriptionApplicationService(TransactionalService):
         try:
             user_sub_with_relations = self.user_sub_repo.get_current_by_og_t_id_w_relations(event.original_transaction_id)
         except NoResultFound:
-            # 해당 (스토어)계정으로 구매한 적은 없으나, 애플 등 스토어 계정에 연동된 구매한 이력이 남아있어, TRANSFER / RENEW 로 요청이 오는 경우
-            # 우선 구매 처리를 정상적으로 하기 위해서 둠.
-            self.logger.info(f"RENEWAL: There is no current user sub with original_transaction_id of : {event.original_transaction_id}")
-            self.logger.info(f"Creating new user subscription for user (user_uuid): {event.app_user_id}")
-            user: User = self.user_repo.get_by_uuid(event.app_user_id)
-            self._create_new_subscription_for_user(user=user, event=event)
+            # 스토어 계정 연동으로 인해 해당 계정으로는 구매한 적이 없어 INITIAL PURCHASE 로 예상되었던 값이 RENEW로 오는 경우
+            self._initial_purchase_but_renew(event)
             return
 
         subscription_plan: SubscriptionPlan = user_sub_with_relations.subscription_plan
