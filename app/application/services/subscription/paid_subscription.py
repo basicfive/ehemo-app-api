@@ -139,8 +139,13 @@ class PaidSubscriptionApplicationService(TransactionalService):
         try:
             user_sub_with_relations = self.user_sub_repo.get_current_by_og_t_id_w_relations(event.original_transaction_id)
         except NoResultFound:
-            self.logger.error(f"RENEWAL ERROR: There is no current user sub with original_transaction_id of : {event.original_transaction_id}")
-            raise RevenuecatWebhookException()
+            # 해당 (스토어)계정으로 구매한 적은 없으나, 애플 등 스토어 계정에 연동된 구매한 이력이 남아있어, TRANSFER / RENEW 로 요청이 오는 경우
+            # 우선 구매 처리를 정상적으로 하기 위해서 둠.
+            self.logger.info(f"RENEWAL: There is no current user sub with original_transaction_id of : {event.original_transaction_id}")
+            self.logger.info(f"Creating new user subscription for user (user_uuid): {event.app_user_id}")
+            user: User = self.user_repo.get_by_uuid(event.app_user_id)
+            self._create_new_subscription_for_user(user=user, event=event)
+            return
 
         subscription_plan: SubscriptionPlan = user_sub_with_relations.subscription_plan
         token_wallet: TokenWallet = user_sub_with_relations.token_wallet
@@ -156,6 +161,9 @@ class PaidSubscriptionApplicationService(TransactionalService):
             # EXPIRED -> RENEW 로 다시 구매한 유저에 대한 처리
             self._handle_resubscription(user_sub_with_relations=user_sub_with_relations, event=event)
             return
+
+        # if user_sub_with_relations.status != SubscriptionStatus.ACTIVE:
+        #     return
 
         # 기존 plan 업데이트 (renew)
         self.user_sub_repo.update(
