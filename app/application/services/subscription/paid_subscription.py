@@ -148,13 +148,14 @@ class PaidSubscriptionApplicationService(TransactionalService):
             return
         try:
             # 이전에 구독하던 것이 있는 경우
-            existing_user_sub: UserSubscription = self.user_sub_repo.get_current_by_user(user.id)
+            existing_user_sub: UserSubscription = self.user_sub_repo.get_current_by_user_with_wallet(user.id)
             self.user_sub_repo.update_with_flush(
                 obj_id=existing_user_sub.id,
                 obj_in=UserSubscriptionUpdate(
                     is_current=False,
                 )
             )
+            self.token_domain_service.disable_wallet(token_wallet=existing_user_sub.token_wallet)
         except NoResultFound:
             pass
         self._create_new_subscription_for_user(user=user, event=event)
