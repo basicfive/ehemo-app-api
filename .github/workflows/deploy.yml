@@ -17,6 +17,8 @@ jobs:
         # SSH 키 저장을 위한 디렉토리 생성
         mkdir -p $HOME/.ssh
         
+        echo "DOCKER_IMAGE=ghcr.io/${{ github.actor }}/ehemo-app-api" >> $GITHUB_ENV
+        
         # 브랜치별 환경 설정
         if [[ ${{ github.ref }} == 'refs/heads/prod' ]]; then
           # 설정 파일 생성
@@ -25,7 +27,6 @@ jobs:
           
           # 환경 변수 설정
           {
-            echo "DOCKER_IMAGE=ghcr.io/${{ github.actor }}/ehemo-app-api/prod"
             echo "GITHUB_TOKEN=${{ secrets.GHCR_TOKEN }}"
             echo "AWS_REGION=${{ secrets.PROD_AWS_REGION }}"
             echo "AWS_ACCESS_KEY=${{ secrets.PROD_AWS_ACCESS_KEY }}"
@@ -48,7 +49,6 @@ jobs:
           
           # 환경 변수 설정
           {
-            echo "DOCKER_IMAGE=ghcr.io/${{ github.actor }}/ehemo-app-api/dev"
             echo "GITHUB_TOKEN=${{ secrets.GHCR_TOKEN }}"
             echo "AWS_REGION=${{ secrets.DEV_AWS_REGION }}"
             echo "AWS_ACCESS_KEY=${{ secrets.DEV_AWS_ACCESS_KEY }}"
@@ -145,7 +145,7 @@ jobs:
         
         # 2. 기존 서버 이미지 삭제
         echo "Removing existing server image..."
-        docker rmi ghcr.io/ehemo-app-api:latest || true
+        docker images ghcr.io/ehemo-app-api -q | xargs -r docker rmi -f
         
         # 3. 새 이미지 pull 및 태그 설정
         echo "Pulling new image..."
