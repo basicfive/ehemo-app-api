@@ -15,6 +15,7 @@ class BaseSetting(BaseModel):
 class RabbitMQSetting(BaseSetting):
     RABBITMQ_HOST: str = os.getenv('RABBITMQ_HOST')
     RABBITMQ_VHOST: str = os.getenv('RABBITMQ_VHOST')
+    RABBITMQ_PORT: int = int(os.getenv('RABBITMQ_PORT'))
     RABBITMQ_USERNAME: str = os.getenv('RABBITMQ_USERNAME')
     RABBITMQ_PASSWORD: str = os.getenv('RABBITMQ_PASSWORD')
     RABBITMQ_PUBLISH_QUEUE: str = os.getenv('RABBITMQ_PUBLISH_QUEUE')

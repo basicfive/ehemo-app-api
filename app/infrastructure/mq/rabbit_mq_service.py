@@ -24,6 +24,7 @@ class RabbitMQService:
             connection_name: str,
             hostname: str = rabbit_mq_settings.RABBITMQ_HOST,
             vhost: str = rabbit_mq_settings.RABBITMQ_VHOST,
+            port: int = rabbit_mq_settings.RABBITMQ_PORT,
             username: str = rabbit_mq_settings.RABBITMQ_USERNAME,
             password: str = rabbit_mq_settings.RABBITMQ_PASSWORD,
             publish_queue: str = rabbit_mq_settings.RABBITMQ_PUBLISH_QUEUE,
@@ -38,7 +39,7 @@ class RabbitMQService:
         encoded_password = quote(password, safe='')
         encoded_vhost = quote(vhost, safe='') if vhost else ''
 
-        url = f"amqp://{username}:{encoded_password}@{hostname}:5671/{encoded_vhost}"
+        url = f"amqp://{username}:{encoded_password}@{hostname}:{port}/{encoded_vhost}"
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
 
         self.connect_kwargs = {
