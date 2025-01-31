@@ -139,6 +139,10 @@ jobs:
         echo "=== Current Container Status ==="
         docker ps -a
         
+        # GHCR 로그인
+        echo "Logging into GHCR..."
+        echo "${{ env.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        
         # 1. 컨테이너 중지
         echo "Stopping containers..."
         docker-compose down
