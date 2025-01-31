@@ -29,7 +29,7 @@ class UserFollowUpAnswerCreate(BaseModel):
     user_id: int
     reason_id: int
     answer_id: int
-    custom_answer: str
+    custom_answer: Optional[str]
 
 class UserFollowUpAnswerUpdate(BaseModel):
     user_id: Optional[int] = None
