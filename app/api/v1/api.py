@@ -7,6 +7,7 @@ from app.api.v1.endpoints.prod.generation import request, hair_model_options
 from app.api.v1.endpoints.prod.image import image
 from app.api.v1.endpoints.prod.user import auth as prod_auth
 from app.api.v1.endpoints.prod.user import user
+from app.api.v1.endpoints.prod.user import deletion_survey
 from app.api.v1.endpoints.prod.home import model_thumbnail
 from app.api.v1.endpoints.prod.versioning import app_version
 from app.api.v1.endpoints.prod.store import store_url
@@ -26,6 +27,7 @@ router.include_router(image.router, prefix="/prod/image", tags=['image'])
 
 router.include_router(prod_auth.router, prefix="/prod/user", tags=['user'])
 router.include_router(user.router, prefix="/prod/user", tags=['user'])
+router.include_router(deletion_survey.router, prefix="/prod/user", tags=['user'])
 
 router.include_router(model_thumbnail.router, prefix="/prod/home", tags=['home'])
 

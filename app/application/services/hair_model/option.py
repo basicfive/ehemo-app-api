@@ -82,7 +82,7 @@ class HairModelOptionApplicationService:
                 HairStyleLengthOption(
                     id=db_hair_style_length.length_id,
                     title=db_hair_style_length.length.title,
-                    description=db_hair_style_length.length.description,
+                    description=db_hair_style_length.length.custom_answer,
                     presigned_image_url=self.s3_client.create_presigned_url(
                         s3_key=db_hair_style_length.image_s3_key,
                         expiration=24*60*60,
@@ -107,7 +107,7 @@ class HairModelOptionApplicationService:
                 HairDesignColorOption(
                     id=db_hair_design_color.color_id,
                     title=db_hair_design_color.color.title,
-                    description=db_hair_design_color.color.description,
+                    description=db_hair_design_color.color.custom_answer,
                     presigned_image_url=self.s3_client.create_presigned_url(
                         s3_key=db_hair_design_color.image_s3_key,
                         expiration=24*60*60,

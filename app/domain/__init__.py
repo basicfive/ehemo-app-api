@@ -6,6 +6,7 @@ from app.domain.hair_model.models.scene import *
 from app.domain.hair_model.models.model_thumbnail import *
 
 from app.domain.user.models.user import *
+from app.domain.user.models.deletion_survey import *
 
 from app.domain.token.models.token import *
 
