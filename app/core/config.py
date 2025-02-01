@@ -11,6 +11,7 @@ class BaseSetting(BaseModel):
     PROJECT_NAME: str = "ehemo-app-api"
     API_V1_STR: str = "/api/v1"
     DATABASE_URL: str = os.getenv("DATABASE_URL")
+    ALERT_DISCORD_WEBHOOK: str = os.getenv("ALERT_DISCORD_WEBHOOK")
 
 class RabbitMQSetting(BaseSetting):
     RABBITMQ_HOST: str = os.getenv('RABBITMQ_HOST')
