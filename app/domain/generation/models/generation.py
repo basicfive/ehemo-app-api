@@ -12,10 +12,12 @@ class GenerationRequest(TimeStampModel):
     user_id = Column(Integer, ForeignKey("user.id"), index=True)
     hair_variant_model_id = Column(Integer, ForeignKey("hair_variant_model.id"))
     background_id = Column(Integer, ForeignKey("background.id"))
+    image_ratio_id = Column(Integer, ForeignKey("image_ratio.id"))
     image_resolution_id = Column(Integer, ForeignKey("image_resolution.id"))
 
     hair_variant_model = relationship("HairVariantModel")
     background = relationship("Background")
+    image_ratio = relationship("ImageRatio")
     image_resolution = relationship("ImageResolution")
 
 class ImageGenerationJob(TimeStampModel):
@@ -29,8 +31,10 @@ class ImageGenerationJob(TimeStampModel):
     webui_png_info = Column(String(2048), nullable=True)
 
     prompt = Column(String(1024), nullable=False)
+    lora_model = Column(String(1024), nullable=True)
     distilled_cfg_scale = Column(Float, nullable=False)
     width = Column(Integer, nullable=False)
     height = Column(Integer, nullable=False)
+    is_upscale = Column(Boolean, nullable=True)
 
     generation_request_id = Column(Integer, ForeignKey("generation_request.id"), index=True)

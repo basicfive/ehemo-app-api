@@ -11,6 +11,9 @@ class ImageResolutionCreate(BaseModel):
     aspect_height: int
     image_s3_key: str
     order: int
+    is_upscale: int
+
+    image_ratio_id: int
 
 class ImageResolutionUpdate(BaseModel):
     title: Optional[str]
@@ -21,6 +24,9 @@ class ImageResolutionUpdate(BaseModel):
     aspect_height: Optional[int]
     image_s3_key: Optional[str]
     order: Optional[int]
+    is_upscale: Optional[bool]
+
+    image_ratio_id: Optional[int]
 
 class ImageResolutionInDB(BaseModel):
     id: int
@@ -32,6 +38,8 @@ class ImageResolutionInDB(BaseModel):
     aspect_height: int
     image_s3_key: str
     order: int
+    is_upscale: bool
+    image_ratio_id: int
 
     class Config:
         from_attributes=True

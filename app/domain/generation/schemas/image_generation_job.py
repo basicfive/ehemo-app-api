@@ -11,10 +11,12 @@ class ImageGenerationJobCreate(BaseModel):
 
     s3_key: str
     prompt: str
+    lora_model: str
     distilled_cfg_scale: float
     width: int
     height: int
     generation_request_id: int
+    is_upscale: bool
 
 class ImageGenerationJobUpdate(BaseModel):
     status: Optional[GenerationStatusEnum] = None
@@ -24,10 +26,12 @@ class ImageGenerationJobUpdate(BaseModel):
     s3_key: Optional[str] = None
     webui_png_info: Optional[str] = None
     prompt: Optional[str] = None
+    lora_model: Optional[str] = None
     distilled_cfg_scale: Optional[float] = None
     width: Optional[int] = None
     height: Optional[int] = None
     generation_request_id: Optional[int] = None
+    is_upscale: Optional[bool] = None
 
 class ImageGenerationJobInDB(BaseModel):
     id: int
@@ -38,10 +42,13 @@ class ImageGenerationJobInDB(BaseModel):
     s3_key: str
     webui_png_info: Optional[str]
     prompt: str
+    lora_model: str
     distilled_cfg_scale: float
+    is_upscale: int
     width: int
     height: int
     generation_request_id: int
+    is_upscale: bool
 
     class Config:
         from_attributes=True

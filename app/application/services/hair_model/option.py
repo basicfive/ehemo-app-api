@@ -1,15 +1,18 @@
 from typing import List
 from fastapi import Depends
 from app.application.services.hair_model.dto.option import GenderOption, HairStyleOption, \
-    HairStyleLengthOption, HairDesignColorOption, BackgroundOption, ImageResolutionOption
+    HairStyleLengthOption, HairDesignColorOption, BackgroundOption, ImageResolutionOption, ImageRatioOption
+from app.domain import ImageRatio
 from app.domain.hair_model.models.hair import Gender, HairStyle, HairStyleLength, HairDesignColor
 from app.domain.hair_model.models.scene import Background, ImageResolution
+from app.domain.hair_model.schemas.scene.image_ratio import ImageRatioInDB
+from app.infrastructure.repositories.hair_model.scene import ImageRatioRepository, get_image_ratio_repository, \
+    BackgroundRepository, ImageResolutionRepository, get_image_resolution_repository, get_background_repository
 from app.infrastructure.s3.s3_client import S3Client, get_s3_client
 from app.infrastructure.repositories.hair_model.hair_model import GenderRepository, HairStyleRepository, \
     HairStyleLengthRepository, HairDesignRepository, HairDesignColorRepository, get_gender_repository, \
     get_hair_style_repository, get_hair_style_length_repository, get_hair_design_repository, \
-    get_hair_design_color_repository, get_background_repository, get_image_resolution_repository, BackgroundRepository, \
-    ImageResolutionRepository
+    get_hair_design_color_repository
 from app.domain.hair_model.schemas.hair.gender import GenderInDB
 from app.domain.hair_model.schemas.hair.hair_design import HairDesignInDB
 from app.domain.hair_model.schemas.hair.hair_style import HairStyleInDB
@@ -25,6 +28,7 @@ class HairModelOptionApplicationService:
             hair_design_repo: HairDesignRepository,
             hair_design_color_repo: HairDesignColorRepository,
             background_repo: BackgroundRepository,
+            image_ratio_repo: ImageRatioRepository,
             image_resolution_repo: ImageResolutionRepository,
             s3_client: S3Client
     ):
@@ -34,6 +38,7 @@ class HairModelOptionApplicationService:
         self.hair_design_repo = hair_design_repo
         self.hair_design_color_repo = hair_design_color_repo
         self.background_repo = background_repo
+        self.image_ratio_repo = image_ratio_repo
         self.image_resolution_repo = image_resolution_repo
         self.s3_client = s3_client
 
@@ -136,8 +141,25 @@ class HairModelOptionApplicationService:
             key=lambda x: x.order
         )
 
-    def get_image_resolution_options(self) -> List[ImageResolutionOption]:
-        db_image_resolution_list: List[ImageResolution] = self.image_resolution_repo.get_all()
+    def get_image_ratio_options(self) -> List[ImageRatioOption]:
+        db_image_ratio_list: List[ImageRatio] = self.image_ratio_repo.get_all()
+        image_ratio_list: List[ImageRatioInDB] = [ImageRatioInDB.model_validate(db_image_ratio) for db_image_ratio in db_image_ratio_list]
+        return sorted(
+            [
+                ImageRatioOption(
+                    **image_ratio.model_dump(),
+                    presigned_image_url=self.s3_client.create_presigned_url(
+                        s3_key=image_ratio.image_s3_key,
+                        expiration=24*60*60,
+                    )
+                )
+                for image_ratio in image_ratio_list
+            ],
+            key=lambda x: x.order
+        )
+
+    def get_image_resolution_options(self, image_ratio_id: int) -> List[ImageResolutionOption]:
+        db_image_resolution_list: List[ImageResolution] = self.image_resolution_repo.get_by_ratio(image_ratio_id=image_ratio_id)
         image_resolution_list: List[ImageResolutionInDB] = [ImageResolutionInDB.model_validate(db_image_resolution) for db_image_resolution in db_image_resolution_list]
         return sorted(
             [
@@ -160,6 +182,7 @@ def get_hair_model_option_application_service(
         hair_design_repo: HairDesignRepository = Depends(get_hair_design_repository),
         hair_design_color_repo: HairDesignColorRepository = Depends(get_hair_design_color_repository),
         background_repo: BackgroundRepository = Depends(get_background_repository),
+        image_ratio_repo: ImageRatioRepository = Depends(get_image_ratio_repository),
         image_resolution_repo: ImageResolutionRepository = Depends(get_image_resolution_repository),
         s3_client: S3Client = Depends(get_s3_client)
 ) -> HairModelOptionApplicationService:
@@ -170,6 +193,7 @@ def get_hair_model_option_application_service(
         hair_design_repo=hair_design_repo,
         hair_design_color_repo=hair_design_color_repo,
         background_repo=background_repo,
+        image_ratio_repo=image_ratio_repo,
         image_resolution_repo=image_resolution_repo,
         s3_client=s3_client
     )

@@ -37,6 +37,13 @@ class BackgroundOption(BaseModel):
     presigned_image_url: str
     order: int
 
+class ImageRatioOption(BaseModel):
+    id: int
+    title: str
+    description: str
+    presigned_image_url: str
+    order: int
+
 class ImageResolutionOption(BaseModel):
     id: int
     title: str

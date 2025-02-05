@@ -9,15 +9,17 @@ class MQConsumeMessage(BaseModel):
     def to_str(self) -> str:
         return self.model_dump_json()
 
-
 class MQPublishMessage(BaseModel):
     generation_request_id: int
+    image_generation_job_id: int
+    s3_key: str
+
     prompt: str
+    lora_model: str
+    is_upscale: bool
     distilled_cfg_scale: float
     width: int
     height: int
-    image_generation_job_id: int
-    s3_key: Optional[str]
 
     def to_str(self) -> str:
         return self.model_dump_json()

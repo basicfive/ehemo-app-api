@@ -6,10 +6,9 @@ from app.application.services.generation.dto.query import GenerationRequestStatu
     GenerationRequestStatus
 from app.application.services.generation.query import get_generated_request_details
 from app.application.services.transactional_service import TransactionalService
-from app.domain import ImageGenerationJob
+from app.domain import ImageGenerationJob, LoRAModel
 from app.domain.hair_model.models.scene import ImageResolution
-from app.application.services.generation.dto.request import CreateGenerationRequestRequest, \
-    GenerationRequestResponse
+from app.application.services.generation.dto.request import CreateGenerationRequestRequest
 from app.application.services.generation.dto.mq import MQPublishMessage
 from app.core.config import image_generation_settings, aws_s3_settings
 from app.domain.generation.models.enums.generation_status import GenerationStatusEnum, GenerationResultEnum
@@ -35,12 +34,13 @@ from app.infrastructure.mq.rabbit_mq_service import RabbitMQService, get_rabbit_
 from app.infrastructure.repositories.generation.generation import GenerationRequestRepository, \
     ImageGenerationJobRepository, get_generation_request_repository, get_image_generation_job_repository
 from app.infrastructure.repositories.hair_model.hair_model import HairVariantModelRepository, \
-    PostureAndClothingRepository, SpecificColorRepository, get_specific_color_repository, \
-    get_posture_and_clothing_repository, get_hair_variant_model_repository
+    SpecificColorRepository, get_specific_color_repository, \
+    get_hair_variant_model_repository
+from app.infrastructure.repositories.hair_model.scene import PostureAndClothingRepository, \
+    get_posture_and_clothing_repository
 from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
 from datetime import datetime, UTC, timedelta
 
-# TODO: DB 접근마다 에러처리 / TRANSACTION
 class RequestGenerationApplicationService(TransactionalService):
     def __init__(
             self,
@@ -141,6 +141,7 @@ class RequestGenerationApplicationService(TransactionalService):
                 user_id=user_id,
                 hair_variant_model_id=hair_variant_model.id,
                 background_id=request.background_id,
+                image_ratio_id=request.image_ratio_id,
                 image_resolution_id=request.image_resolution_id
             )
         )
@@ -189,9 +190,8 @@ class RequestGenerationApplicationService(TransactionalService):
             # job 생성
             image_generation_job = self._create_image_generation_job(
                 prompt=prompt,
-                image_resolution=generation_request_with_relation.image_resolution,
+                generation_request_with_relations=generation_request_with_relation,
                 time_to_live_sec=message_time_to_live_sec,
-                generation_request_id=generation_request_with_relation.id
             )
             image_generation_job_list.append(image_generation_job)
             # MQ 요청 보내기
@@ -232,7 +232,7 @@ class RequestGenerationApplicationService(TransactionalService):
             length=length,
             gender=hair_variant_model_with_relations.gender,
             background=generation_request_with_relations.background,
-            lora_model=hair_variant_model_with_relations.lora_model,
+            # lora_model=hair_variant_model_with_relations.lora_model,
             specific_color_list=specific_color_list,
             posture_and_clothing_list=posture_and_clothing_list,
             count=image_generation_settings.GENERATED_IMAGE_CNT_PER_REQUEST
@@ -241,20 +241,27 @@ class RequestGenerationApplicationService(TransactionalService):
     def _create_image_generation_job(
             self,
             prompt: str,
-            image_resolution: ImageResolution,
+            generation_request_with_relations: GenerationRequest,
             time_to_live_sec: int,
-            generation_request_id: int,
     ) -> ImageGenerationJob:
         s3_key = generate_unique_datatime_uuid_key(prefix=aws_s3_settings.GENERATED_IMAGE_S3KEY_PREFIX)
+        image_resolution: ImageResolution = generation_request_with_relations.image_resolution
+        is_upscale: bool = image_resolution.is_upscale
+
+        hair_variant_model_with_relations: HairVariantModel = generation_request_with_relations.hair_variant_model
+        lora_model: LoRAModel = hair_variant_model_with_relations.lora_model
+
         return self.image_generation_job_repo.create_with_flush(
             obj_in=ImageGenerationJobCreate(
                 retry_count=0,
                 expires_at=datetime.now(UTC) + timedelta(seconds=time_to_live_sec),
                 prompt=prompt,
+                lora_model=lora_model.prompt,
+                is_upscale=is_upscale,
                 distilled_cfg_scale=image_generation_settings.DISTILLED_CFG_SCALE,
                 width=image_resolution.width,
                 height=image_resolution.height,
-                generation_request_id=generation_request_id,
+                generation_request_id=generation_request_with_relations.id,
                 s3_key=s3_key
             )
         )

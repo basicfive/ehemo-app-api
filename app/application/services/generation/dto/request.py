@@ -7,6 +7,7 @@ class CreateGenerationRequestRequest(BaseModel):
     length_id: Optional[int]
     color_id: int
     background_id: int
+    image_ratio_id: int
     image_resolution_id: int
 
 class UpdateGenerationRequestRequest(BaseModel):
@@ -15,6 +16,7 @@ class UpdateGenerationRequestRequest(BaseModel):
     length_id: Optional[int]
     color_id: int
     background_id: int
+    image_ratio_id: int
     image_resolution_id: int
 
 class GenerationRequestResponse(BaseModel):

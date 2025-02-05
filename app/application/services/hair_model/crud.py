@@ -10,9 +10,7 @@ from app.infrastructure.repositories.hair_model.hair_model import GenderReposito
     ColorRepository, SpecificColorRepository, LoRAModelRepository, HairDesignColorRepository, HairDesignRepository, \
     HairVariantModelRepository, get_gender_repository, get_color_repository, get_lora_model_repository, \
     get_specific_color_repository, get_hair_style_repository, get_hair_style_length_repository, \
-    get_hair_design_repository, get_hair_design_color_repository, get_hair_variant_model_repository, \
-    BackgroundRepository, PostureAndClothingRepository, ImageResolutionRepository, get_image_resolution_repository, \
-    get_posture_and_clothing_repository, get_background_repository, get_length_repository
+    get_hair_design_repository, get_hair_design_color_repository, get_hair_variant_model_repository, get_length_repository
 from app.domain.hair_model.schemas.hair.color import ColorCreate, ColorUpdate, ColorInDB, SpecificColorInDB, SpecificColorCreate, SpecificColorUpdate
 from app.domain.hair_model.schemas.hair.gender import GenderCreate, GenderUpdate, GenderInDB
 from app.domain.hair_model.schemas.hair.hair_design import HairDesignCreate, HairDesignInDB, HairDesignUpdate
@@ -27,7 +25,9 @@ from app.domain.hair_model.schemas.scene.background import BackgroundInDB, Backg
 from app.domain.hair_model.schemas.scene.image_resolution import ImageResolutionInDB, ImageResolutionCreate, ImageResolutionUpdate
 from app.domain.hair_model.schemas.scene.posture_and_clothing import PostureAndClothingInDB, PostureAndClothingCreate, PostureAndClothingUpdate
 from app.application.services.crud_service import CRUDService
-
+from app.infrastructure.repositories.hair_model.scene import PostureAndClothingRepository, BackgroundRepository, \
+    get_background_repository, get_posture_and_clothing_repository, ImageResolutionRepository, \
+    get_image_resolution_repository
 
 
 class GenderCRUDService(CRUDService[Gender, GenderInDB, GenderCreate, GenderUpdate, GenderRepository]):
@@ -133,18 +133,6 @@ class HairDesignCRUDService(CRUDService[HairDesign, HairDesignInDB, HairDesignCr
             HairDesignInDB.model_validate(db_hair_design)
             for db_hair_design in self.repo.get_all_by_hair_style(hair_style_id)
         ]
-
-    def get_all_by_hair_style_and_length(self, hair_style_id: int, length_id: int):
-        return [
-            HairDesignInDB.model_validate(db_hair_design)
-            for db_hair_design in self.repo.get_all_by_hair_style_and_length(hair_style_id=hair_style_id, length_id=length_id)
-        ]
-
-    # def get_all_by_length(self, length_id: int) -> List[HairDesignInDB]:
-    #     return [
-    #         HairDesignInDB.model_validate(db_hair_style_length)
-    #         for db_hair_style_length in self.repo.get_all_by_length(length_id)
-    #     ]
 
 def get_hair_design_crud_service(
         repo: HairDesignRepository = Depends(get_hair_design_repository),
