@@ -10,8 +10,9 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.application.services.generation.dto.mq import MQPublishMessage
 from app.core.decorators import log_errors
-from app.core.config import rabbit_mq_settings
+from app.core.config import rabbit_mq_settings, base_settings
 from app.core.enums.message_priority import MessagePriority
+from app.infrastructure.alert.discord_webhook import send_error_notification
 
 logger = logging.getLogger()
 
@@ -82,7 +83,6 @@ class RabbitMQService:
         await self.close()  # 기존 연결 정리 후
         await self.connect()
 
-    @log_errors("RabbitMQ publish failed")
     async def publish(self, message: MQPublishMessage, expiration_sec: int, priority: int = MessagePriority.LOW):
         if self.connection.is_closed or self.channel.is_closed:
             await self._reconnect()
@@ -98,7 +98,6 @@ class RabbitMQService:
         )
         logger.info(f"[MQ] Published Job ID: {message.image_generation_job_id}. DETAILS: {message.to_str()}")
 
-    @log_errors("RabbitMQ consume failed")
     async def consume(self, sync_callback: Callable):
         while True:
             try:
@@ -108,11 +107,8 @@ class RabbitMQService:
                 queue = await self.channel.declare_queue(self.consume_queue, passive=True)
 
                 async def async_wrapper(message):
-                    try:
-                        loop = asyncio.get_event_loop()
-                        await loop.run_in_executor(None, sync_callback, message.body)
-                    except Exception as e:
-                        logger.error(f"Error processing message: {e}", exc_info=True)
+                    loop = asyncio.get_event_loop()
+                    await loop.run_in_executor(None, sync_callback, message.body)
 
                 # no_ack=True로 설정, context manager 사용하지 않음
                 await queue.consume(async_wrapper, no_ack=True)
@@ -120,10 +116,12 @@ class RabbitMQService:
                 while not (self.connection.is_closed or self.channel.is_closed):
                     await asyncio.sleep(30)
 
-                logger.warning("Connection or channel closed, restarting consumer...")
+                # 연결이 끊어졌음을 로그로 남기고 while True로 인해 처음부터 다시 시작
+                logger.warning("Connection or channel closed, will attempt to reconnect...")
 
             except Exception as e:
                 logger.error(f"Consumer encountered an error: {e}", exc_info=True)
+                send_error_notification(webhook_url=base_settings.ALERT_DISCORD_WEBHOOK, error=e)
                 await asyncio.sleep(5)
 
     async def get_queue_info(self):
