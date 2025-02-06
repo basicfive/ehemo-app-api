@@ -84,31 +84,30 @@ class ImageGenerationRetryService(TransactionalService):
 
     @transactional
     async def _retry_job(self, expired_job: ImageGenerationJob, current_message_expire_at: int) -> int:
+        print(f"Currently updating expire time with retry - current time : {datetime.now(UTC)}")
+        new_expire_at = current_message_expire_at + calculate_retry_message_ttl_sec(expired_job.is_upscale)
 
-            print(f"Currently updating expire time with retry - current time : {datetime.now(UTC)}")
-            new_expire_at = current_message_expire_at + calculate_retry_message_ttl_sec()
-
-            # 재요청 - mq 높은 우선순위
-            db_retry_job = self.image_generation_job_repo.update_with_flush(
-                obj_id=expired_job.id,
-                obj_in=ImageGenerationJobUpdate(
-                    retry_count=expired_job.retry_count + 1,
-                    expires_at=datetime.now(UTC) + timedelta(seconds=new_expire_at)
-                )
+        # 재요청 - mq 높은 우선순위
+        db_retry_job = self.image_generation_job_repo.update_with_flush(
+            obj_id=expired_job.id,
+            obj_in=ImageGenerationJobUpdate(
+                retry_count=expired_job.retry_count + 1,
+                expires_at=datetime.now(UTC) + timedelta(seconds=new_expire_at)
             )
-            retry_job = ImageGenerationJobInDB.model_validate(db_retry_job)
-            message = MQPublishMessage(
-                **retry_job.model_dump(),
-                image_generation_job_id=retry_job.id,
-            )
+        )
+        retry_job = ImageGenerationJobInDB.model_validate(db_retry_job)
+        message = MQPublishMessage(
+            **retry_job.model_dump(),
+            image_generation_job_id=retry_job.id,
+        )
 
-            await self.rabbit_mq_service.publish(
-                message=message,
-                expiration_sec=new_expire_at,
-                priority=MessagePriority.URGENT
-            )
+        await self.rabbit_mq_service.publish(
+            message=message,
+            expiration_sec=new_expire_at,
+            priority=MessagePriority.URGENT
+        )
 
-            return new_expire_at
+        return new_expire_at
 
     def _handle_failed_job(self, expired_job: ImageGenerationJob):
         failed_result: Optional[FailedJobResult] = self._mark_as_job_failed(expired_job)

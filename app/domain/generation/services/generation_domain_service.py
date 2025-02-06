@@ -45,11 +45,11 @@ def _calculate_message_ttl_sec(
         image_generation_settings.SINGLE_INFERENCE_SEC_EST * multiplier
     )
 
-def calculate_normal_message_ttl_sec():
-    return _calculate_message_ttl_sec(multiplier=image_generation_settings.MESSAGE_TTL_MULTIPLIER)
+def calculate_normal_message_ttl_sec(is_upscale: bool):
+    return _calculate_message_ttl_sec(multiplier=(image_generation_settings.MESSAGE_TTL_MULTIPLIER * (3 if is_upscale else 1)))
 
-def calculate_retry_message_ttl_sec():
-    return _calculate_message_ttl_sec(multiplier=image_generation_settings.RETRY_MESSAGE_TTL_MULTIPLIER)
+def calculate_retry_message_ttl_sec(is_upscale: bool):
+    return _calculate_message_ttl_sec(multiplier=image_generation_settings.RETRY_MESSAGE_TTL_MULTIPLIER * (3 if is_upscale else 1))
 
 def are_all_image_generation_jobs_complete(image_generation_job_list: List[ImageGenerationJob]):
     for image_generation_job in image_generation_job_list:

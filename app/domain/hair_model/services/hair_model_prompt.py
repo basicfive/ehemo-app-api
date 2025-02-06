@@ -19,7 +19,7 @@ def _concat_prompt(
     against white wall <lora:fx_layered_1-000200:1>
     """
     # return f"A {age}-year-old Korean {gender_prompt} with {color_prompt} {length_prompt} ohwx hair, {posture_and_clothing_prompt}, against {background_prompt} {lora_model_prompt}"
-    return f"A {age}-year-old Korean {gender_prompt} with {color_prompt} {length_prompt} ohwx hair, {posture_and_clothing_prompt}, against {background_prompt}"
+    return f"A {age}-year-old Korean {gender_prompt} with {color_prompt} ({length_prompt} ohwx hair: 1.2), detailed uneven rough skin, ultra detailed skin, natural facial shadows, {posture_and_clothing_prompt}, against {background_prompt}"
 
 def create_prompts(
         length: Length,

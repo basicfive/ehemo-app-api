@@ -162,9 +162,11 @@ class RequestGenerationApplicationService(TransactionalService):
         generation_request_with_relation: GenerationRequest = (
             self.generation_request_repo.get_with_all_relations(generation_request_id)
         )
+        image_resolution: ImageResolution = generation_request_with_relation.image_resolution
 
         # create prompt list
         prompt_list = self._create_prompts(generation_request_with_relation)
+        each_message_ttl = calculate_normal_message_ttl_sec(is_upscale=image_resolution.is_upscale)
 
         # queue 상태 확인
         message_count, consumer_count = await self.rabbit_mq_service.get_queue_info()
@@ -186,7 +188,7 @@ class RequestGenerationApplicationService(TransactionalService):
         )
 
         for idx, prompt in enumerate(prompt_list):
-            message_time_to_live_sec += calculate_normal_message_ttl_sec()
+            message_time_to_live_sec += each_message_ttl
             # job 생성
             image_generation_job = self._create_image_generation_job(
                 prompt=prompt,
