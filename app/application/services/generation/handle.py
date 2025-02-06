@@ -1,7 +1,8 @@
 import json
 import logging
-from typing import List
+from typing import List, Optional
 
+from app.application.services.generation.dto.handle import FCMMessageFlag
 from app.core.constants import FCMConstants
 from app.application.services.generation.dto.mq import MQConsumeMessage
 from app.application.services.transactional_service import TransactionalService
@@ -56,27 +57,31 @@ class MessageHandler(TransactionalService):
         self.s3_client = s3_client
         self.fcm_service = fcm_service
 
-    @transactional
     def process_message(self, body: bytes) -> None:
         """메시지 처리의 메인 엔트리포인트"""
-        try:
-            data_dict = json.loads(body)
-            message = MQConsumeMessage(**data_dict)
+        data_dict = json.loads(body)
+        message = MQConsumeMessage(**data_dict)
 
-            logger.info(f"[MQ] Consumed Job ID: {message.image_generation_job_id}. DETAILS: {message.to_str()}")
+        logger.info(f"[MQ] Consumed Job ID: {message.image_generation_job_id}. DETAILS: {message.to_str()}")
 
-            image_generation_job = self._update_generation_job(message)
+        # 생성 결과 저장
+        flag: FCMMessageFlag = self._save_generation_result(message=message)
+        # fcm 알림 전송
+        if flag.to_send:
+            self._notify_user(user_id=flag.generation_request.user_id, generation_request_id=flag.generation_request.id)
 
-            generation_request = self.generation_request_repo.get(image_generation_job.generation_request_id)
-            image_generation_job_list = self.image_generation_job_repo.get_all_by_generation_request(
-                generation_request_id=image_generation_job.generation_request_id
-            )
-            if should_create_image_group(generation_request, image_generation_job_list):
-                self._create_and_notify_image_group(generation_request.id, image_generation_job_list)
+    @transactional
+    def _save_generation_result(self, message) -> FCMMessageFlag:
+        image_generation_job = self._update_generation_job(message)
 
-        except Exception as e:
-            logger.error(f"Error processing message: {e}", exc_info=True)
-            raise
+        generation_request = self.generation_request_repo.get(image_generation_job.generation_request_id)
+        image_generation_job_list = self.image_generation_job_repo.get_all_by_generation_request(
+            generation_request_id=image_generation_job.generation_request_id
+        )
+        if should_create_image_group(generation_request, image_generation_job_list):
+            self._create_image_group(generation_request.id, image_generation_job_list)
+            return FCMMessageFlag(to_send=True, generation_request=generation_request)
+        return FCMMessageFlag(to_send=False)
 
     def _update_generation_job(self, message: MQConsumeMessage) -> ImageGenerationJob:
         return self.image_generation_job_repo.update_with_flush(
@@ -87,12 +92,11 @@ class MessageHandler(TransactionalService):
             )
         )
 
-    def _create_and_notify_image_group(
+    def _create_image_group(
             self,
             generation_request_id: int,
             image_generation_jobs: List[ImageGenerationJob]
     ) -> None:
-        """이미지 그룹 생성 및 알림 처리"""
 
         generation_request_with_relation = self.generation_request_repo.get_with_all_relations(generation_request_id)
 
@@ -102,7 +106,7 @@ class MessageHandler(TransactionalService):
             image_generation_jobs,
         )
 
-        # 알림 상태 업데이트
+        # 생성 상태 업데이트
         self.generation_request_repo.update(
             obj_id=generation_request_with_relation.id,
             obj_in=GenerationRequestUpdate(
@@ -110,10 +114,13 @@ class MessageHandler(TransactionalService):
             )
         )
 
-        user: User = self.user_repo.get(generation_request_with_relation.user_id)
+    def _notify_user(
+            self,
+            user_id: int,
+            generation_request_id: int,
+    ):
+        user: User = self.user_repo.get(user_id)
 
-        # FCM 알림 전송
-        # TODO: user fcm token null 값이면 어떻게 동작하지?
         fcm_data = FCMGenerationResultData(generation_status=GenerationResultEnum.SUCCEED)
         self.fcm_service.send_to_token(
             token=user.fcm_token,
