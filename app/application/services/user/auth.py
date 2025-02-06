@@ -98,7 +98,7 @@ class UserAuthApplicationService(TransactionalService):
     def _get_or_create_user(self, auth_info: AuthInfo) -> User:
         try:
             # TODO: DB에서 리소스가 없는 경우 에러 반환하지 않는 쪽으로 가야하는가?
-            return self.user_repo.get_by_social_account(provider=auth_info.provider, social_id=auth_info.social_id)
+            return self.user_repo.get_active_by_social_account(provider=auth_info.provider, social_id=auth_info.social_id)
         except NoResultFound:
             return self.user_repo.create_with_flush(obj_in=UserCreate(**auth_info.model_dump()))
 

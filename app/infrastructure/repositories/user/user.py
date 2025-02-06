@@ -13,9 +13,17 @@ class UserRepository(CRUDRepository[User, UserCreate, UserUpdate]):
         super().__init__(model=User, db=db)
         self.db = db
 
-    def get_by_social_account(self, provider: str, social_id: str) -> User:
+    def get_active_by_social_account(self, provider: str, social_id: str) -> User:
         stmt = select(User).filter_by(provider=provider, social_id=social_id, deleted=False)
         return self.db.execute(stmt).scalar_one()
+
+    def get_all_by_social_id_with_user_subs(self, social_id: str) -> List[User]:
+        stmt = (
+            select(User)
+            .options(joinedload(User.user_subscriptions))
+            .where(User.social_id == social_id)
+        )
+        return list(self.db.scalars(stmt).all())
 
     def get_with_subscriptions(self, user_id: int) -> User:
         stmt = (
