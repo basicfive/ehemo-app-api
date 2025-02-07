@@ -23,7 +23,7 @@ class UserRepository(CRUDRepository[User, UserCreate, UserUpdate]):
             .options(joinedload(User.user_subscriptions))
             .where(User.social_id == social_id)
         )
-        return list(self.db.scalars(stmt).all())
+        return list(self.db.scalars(stmt).unique().all())
 
     def get_with_subscriptions(self, user_id: int) -> User:
         stmt = (
