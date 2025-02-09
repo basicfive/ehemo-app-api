@@ -69,6 +69,7 @@ class ImageGenerationSetting(BaseModel):
     DISTILLED_CFG_SCALE: float = 2.0
     # 이걸 고정 상수로 두는게 맞나..?
     SINGLE_INFERENCE_SEC_EST: int = 60
+    HIGH_QUALITY_TTL_MULT: int = 6
 
     WAIT_TIME_BUFFER_MULT: float = 1.2
     RETRY_WAIT_TIME_BUFFER_MULT: float = 1.0
