@@ -19,7 +19,14 @@ def _concat_prompt(
     against white wall <lora:fx_layered_1-000200:1>
     """
     # return f"A {age}-year-old Korean {gender_prompt} with {color_prompt} {length_prompt} ohwx hair, {posture_and_clothing_prompt}, against {background_prompt} {lora_model_prompt}"
-    return f"A {age}-year-old Korean {gender_prompt} with {color_prompt} ({length_prompt} ohwx hair: 1.2), detailed uneven rough skin, ultra detailed skin, natural facial shadows, {posture_and_clothing_prompt}, against {background_prompt}"
+    skin_prompt = "detailed uneven rough skin, ultra detailed skin, natural facial shadows"
+    length_detail = "that falls far past her chest, hair reaching down to her waist"
+
+    if length_prompt == "long flowing":
+        return f"A {age}-year-old Korean {gender_prompt} with {color_prompt} ({length_prompt}:1.2) (ohwx hair: 1.2) {length_detail}, {skin_prompt}, {posture_and_clothing_prompt}, {background_prompt}"
+    if length_prompt == "":
+        return f"A {age}-year-old Korean {gender_prompt} with {color_prompt} (ohwx hair: 1.2), {skin_prompt}, {posture_and_clothing_prompt}, {background_prompt}"
+    return f"A {age}-year-old Korean {gender_prompt} with {color_prompt} ({length_prompt}:1.2) (ohwx hair: 1.2), {skin_prompt}, {posture_and_clothing_prompt}, {background_prompt}"
 
 def create_prompts(
         length: Length,
