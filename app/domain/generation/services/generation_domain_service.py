@@ -21,7 +21,8 @@ def _estimate_queue_wait_sec(
     """
     # ETA_BUFFER_MULTIPLIER * ((이미지 1개 생성 시간) * (현재 mq queue 에 존재하는 요청 수 + 추론 서버 수(현재 처리 갯수))) / (추론 서버 수)
     return int(
-        buffer_mult * image_generation_settings.SINGLE_INFERENCE_SEC_EST * (image_count + processor_count) / processor_count
+        buffer_mult * image_generation_settings.SINGLE_INFERENCE_SEC_EST \
+        * image_generation_settings.HIGH_QUALITY_TTL_MULT * (image_count + processor_count) / processor_count
     )
 
 def estimate_normal_priority_message_wait_sec(
