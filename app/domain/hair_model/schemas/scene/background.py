@@ -7,6 +7,7 @@ class BackgroundCreate(BaseModel):
     description: str
     prompt: str
     image_s3_key: str
+    is_custom_bgr: bool
     order: int
 
 class BackgroundUpdate(BaseModel):
@@ -14,6 +15,7 @@ class BackgroundUpdate(BaseModel):
     description: Optional[str]
     prompt: Optional[str]
     image_s3_key: Optional[str]
+    is_custom_bgr: Optional[bool]
     order: Optional[int]
 
 class BackgroundInDB(BaseModel):
@@ -22,6 +24,7 @@ class BackgroundInDB(BaseModel):
     description: str
     prompt: str
     image_s3_key: str
+    is_custom_bgr: bool
     order: int
 
     class Config:

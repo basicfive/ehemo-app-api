@@ -36,5 +36,7 @@ class ImageGenerationJob(TimeStampModel):
     width = Column(Integer, nullable=False)
     height = Column(Integer, nullable=False)
     is_upscale = Column(Boolean, nullable=True)
+    is_custom_bgr = Column(Boolean, nullable=True)
+    matting_bgr_key = Column(String(1024), nullable=True)
 
     generation_request_id = Column(Integer, ForeignKey("generation_request.id"), index=True)

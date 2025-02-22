@@ -6,8 +6,8 @@ from app.application.services.generation.dto.query import GenerationRequestStatu
     GenerationRequestStatus
 from app.application.services.generation.query import get_generated_request_details
 from app.application.services.transactional_service import TransactionalService
-from app.domain import ImageGenerationJob, LoRAModel
-from app.domain.hair_model.models.scene import ImageResolution
+from app.domain import ImageGenerationJob, LoRAModel, BackgroundForMatting
+from app.domain.hair_model.models.scene import ImageResolution, Background
 from app.application.services.generation.dto.request import CreateGenerationRequestRequest
 from app.application.services.generation.dto.mq import MQPublishMessage
 from app.core.config import image_generation_settings, aws_s3_settings
@@ -37,7 +37,7 @@ from app.infrastructure.repositories.hair_model.hair_model import HairVariantMod
     SpecificColorRepository, get_specific_color_repository, \
     get_hair_variant_model_repository
 from app.infrastructure.repositories.hair_model.scene import PostureAndClothingRepository, \
-    get_posture_and_clothing_repository
+    get_posture_and_clothing_repository, BackgroundForMattingRepository, get_background_for_matting_repo
 from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
 from datetime import datetime, UTC, timedelta
 
@@ -51,9 +51,9 @@ class RequestGenerationApplicationService(TransactionalService):
             hair_variant_model_repo: HairVariantModelRepository,
             generation_request_repo: GenerationRequestRepository,
             image_generation_job_repo: ImageGenerationJobRepository,
+            background_for_matting_repo: BackgroundForMattingRepository,
             rabbit_mq_service: RabbitMQService,
             unit_of_work: UnitOfWork,
-
     ):
         super().__init__(unit_of_work)
         self.user_repo = user_repo
@@ -62,6 +62,7 @@ class RequestGenerationApplicationService(TransactionalService):
         self.posture_and_clothing_repo = posture_and_clothing_repo
         self.hair_variant_model_repo = hair_variant_model_repo
         self.generation_request_repo = generation_request_repo
+        self.background_for_matting_repo = background_for_matting_repo
         self.image_generation_job_repo = image_generation_job_repo
         self.rabbit_mq_service = rabbit_mq_service
 
@@ -248,10 +249,17 @@ class RequestGenerationApplicationService(TransactionalService):
     ) -> ImageGenerationJob:
         s3_key = generate_unique_datatime_uuid_key(prefix=aws_s3_settings.GENERATED_IMAGE_S3KEY_PREFIX)
         image_resolution: ImageResolution = generation_request_with_relations.image_resolution
+        background: Background = generation_request_with_relations.background
         is_upscale: bool = image_resolution.is_upscale
+        is_custom_bgr: bool = background.is_custom_bgr
 
         hair_variant_model_with_relations: HairVariantModel = generation_request_with_relations.hair_variant_model
         lora_model: LoRAModel = hair_variant_model_with_relations.lora_model
+
+        matting_bgr_key: Optional[str] = None
+        if is_custom_bgr:
+            background_for_matting: BackgroundForMatting = self.background_for_matting_repo.get_by_resolution(image_resolution.id)
+            matting_bgr_key = background_for_matting.image_s3_key
 
         return self.image_generation_job_repo.create_with_flush(
             obj_in=ImageGenerationJobCreate(
@@ -260,6 +268,8 @@ class RequestGenerationApplicationService(TransactionalService):
                 prompt=prompt,
                 lora_model=lora_model.prompt,
                 is_upscale=is_upscale,
+                is_custom_bgr=is_custom_bgr,
+                matting_bgr_key=matting_bgr_key,
                 distilled_cfg_scale=image_generation_settings.DISTILLED_CFG_SCALE,
                 width=image_resolution.width,
                 height=image_resolution.height,
@@ -292,6 +302,7 @@ def get_request_generation_application_service(
         hair_variant_model_repo: HairVariantModelRepository = Depends(get_hair_variant_model_repository),
         generation_request_repo: GenerationRequestRepository = Depends(get_generation_request_repository),
         image_generation_job_repo: ImageGenerationJobRepository = Depends(get_image_generation_job_repository),
+        background_for_matting_repo: BackgroundForMattingRepository = Depends(get_background_for_matting_repo),
         rabbit_mq_service: RabbitMQService = Depends(get_rabbit_mq_service),
         unit_of_work: UnitOfWork = Depends(get_unit_of_work),
 ) -> RequestGenerationApplicationService:
@@ -303,6 +314,7 @@ def get_request_generation_application_service(
         hair_variant_model_repo=hair_variant_model_repo,
         generation_request_repo=generation_request_repo,
         image_generation_job_repo=image_generation_job_repo,
+        background_for_matting_repo=background_for_matting_repo,
         rabbit_mq_service=rabbit_mq_service,
         unit_of_work=unit_of_work,
     )

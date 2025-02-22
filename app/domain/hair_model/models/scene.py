@@ -8,6 +8,7 @@ class Background(TimeStampModel):
     description = Column(String(100), nullable=False)
     prompt = Column(String(1024), nullable=False)
     image_s3_key = Column(String(2048), nullable=False)
+    is_custom_bgr = Column(Boolean, nullable=True) # TODO: nullable -> false
     order = Column(Integer, nullable=True)
 
 class PostureAndClothing(TimeStampModel):
@@ -38,3 +39,9 @@ class ImageResolution(TimeStampModel):
     is_upscale = Column(Boolean, nullable=True) # TODO: not nullable
 
     image_ratio_id = Column(ForeignKey("image_ratio.id"), nullable=True) # TODO: not nullable
+
+class BackgroundForMatting(TimeStampModel):
+    __tablename__ = "background_for_matting"
+    image_s3_key = Column(String(2048), nullable=False)
+
+    image_resolution_id = Column(ForeignKey("image_resolution.id"), nullable=False)

@@ -17,6 +17,8 @@ class ImageGenerationJobCreate(BaseModel):
     height: int
     generation_request_id: int
     is_upscale: bool
+    is_custom_bgr: bool
+    matting_bgr_key: Optional[str] = None
 
 class ImageGenerationJobUpdate(BaseModel):
     status: Optional[GenerationStatusEnum] = None
@@ -32,6 +34,8 @@ class ImageGenerationJobUpdate(BaseModel):
     height: Optional[int] = None
     generation_request_id: Optional[int] = None
     is_upscale: Optional[bool] = None
+    is_custom_bgr: Optional[bool] = None
+    matting_bgr_key: Optional[str] = None
 
 class ImageGenerationJobInDB(BaseModel):
     id: int
@@ -49,6 +53,8 @@ class ImageGenerationJobInDB(BaseModel):
     height: int
     generation_request_id: int
     is_upscale: bool
+    is_custom_bgr: bool
+    matting_bgr_key: Optional[str]
 
     class Config:
         from_attributes=True

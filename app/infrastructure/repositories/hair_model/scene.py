@@ -5,9 +5,11 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.db.base import get_db
-from app.domain import ImageRatio
+from app.domain import ImageRatio, BackgroundForMatting
 from app.domain.hair_model.models.scene import Background, PostureAndClothing, ImageResolution
 from app.domain.hair_model.schemas.scene.background import BackgroundCreate, BackgroundUpdate
+from app.domain.hair_model.schemas.scene.background_for_matting import BackgroundForMattingCreate, \
+    BackgroundForMattingUpdate
 from app.domain.hair_model.schemas.scene.image_ratio import ImageRatioCreate, ImageRatioUpdate
 from app.domain.hair_model.schemas.scene.image_resolution import ImageResolutionCreate, ImageResolutionUpdate
 from app.domain.hair_model.schemas.scene.posture_and_clothing import PostureAndClothingUpdate, PostureAndClothingCreate
@@ -54,3 +56,17 @@ class ImageResolutionRepository(CRUDRepository[ImageResolution, ImageResolutionC
 
 def get_image_resolution_repository(db: Session = Depends(get_db)) -> ImageResolutionRepository:
     return ImageResolutionRepository(db=db)
+
+class BackgroundForMattingRepository(CRUDRepository[BackgroundForMatting, BackgroundForMattingCreate, BackgroundForMattingUpdate]):
+    def __init__(self, db: Session):
+        super().__init__(model=BackgroundForMatting, db=db)
+        self.db = db
+
+    def get_by_resolution(self, image_resolution_id: int) -> BackgroundForMatting:
+        stmt = select(BackgroundForMatting).where(BackgroundForMatting.image_resolution_id == image_resolution_id)
+        return self.db.execute(stmt).scalar_one()
+
+def get_background_for_matting_repo(db: Session = Depends(get_db)) -> BackgroundForMattingRepository:
+    return BackgroundForMattingRepository(db=db)
+
+
