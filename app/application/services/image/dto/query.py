@@ -1,9 +1,12 @@
+from typing import Optional
 from pydantic import BaseModel
 from datetime import datetime
 
 class GeneratedImageData(BaseModel):
     id: int
     image_url: str
+    last_modified_image_url: Optional[str]
+    is_custom_background: bool
     generated_image_group_id: int
     width: int
     height: int

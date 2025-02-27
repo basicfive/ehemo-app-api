@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, Dict, Any
 import boto3
 from botocore.exceptions import ClientError
 from botocore.client import Config
@@ -28,26 +28,91 @@ class S3Client:
             config=Config(signature_version='s3v4')  # SigV4 서명 사용
         )
 
-    def create_presigned_url(
+    def _create_presigned_url(
             self,
-            s3_key: str,
+            action: str,
+            params: Dict[str, Any],
             expiration: int = aws_s3_settings.PRESIGNED_URL_EXPIRATION_SEC,
             http_method: str = 'GET'
     ) -> Optional[str]:
+        """
+        S3 작업을 위한 presigned URL을 생성하는 내부 헬퍼 함수
+
+        Args:
+            action (str): S3 작업 타입 ('get_object', 'put_object' 등)
+            params (Dict[str, Any]): S3 작업에 필요한 파라미터
+            expiration (int): URL 만료 시간 (초)
+            http_method (str): HTTP 메서드
+
+        Returns:
+            Optional[str]: 성공시 presigned URL, 실패시 None
+        """
         try:
             response = self.s3_client.generate_presigned_url(
-                'get_object',
-                Params={
-                    'Bucket': self.bucket_name,
-                    'Key': s3_key
-                },
+                action,
+                Params=params,
                 ExpiresIn=expiration,
                 HttpMethod=http_method
             )
             return response
         except ClientError as e:
-            logging.error(f"Error creating presigned URL: {e}")
+            logging.error(f"Error creating presigned URL for {action}: {e}")
             return None
+
+    def create_get_presigned_url(
+            self,
+            s3_key: str,
+            expiration: int = aws_s3_settings.PRESIGNED_URL_EXPIRATION_SEC
+    ) -> Optional[str]:
+        """
+        S3에서 객체를 다운로드하기 위한 GET presigned URL 생성
+
+        Args:
+            s3_key (str): 접근할 S3 객체 키
+            expiration (int): URL 만료 시간 (초)
+
+        Returns:
+            Optional[str]: 성공시 presigned URL, 실패시 None
+        """
+        params = {
+            'Bucket': self.bucket_name,
+            'Key': s3_key
+        }
+        return self._create_presigned_url(
+            action='get_object',
+            params=params,
+            expiration=expiration,
+            http_method='GET'
+        )
+
+    def create_put_presigned_url(
+            self,
+            s3_key: str,
+            content_type: str = 'image/jpeg',
+            expiration: int = aws_s3_settings.PRESIGNED_URL_EXPIRATION_SEC
+    ) -> Optional[str]:
+        """
+        S3에 객체를 업로드하기 위한 PUT presigned URL 생성
+
+        Args:
+            s3_key (str): 업로드할 S3 객체 키
+            content_type (str): 업로드할 파일의 컨텐츠 타입
+            expiration (int): URL 만료 시간 (초)
+
+        Returns:
+            Optional[str]: 성공시 presigned URL, 실패시 None
+        """
+        params = {
+            'Bucket': self.bucket_name,
+            'Key': s3_key,
+            'ContentType': content_type
+        }
+        return self._create_presigned_url(
+            action='put_object',
+            params=params,
+            expiration=expiration,
+            http_method='PUT'
+        )
 
     def upload_to_s3(self, key, image_data, image_format='JPEG'):
         """

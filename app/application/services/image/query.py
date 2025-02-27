@@ -54,12 +54,16 @@ class ImageQueryApplicationService:
 
         for db_generated_image in db_generated_image_list:
             generated_image = GeneratedImageInDB.model_validate(db_generated_image)
+            last_modified_image_url = None
+            if generated_image.last_modified_image_key:
+                last_modified_image_url = self.s3_client.create_get_presigned_url(s3_key=generated_image.last_modified_image_key)
             generated_image_response.append(
                 GeneratedImageData(
                     **generated_image.model_dump(),
                     width=image_resolution.width,
                     height=image_resolution.height,
-                    image_url=self.s3_client.create_presigned_url(s3_key=generated_image.s3_key)
+                    image_url=self.s3_client.create_get_presigned_url(s3_key=generated_image.s3_key),
+                    last_modified_image_url=last_modified_image_url,
                 )
             )
         return generated_image_response
@@ -84,7 +88,7 @@ class ImageQueryApplicationService:
             generated_image_group_response.append(
                 GeneratedImageGroupData(
                     **generated_image_group.model_dump(),
-                    thumbnail_image_url=self.s3_client.create_presigned_url(s3_key=generated_image_group.thumbnail_image_s3_key)
+                    thumbnail_image_url=self.s3_client.create_get_presigned_url(s3_key=generated_image_group.thumbnail_image_s3_key)
                 )
             )
         generated_image_group_response.sort(key=lambda x: x.created_at, reverse=True)

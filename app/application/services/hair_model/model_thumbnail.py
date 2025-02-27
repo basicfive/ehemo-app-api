@@ -21,7 +21,7 @@ class ModelThumbnailQueryService:
         db_model_thumbnail_list: List[ModelThumbnail] = self.model_thumbnail_repo.get_all_in_order()
         return [
            ModelThumbnailData(
-               presigned_image_url=self.s3_client.create_presigned_url(db_model_thumbnail.s3_key),
+               presigned_image_url=self.s3_client.create_get_presigned_url(db_model_thumbnail.s3_key),
                gender_id=db_model_thumbnail.gender_id
            ) for db_model_thumbnail in db_model_thumbnail_list
         ]

@@ -50,7 +50,7 @@ class HairModelOptionApplicationService:
             [
                 GenderOption(
                     **gender.model_dump(),
-                    presigned_image_url=self.s3_client.create_presigned_url(
+                    presigned_image_url=self.s3_client.create_get_presigned_url(
                         s3_key=gender.image_s3_key,
                         expiration=24*60*60,
                     ),
@@ -67,7 +67,7 @@ class HairModelOptionApplicationService:
             [
                 HairStyleOption(
                     **hair_style.model_dump(),
-                    presigned_image_url=self.s3_client.create_presigned_url(
+                    presigned_image_url=self.s3_client.create_get_presigned_url(
                         s3_key=hair_style.image_s3_key,
                         expiration=24*60*60,
                     )
@@ -88,7 +88,7 @@ class HairModelOptionApplicationService:
                     id=db_hair_style_length.length_id,
                     title=db_hair_style_length.length.title,
                     description=db_hair_style_length.length.description,
-                    presigned_image_url=self.s3_client.create_presigned_url(
+                    presigned_image_url=self.s3_client.create_get_presigned_url(
                         s3_key=db_hair_style_length.image_s3_key,
                         expiration=24*60*60,
                     ),
@@ -113,7 +113,7 @@ class HairModelOptionApplicationService:
                     id=db_hair_design_color.color_id,
                     title=db_hair_design_color.color.title,
                     description=db_hair_design_color.color.description,
-                    presigned_image_url=self.s3_client.create_presigned_url(
+                    presigned_image_url=self.s3_client.create_get_presigned_url(
                         s3_key=db_hair_design_color.image_s3_key,
                         expiration=24*60*60,
                     ),
@@ -131,7 +131,7 @@ class HairModelOptionApplicationService:
             [
                 BackgroundOption(
                     **background.model_dump(),
-                    presigned_image_url=self.s3_client.create_presigned_url(
+                    presigned_image_url=self.s3_client.create_get_presigned_url(
                         s3_key=background.image_s3_key,
                         expiration=24*60*60,
                     )
@@ -148,7 +148,7 @@ class HairModelOptionApplicationService:
             [
                 ImageRatioOption(
                     **image_ratio.model_dump(),
-                    presigned_image_url=self.s3_client.create_presigned_url(
+                    presigned_image_url=self.s3_client.create_get_presigned_url(
                         s3_key=image_ratio.image_s3_key,
                         expiration=24*60*60,
                     )
@@ -165,7 +165,7 @@ class HairModelOptionApplicationService:
             [
                 ImageResolutionOption(
                     **image_resolution.model_dump(),
-                    presigned_image_url=self.s3_client.create_presigned_url(
+                    presigned_image_url=self.s3_client.create_get_presigned_url(
                         s3_key=image_resolution.image_s3_key,
                         expiration=24*60*60,
                     )

@@ -5,7 +5,9 @@ from app.domain.time_stamp_model import TimeStampModel
 class GeneratedImage(TimeStampModel):
     __tablename__ = "generated_image"
     s3_key = Column(String(1024), nullable=False)
+    last_modified_image_key = Column(String(1024), nullable=True)
     webui_png_info = Column(String(2048), nullable=False)
+    is_custom_background = Column(Boolean, nullable=True) # TODO: nullable False
     deleted = Column(Boolean, default=False, nullable=False)
     reported = Column(Boolean, default=False, nullable=True)
 

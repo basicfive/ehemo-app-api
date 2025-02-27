@@ -1,6 +1,9 @@
-from fastapi import Depends, APIRouter
+from fastapi import Depends, APIRouter, status
 from typing import List
 
+from app.application.services.image.background_update import GeneratedImageBackgroundUpdateService, \
+    get_generated_image_background_update_service
+from app.application.services.image.dto.background_update import LastModifiedImageUploadDto
 from app.application.services.image.dto.query import GeneratedImageData, GeneratedImageGroupData
 from app.application.services.image.management import ImageManagementApplicationService, get_image_management_application_service
 from app.application.services.image.query import ImageQueryApplicationService, \
@@ -68,3 +71,21 @@ def soft_delete_group_and_images(
         service: ImageManagementApplicationService = Depends(get_image_management_application_service)
 ) -> bool:
     return service.soft_delete_group_and_images(generated_image_group_id, user_id)
+
+# 배경 수정된 이미지 업로드
+
+@router.get("/modified-img-upload-presigned-url", response_model=LastModifiedImageUploadDto, status_code=status.HTTP_200_OK)
+def get_modified_img_upload_presigned_url(
+        generated_image_id: int,
+        user_id: int = Depends(validate_user_token),
+        service: GeneratedImageBackgroundUpdateService = Depends(get_generated_image_background_update_service),
+) -> LastModifiedImageUploadDto:
+    return service.create_update_presigned_url(generated_image_id, user_id)
+
+@router.put("/latest-modified-image-key", status_code=status.HTTP_201_CREATED)
+def update_latest_modified_image_key(
+        request: LastModifiedImageUploadDto,
+        user_id: int = Depends(validate_user_token),
+        service: GeneratedImageBackgroundUpdateService = Depends(get_generated_image_background_update_service),
+):
+    service.update_latest_modified_image_key(request, user_id)

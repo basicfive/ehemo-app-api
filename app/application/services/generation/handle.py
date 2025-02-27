@@ -159,6 +159,7 @@ class MessageHandler(TransactionalService):
                     user_id=generation_request_with_relation.user_id,
                     s3_key=job.s3_key,
                     webui_png_info=job.webui_png_info,
+                    is_custom_background=job.is_custom_bgr,
                     generated_image_group_id=image_group.id,
                     image_generation_job_id=job.id
                 )
@@ -167,7 +168,7 @@ class MessageHandler(TransactionalService):
     def _create_thumbnail(self, jobs: List[ImageGenerationJob]) -> str:
         """썸네일 이미지 생성"""
         image_urls = [
-            self.s3_client.create_presigned_url(job.s3_key)
+            self.s3_client.create_get_presigned_url(job.s3_key)
             for job in jobs
         ]
 
