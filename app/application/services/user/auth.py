@@ -102,52 +102,36 @@ class UserAuthApplicationService(TransactionalService):
         except NoResultFound:
             return self.user_repo.create_with_flush(obj_in=UserCreate(**auth_info.model_dump()))
 
-
-def get_google_user_auth_application_service(
+def create_auth_service_dependency(provider: str):
+    if provider == "google":
+        social_auth_client_dependency = get_google_auth_client
+    elif provider == "kakao":
+        social_auth_client_dependency = get_kakao_auth_client
+    elif provider == "apple":
+        social_auth_client_dependency = get_apple_auth_client
+    else:
+        raise ValueError(f"지원하지 않는 소셜 로그인 제공자입니다: {provider}")
+    
+    def dependency(
         user_repo: UserRepository = Depends(get_user_repository),
         redis_service: RedisService = Depends(get_redis_service),
         auth_token_service: AuthTokenService = Depends(get_auth_token_service),
-        social_auth_client: SocialAuthClient = Depends(get_google_auth_client),
+        social_auth_client: SocialAuthClient = Depends(social_auth_client_dependency),
         unit_of_work: UnitOfWork = Depends(get_unit_of_work),
-) -> UserAuthApplicationService:
-    return UserAuthApplicationService(
-        user_repo=user_repo,
-        redis_service=redis_service,
-        auth_token_service=auth_token_service,
-        social_auth_client=social_auth_client,
-        unit_of_work=unit_of_work,
-    )
+    ) -> UserAuthApplicationService:
+        return UserAuthApplicationService(
+            user_repo=user_repo,
+            redis_service=redis_service,
+            auth_token_service=auth_token_service,
+            social_auth_client=social_auth_client,
+            unit_of_work=unit_of_work,
+        )
+    
+    return dependency
 
-def get_kakao_user_auth_application_service(
-        user_repo: UserRepository = Depends(get_user_repository),
-        redis_service: RedisService = Depends(get_redis_service),
-        auth_token_service: AuthTokenService = Depends(get_auth_token_service),
-        social_auth_client: SocialAuthClient = Depends(get_kakao_auth_client),
-        unit_of_work: UnitOfWork = Depends(get_unit_of_work),
-) -> UserAuthApplicationService:
-    return UserAuthApplicationService(
-        user_repo=user_repo,
-        redis_service=redis_service,
-        auth_token_service=auth_token_service,
-        social_auth_client=social_auth_client,
-        unit_of_work = unit_of_work,
-    )
-
-def get_apple_user_auth_application_service(
-        user_repo: UserRepository = Depends(get_user_repository),
-        redis_service: RedisService = Depends(get_redis_service),
-        auth_token_service: AuthTokenService = Depends(get_auth_token_service),
-        social_auth_client: SocialAuthClient = Depends(get_apple_auth_client),
-        unit_of_work: UnitOfWork = Depends(get_unit_of_work),
-) -> UserAuthApplicationService:
-    return UserAuthApplicationService(
-        user_repo=user_repo,
-        redis_service=redis_service,
-        auth_token_service=auth_token_service,
-        social_auth_client=social_auth_client,
-        unit_of_work=unit_of_work,
-    )
-
+get_google_user_auth_application_service = create_auth_service_dependency("google")
+get_kakao_user_auth_application_service = create_auth_service_dependency("kakao")
+get_apple_user_auth_application_service = create_auth_service_dependency("apple")
 
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 security = HTTPBearer()
