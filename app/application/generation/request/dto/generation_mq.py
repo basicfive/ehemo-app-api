@@ -28,5 +28,6 @@ class GenerationPublishMessage(InferenceBaseMessage):
     width: int
     height: int
 
-    is_img2img: bool
-    reference_image_s3_key: Optional[str] = None
+    is_user_reference_image: bool
+    user_reference_image_s3_key: Optional[str] = None
+    user_reference_image_denoise_strength: Optional[float] = None

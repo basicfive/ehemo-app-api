@@ -2,8 +2,8 @@ from typing import Optional
 from enum import Enum
 
 class InferenceType(str, Enum):
-    NORMAL = "normal"
-    THUMBNAIL = "thumbnail"
+    NORMAL = "NORMAL"
+    THUMBNAIL = "THUMBNAIL"
 
     @classmethod
     def from_string(cls, value: str) -> Optional['InferenceType']:

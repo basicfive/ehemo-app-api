@@ -1,6 +1,7 @@
 import json
 
 from app.application.user_hair_style.thumbnail_generation.dto.thumbnail_mq import ThumbnailGenerationConsumeMessage
+from app.infrastructure.mq.rabbit_mq_service import RabbitMQService
 from app.application.transactional_service import TransactionalService
 from app.infrastructure.database.unit_of_work import UnitOfWork
 from app.infrastructure.database.transaction import transactional
@@ -22,6 +23,7 @@ class ThumbnailGenerationResultHandler(TransactionalService):
             user_hair_style_repository: UserHairStyleRepository,
             user_hair_style_lora_repository: UserHairStyleLoraRepository,
             training_request_repository: TrainingRequestRepository,
+            rabbitmq_service: RabbitMQService,
             fcm_service: FCMService,
             unit_of_work: UnitOfWork,
     ):
@@ -29,10 +31,11 @@ class ThumbnailGenerationResultHandler(TransactionalService):
         self.user_hair_style_repository = user_hair_style_repository
         self.training_request_repository = training_request_repository
         self.user_hair_style_lora_repository = user_hair_style_lora_repository
+        self.rabbitmq_service = rabbitmq_service
         self.fcm_service = fcm_service
 
     @transactional
-    def _handle_thumbnail_generation(
+    def _handle_thumbnail_generation_result(
         self,
         message: ThumbnailGenerationConsumeMessage,
         training_request: TrainingRequest,
@@ -65,7 +68,7 @@ class ThumbnailGenerationResultHandler(TransactionalService):
         training_request: TrainingRequest = self.training_request_repository.get_with_user(message.training_request_id)
         user: User = training_request.user
 
-        self._handle_thumbnail_generation(message, training_request, user)
+        self._handle_thumbnail_generation_result(message, training_request, user)
 
         # 유저에게 등록 완료를 알리는 push 전송
         self.fcm_service.send_to_token(
@@ -77,16 +80,17 @@ class ThumbnailGenerationResultHandler(TransactionalService):
 
 from app.core.db.base import get_db
 
-def handle_thumbnail_generation_result(body: bytes) -> None:
+async def handle_thumbnail_generation_result(body: bytes) -> None:
     db = next(get_db())
     try:
         usecase = ThumbnailGenerationResultHandler(
             user_hair_style_repository=UserHairStyleRepository(db),
             user_hair_style_lora_repository=UserHairStyleLoraRepository(db),
             training_request_repository=TrainingRequestRepository(db),
+            rabbitmq_service=RabbitMQService(),
             fcm_service=FCMService(),
             unit_of_work=UnitOfWork(db),
         )
-        usecase.handle_thumbnail_generation_result(body)
+        await usecase.handle_thumbnail_generation_result(body)
     finally:
         db.close()

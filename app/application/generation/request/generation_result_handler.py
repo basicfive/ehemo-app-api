@@ -4,7 +4,7 @@ from typing import List, Tuple
 from datetime import datetime, timedelta, UTC
 
 from app.core.config import rabbit_mq_settings
-from app.application.generation.request.dto.upscale_mq import UpscalePublishMessage, ImageInfo
+from app.application.generation.request.dto.upscale_mq import UpscalePublishMessage, UpscaleImageInfo
 from app.domain.generation.models.generated_image import GeneratedImage
 from app.domain.generation.models.generation import GenerationJob, GenerationRequest
 from app.domain.user.models.user import User
@@ -47,6 +47,9 @@ class GenerationResultHandler(TransactionalService):
                 generation_job_id=generation_job.id,
                 generated_image_list=generated_images,
                 time_to_live_sec=int(time_delta.total_seconds()),
+                prompt=generation_job.prompt,
+                width=generation_job.width,
+                height=generation_job.height,
             )
         else:
             generation_request, generation_job, generated_images = self.mark_as_failed(message.generation_job_id)
@@ -66,19 +69,26 @@ class GenerationResultHandler(TransactionalService):
             generation_job_id: int,
             generated_image_list: List[GeneratedImage],
             time_to_live_sec: int,
+            prompt: str,
+            width: int,
+            height: int,
     ):
-        image_info_list: List[ImageInfo] = []
+        image_info_list: List[UpscaleImageInfo] = []
         for generated_image in generated_image_list:
             image_info_list.append(
-                ImageInfo(
+                UpscaleImageInfo(
                     generated_image_id=generated_image.id,
-                    s3_key=generated_image.upscaled_s3_key,
+                    s3_key=generated_image.s3_key,
+                    upscale_s3_key=generated_image.upscaled_s3_key,
                 )
             )
         message = UpscalePublishMessage(
             generation_job_id=generation_job_id,
             image_info_list=image_info_list,
             time_to_live_sec=time_to_live_sec,
+            prompt=prompt,
+            width=width,
+            height=height,
         )
         self.rabbit_mq_service.publish(
             message=message.model_dump_json(),

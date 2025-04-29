@@ -2,6 +2,8 @@ import json
 import logging
 from datetime import datetime
 
+from app.core.config import image_generation_settings
+from app.domain.training.services.thumbnail_generation import create_thumbnail_prompt, get_thumbnail_image_size
 from app.core.enums.inference_types import InferenceType
 from app.domain.training.services.user_hair_lora_naming import create_user_hair_style_thumbnail_s3_key
 from app.application.user_hair_style.thumbnail_generation.dto.thumbnail_mq import ThumbnailGenerationPublishMessage
@@ -86,6 +88,7 @@ class TrainingResultHandler(TransactionalService):
         if message.is_success:
             user_hair_lora: UserHairStyleLora = self._handle_success_training_job(message, user)
             thumbnail_s3_key: str = create_user_hair_style_thumbnail_s3_key()
+            width, height = get_thumbnail_image_size()
             await self.rabbit_mq_service.publish(
                 message=ThumbnailGenerationPublishMessage(
                     inference_type=InferenceType.THUMBNAIL,
@@ -93,6 +96,10 @@ class TrainingResultHandler(TransactionalService):
                     user_hair_lora_s3_key=user_hair_lora.lora_s3_key,
                     user_hair_lora_name=user_hair_lora.lora_name,
                     thumbnail_s3_key=thumbnail_s3_key,
+                    prompt=create_thumbnail_prompt(training_request.gender),
+                    width=width,
+                    height=height,
+                    distilled_cfg_scale=image_generation_settings.DISTILLED_CFG_SCALE,
                 ).model_dump_json(),
                 queue_name=rabbit_mq_settings.RABBITMQ_EVENT_BUS,
             )
