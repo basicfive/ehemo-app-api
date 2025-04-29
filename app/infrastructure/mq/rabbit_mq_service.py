@@ -8,8 +8,6 @@ from typing import Optional, AsyncGenerator, Callable
 from aio_pika import connect_robust, Message, Connection, Channel
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from app.application.services.generation.dto.mq import MQPublishMessage
-from app.core.decorators import log_errors
 from app.core.config import rabbit_mq_settings, base_settings
 from app.core.enums.message_priority import MessagePriority
 from app.infrastructure.alert.discord_webhook import send_error_notification
@@ -28,12 +26,8 @@ class RabbitMQService:
             port: int = rabbit_mq_settings.RABBITMQ_PORT,
             username: str = rabbit_mq_settings.RABBITMQ_USERNAME,
             password: str = rabbit_mq_settings.RABBITMQ_PASSWORD,
-            publish_queue: str = rabbit_mq_settings.RABBITMQ_PUBLISH_QUEUE,
-            consume_queue: str = rabbit_mq_settings.RABBITMQ_CONSUME_QUEUE
     ):
         self.connection_name = connection_name
-        self.publish_queue = publish_queue
-        self.consume_queue = consume_queue
         self.connection: Optional[Connection] = None
         self.channel: Optional[Channel] = None
 
@@ -66,7 +60,6 @@ class RabbitMQService:
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10)
     )
-    @log_errors("Failed to connect to RabbitMQ")
     async def connect(self):
         if not self.connection or self.connection.is_closed:
             self.connection = await connect_robust(**self.connect_kwargs)
@@ -83,35 +76,52 @@ class RabbitMQService:
         await self.close()  # 기존 연결 정리 후
         await self.connect()
 
-    async def publish(self, message: MQPublishMessage, expiration_sec: int, priority: int = MessagePriority.LOW):
+    async def publish(
+            self,
+            message: str,
+            queue_name: str,
+            expiration_sec: Optional[int] = None,
+            priority: int = MessagePriority.LOW
+        ):
         if self.connection.is_closed or self.channel.is_closed:
             await self._reconnect()
 
-        await self.channel.default_exchange.publish(
-            Message(
-                body=message.to_json(),
-                delivery_mode=2,
-                expiration=expiration_sec,
-                priority=priority
-            ),
-            routing_key=self.publish_queue
-        )
-        logger.info(f"[MQ] Published Job ID: {message.image_generation_job_id}. DETAILS: {message.to_str()}")
+        message_params = {
+            "body": message.encode('utf-8'),
+            "delivery_mode": 2,  # persistent message
+            "priority": priority
+        }
+        if expiration_sec:
+            message_params["expiration"] = expiration_sec
 
-    async def consume(self, sync_callback: Callable):
+        await self.channel.default_exchange.publish(
+            Message(**message_params),
+            routing_key=queue_name
+        )
+        logger.info(f"[MQ] Published message to {queue_name}. message: {message}")
+
+
+    async def consume(
+            self,
+            queue_name: str,
+            callback: Callable,
+    ):
         while True:
             try:
                 if self.connection.is_closed or self.channel.is_closed:
                     await self._reconnect()
 
-                queue = await self.channel.declare_queue(self.consume_queue, passive=True)
+                queue = await self.channel.get_queue(queue_name)
 
-                async def async_wrapper(message):
-                    loop = asyncio.get_event_loop()
-                    await loop.run_in_executor(None, sync_callback, message.body)
+                async def message_handler(message):
+                    try:
+                        await callback(message.body)
+                    except Exception as e:
+                        logger.error(f"Error processing message: {e}", exc_info=True)
+                        send_error_notification(webhook_url=base_settings.ALERT_DISCORD_WEBHOOK, error=e)
 
                 # no_ack=True로 설정, context manager 사용하지 않음
-                await queue.consume(async_wrapper, no_ack=True)
+                await queue.consume(message_handler, no_ack=True)
 
                 while not (self.connection.is_closed or self.channel.is_closed):
                     await asyncio.sleep(30)
@@ -124,11 +134,12 @@ class RabbitMQService:
                 send_error_notification(webhook_url=base_settings.ALERT_DISCORD_WEBHOOK, error=e)
                 await asyncio.sleep(5)
 
-    async def get_queue_info(self):
+
+    async def get_queue_info(self, queue_name: str):
         if self.connection.is_closed or self.channel.is_closed:
             await self._reconnect()
 
-        queue = await self.channel.declare_queue(self.publish_queue, passive=True)
+        queue = await self.channel.declare_queue(queue_name, passive=True)
         message_count = queue.declaration_result.message_count
         consumer_count = queue.declaration_result.consumer_count
         return message_count, consumer_count
@@ -143,8 +154,11 @@ class RabbitMQService:
                 del self._instances[self.connection_name]
 
 async def get_rabbit_mq_service() -> AsyncGenerator[RabbitMQService, None]:
-    service = await RabbitMQService.get_instance("api")
+    service = await RabbitMQService.get_instance("rabbit_mq_service")
     try:
         yield service
     finally:
         pass
+
+async def get_rabbit_mq_service_singleton() -> RabbitMQService:
+    return await RabbitMQService.get_instance("rabbit_mq_service")

@@ -2,9 +2,10 @@ import asyncio
 import logging
 from typing import Optional, List
 
-from app.infrastructure.mq.rabbit_mq_service import RabbitMQService
+from app.core.config import rabbit_mq_settings
+from app.infrastructure.mq.rabbit_mq_service import RabbitMQService, get_rabbit_mq_service_singleton
 from app.infrastructure.task.base import TaskManager
-from app.infrastructure.task.task import JobRetryTaskManager, TokenRefillTaskManager, ConsumeTaskManager
+from app.infrastructure.task.task import FailedRequestTaskManager, TokenRefillTaskManager, ConsumeTaskManager
 
 logger = logging.getLogger(__name__)
 
@@ -15,13 +16,24 @@ class LifespanServices:
 
     async def initialize(self):
         # 태스크가 의존하는 싱글톤 인스턴스들 초기화
-        self.mq_service = await RabbitMQService.get_instance("task")
+        self.mq_service = await get_rabbit_mq_service_singleton()
 
-        # 태스크 매니저들 초기화
+        consume_task_managers: List[TaskManager] = [
+            ConsumeTaskManager(
+                rabbit_mq_service=self.mq_service,
+                consume_queue=queue_name
+            )
+            for queue_name in [
+                rabbit_mq_settings.RABBITMQ_TRAINING_CONSUME,
+                rabbit_mq_settings.RABBITMQ_INFERENCE_CONSUME,
+                rabbit_mq_settings.RABBITMQ_UPSCALE_CONSUME,
+            ]
+        ]
+
         task_managers: List[TaskManager] = [
-            JobRetryTaskManager(rabbit_mq_service=self.mq_service),
-            ConsumeTaskManager(rabbit_mq_service=self.mq_service),
+            FailedRequestTaskManager(),
             TokenRefillTaskManager(),
+            *consume_task_managers,
         ]
 
         # 모든 태스크 시작

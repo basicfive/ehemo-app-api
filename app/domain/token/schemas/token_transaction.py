@@ -1,7 +1,7 @@
 from typing import Optional
 from pydantic import BaseModel
 
-from app.domain.token.models.enums.token import TokenTransactionType, TokenSourceType
+from app.domain.token.enums.token import TokenTransactionType, TokenSourceType
 
 class TokenTransactionCreate(BaseModel):
     transaction_type: TokenTransactionType

@@ -5,7 +5,7 @@ from fastapi import Depends
 
 from app import TokenTransactionConstants
 from app.domain import UserSubscription, User
-from app.domain.token.models.enums.token import TokenTransactionType, TokenSourceType
+from app.domain.token.enums.token import TokenTransactionType, TokenSourceType
 from app.domain.token.models.token import TokenWallet, TokenTransaction
 from app.domain.token.schemas.token_transaction import TokenTransactionCreate
 from app.domain.token.schemas.token_wallet import TokenWalletUpdate, TokenWalletCreate
@@ -17,7 +17,7 @@ token wallet / token transaction 일관성을 유지해야하기 때문에,
 애플리케이션 레이어에서 repo로의 직접 접근을 허용하지 않음.
 이가 코드 레벨에서 드러나도록 구분하는 법에 대한 고민이 필요함.
 """
-class TokenDomainService:
+class TokenService:
    def __init__(
            self,
            token_wallet_repo: TokenWalletRepository,
@@ -174,11 +174,11 @@ class TokenDomainService:
        return token_wallet, token_transaction
 
 
-def get_token_domain_service(
+def get_token_service(
        token_wallet_repo: TokenWalletRepository = Depends(get_token_wallet_repository),
        token_transaction_repo: TokenTransactionRepository = Depends(get_token_transaction_repository),
-) -> TokenDomainService:
-   return TokenDomainService(
+) -> TokenService:
+   return TokenService(
        token_wallet_repo=token_wallet_repo,
        token_transaction_repo=token_transaction_repo,
    )

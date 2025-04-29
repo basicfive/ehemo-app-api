@@ -18,6 +18,11 @@ class NoInferenceConsumerException(CustomServerException):
         message = "No Inference server is connected to queue"
         super().__init__(message, context)
 
+class NoUpscaleConsumerException(CustomServerException):
+    def __init__(self, context: str = None):
+        message = "No Upscale server is connected to queue"
+        super().__init__(message, context)
+
 class FCMException(CustomServerException):
     def __init__(self, context: str = None):
         message = "FCM Service error occurred"

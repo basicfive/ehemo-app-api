@@ -19,8 +19,16 @@ class RabbitMQSetting(BaseSetting):
     RABBITMQ_PORT: int = int(os.getenv('RABBITMQ_PORT'))
     RABBITMQ_USERNAME: str = os.getenv('RABBITMQ_USERNAME')
     RABBITMQ_PASSWORD: str = os.getenv('RABBITMQ_PASSWORD')
-    RABBITMQ_PUBLISH_QUEUE: str = os.getenv('RABBITMQ_PUBLISH_QUEUE')
-    RABBITMQ_CONSUME_QUEUE: str = os.getenv('RABBITMQ_CONSUME_QUEUE')
+
+    RABBITMQ_INFERENCE_PUBLISH: str = os.getenv('RABBITMQ_INFERENCE_PUBLISH')
+    RABBITMQ_INFERENCE_CONSUME: str = os.getenv('RABBITMQ_INFERENCE_CONSUME')
+
+    RABBITMQ_UPSCALE_PUBLISH: str = os.getenv('RABBITMQ_UPSCALE_PUBLISH')
+    RABBITMQ_UPSCALE_CONSUME: str = os.getenv('RABBITMQ_UPSCALE_CONSUME')
+
+    RABBITMQ_TRAINING_PUBLISH: str = os.getenv('RABBITMQ_TRAINING_PUBLISH')
+    RABBITMQ_TRAINING_CONSUME: str = os.getenv('RABBITMQ_TRAINING_CONSUME')
+
 
 class RedisSetting(BaseSetting):
     REDIS_HOST: str = os.getenv("REDIS_HOST")
@@ -34,6 +42,10 @@ class AWSS3Setting(BaseSetting):
 
     GENERATED_IMAGE_S3KEY_PREFIX: str = "generated_image/"
     GENERATED_IMAGE_GROUP_S3KEY_PREFIX: str = "generated_image_group_thumbnail/"
+
+    USER_UPLOADED_IMAGE_FOR_TRAINING_S3KEY_PREFIX: str = "user_uploaded_image_for_training/"
+    USER_HAIR_STYLE_LORA_S3KEY_PREFIX: str = "user_hair_style_lora/"
+    USER_HAIR_STYLE_THUMBNAIL_S3KEY_PREFIX: str = "user_hair_style_thumbnail/"
 
     PRESIGNED_URL_EXPIRATION_SEC: int = 3600
 
@@ -65,18 +77,15 @@ class OAuthSetting(BaseModel):
     KAKAO_CLIENT_SECRET: str = os.getenv("KAKAO_CLIENT_SECRET")
 
 class ImageGenerationSetting(BaseModel):
-    GENERATED_IMAGE_CNT_PER_REQUEST: int = 10
+    GENERATED_IMAGE_CNT_PER_REQUEST: int = 4
     DISTILLED_CFG_SCALE: float = 2.0
-    # 이걸 고정 상수로 두는게 맞나..?
-    SINGLE_INFERENCE_SEC_EST: int = 60
-    HIGH_QUALITY_TTL_MULT: int = 6
 
-    WAIT_TIME_BUFFER_MULT: float = 1.2
-    RETRY_WAIT_TIME_BUFFER_MULT: float = 1.0
+    SINGLE_INFERENCE_SEC_EST: int = 30
+    SINGLE_INFERENCE_HIGH_RES_SEC_EST: int = 60
+    
+    SINGLE_INFERENCE_UPSCALE_SEC_EST: int = 60
 
-    MESSAGE_TTL_MULTIPLIER: float = 1.0
-    RETRY_MESSAGE_TTL_MULTIPLIER: float = 2.0
-    MAX_RETRIES: int = 1
+    IMAGE_GENERATION_JOB_EXPIRE_TIME_MULTIPLIER: float = 1.2
 
 class TokenSetting(BaseModel):
     MONTHLY_REFILLED_TOKEN: int = 15
@@ -91,6 +100,17 @@ class TimezoneSetting(BaseModel):
     SEOUL: str = "Asia/Seoul"
     UTC: str = "UTC"
 
+class TrainingSetting(BaseModel):
+    MINIMUM_IMAGE_CNT_FOR_TRAINING: int = 30
+    MAXIMUM_IMAGE_CNT_FOR_TRAINING: int = 100
+
+    MINIMUM_IMAGE_CNT_FOR_QUALITY_GUARANTEE: int = 70
+
+    TIME_PER_STEP_ON_A100_SEC: float = 3.34
+    MINIMUM_TRAINING_STEPS: int = 14000
+    MINIMUM_EPOCH: int = 200
+    MINIMUM_ESTIAMATE_TRAINING_TIME_SEC: int = 46800  # 13 hours
+
 
 base_settings = BaseSetting()
 rabbit_mq_settings = RabbitMQSetting()
@@ -102,3 +122,4 @@ image_generation_settings = ImageGenerationSetting()
 token_settings = TokenSetting()
 revenuecat_settings = RevenueCatSetting()
 timezone_settings = TimezoneSetting()
+training_settings = TrainingSetting()

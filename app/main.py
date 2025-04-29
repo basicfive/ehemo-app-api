@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from app.core.api.concurrent_request_middleware import ConcurrentRequestMiddleware
 from app.core.db.base import Base, engine
 from app.core.config import base_settings
-from app.api.v1.api import router
+from app.presentation.api.v1.api import router
 from app.core.errors.handlers import handle_general_exception
 from app.core.lifecycle import LifespanServices
 from contextlib import asynccontextmanager

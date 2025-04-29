@@ -1,0 +1,125 @@
+import json
+import logging
+from typing import List, Tuple
+from datetime import datetime, timedelta, UTC
+
+from app.core.config import rabbit_mq_settings
+from app.application.generation.request.dto.upscale_mq import UpscalePublishMessage, ImageInfo
+from app.domain.generation.models.generated_image import GeneratedImage
+from app.domain.generation.models.generation import GenerationJob, GenerationRequest
+from app.domain.user.models.user import User
+from app.core.constants import FCMConstants
+from app.infrastructure.database.transaction import transactional
+from app.application.generation.request.dto.generation_mq import GenerationConsumeMessage
+from app.domain.generation.services.generation_request_service import GenerationRequestService
+from app.infrastructure.mq.rabbit_mq_service import RabbitMQService
+from app.application.transactional_service import TransactionalService
+from app.infrastructure.database.unit_of_work import UnitOfWork
+from app.infrastructure.fcm.fcm_service import FCMService
+from app.infrastructure.repositories.user.user import UserRepository
+
+logger = logging.getLogger(__name__)
+
+class GenerationResultHandler(TransactionalService):
+    def __init__(
+            self,
+            user_repo: UserRepository,
+            generation_request_service: GenerationRequestService,
+            rabbit_mq_service: RabbitMQService,
+            fcm_service: FCMService,
+            unit_of_work: UnitOfWork,
+    ):
+        super().__init__(unit_of_work)
+        self.user_repo = user_repo
+        self.generation_request_service = generation_request_service
+        self.rabbit_mq_service = rabbit_mq_service
+        self.fcm_service = fcm_service
+
+    async def handle_generation_result(self, body: bytes) -> None:
+        data_dict = json.loads(body)
+        message = GenerationConsumeMessage(**data_dict)
+        logger.info(f"[MQ] Consumed Job ID: {message.generation_job_id}. DETAILS: {message.model_dump_json()}")
+
+        if message.is_success:
+            generation_job, generated_images = self.mark_after_generation_success(message.generation_job_id)
+            time_delta: timedelta = (generation_job.expires_at - datetime.now(UTC))
+            self._request_generated_image_upscale(
+                generation_job_id=generation_job.id,
+                generated_image_list=generated_images,
+                time_to_live_sec=int(time_delta.total_seconds()),
+            )
+        else:
+            generation_request, generation_job, generated_images = self.mark_as_failed(message.generation_job_id)
+            user: User = self.user_repo.get(generation_request.user_id)
+            self._notify_user_failure(user)
+
+    @transactional
+    def mark_after_generation_success(self, generation_job_id: int) -> Tuple[GenerationJob, List[GeneratedImage]]:
+        return self.generation_request_service.mark_after_generation_success(generation_job_id)
+    
+    @transactional
+    def mark_as_failed(self, generation_job_id: int) -> Tuple[GenerationRequest, GenerationJob, List[GeneratedImage]]:
+        return self.generation_request_service.mark_as_failed(generation_job_id)
+
+    async def _request_generated_image_upscale(
+            self,
+            generation_job_id: int,
+            generated_image_list: List[GeneratedImage],
+            time_to_live_sec: int,
+    ):
+        image_info_list: List[ImageInfo] = []
+        for generated_image in generated_image_list:
+            image_info_list.append(
+                ImageInfo(
+                    generated_image_id=generated_image.id,
+                    s3_key=generated_image.upscaled_s3_key,
+                )
+            )
+        message = UpscalePublishMessage(
+            generation_job_id=generation_job_id,
+            image_info_list=image_info_list,
+            time_to_live_sec=time_to_live_sec,
+        )
+        self.rabbit_mq_service.publish(
+            message=message.model_dump_json(),
+            queue_name=rabbit_mq_settings.RABBITMQ_UPSCALE_PUBLISH,
+            expiration_sec=message.time_to_live_sec,
+        )
+
+    def _notify_user_failure(
+            self,
+            user: User,
+    ):
+        self.fcm_service.send_to_token(
+            token=user.fcm_token,
+            title=FCMConstants.FAILURE_TITLE,
+            body=FCMConstants.FAILURE_BODY,
+        )
+
+from app.core.db.base import get_db
+from app.infrastructure.database.unit_of_work import get_unit_of_work
+from app.infrastructure.repositories.generation.generation import get_generation_request_repository, get_generation_job_repository
+from app.infrastructure.repositories.generation.generated_image import get_generated_image_repository
+from app.infrastructure.repositories.user.user import get_user_repository
+from app.infrastructure.fcm.fcm_service import get_fcm_service
+from app.infrastructure.mq.rabbit_mq_service import get_rabbit_mq_service
+from app.domain.generation.services.generation_request_service import get_generation_request_service
+
+async def handle_generation_result(body: bytes) -> None:
+    db = next(get_db())
+    try:
+        generation_request_service = get_generation_request_service(
+            generation_request_repository=get_generation_request_repository(db),
+            generation_job_repository=get_generation_job_repository(db),
+            generated_image_repository=get_generated_image_repository(db),
+        )
+        message_handler = GenerationResultHandler(
+            user_repo=get_user_repository(db),
+            generation_request_service=generation_request_service,
+            rabbit_mq_service=get_rabbit_mq_service(),
+            fcm_service=get_fcm_service(),
+            unit_of_work=get_unit_of_work(db),
+        )
+        await message_handler.handle_generation_result(body)
+    finally:
+        db.close()

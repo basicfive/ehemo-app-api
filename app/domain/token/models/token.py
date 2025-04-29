@@ -2,7 +2,7 @@ from sqlalchemy import Column, DateTime, Integer, String, ForeignKey, Enum, Inde
 from sqlalchemy.orm import relationship
 
 from app.domain.time_stamp_model import TimeStampModel
-from app.domain.token.models.enums.token import TokenTransactionType, TokenSourceType
+from app.domain.token.enums.token import TokenTransactionType, TokenSourceType
 
 
 class TokenWallet(TimeStampModel):
