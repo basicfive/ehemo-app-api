@@ -23,6 +23,14 @@ class GenerationRequestRepository(CRUDRepository[GenerationRequest, GenerationRe
         result = self.db.execute(stmt)
         return result.scalars().one()
     
+    def get_with_resolution(self, generation_request_id: int) -> GenerationRequest:
+        stmt = (
+            select(GenerationRequest).where(GenerationRequest.id == generation_request_id)
+            .options(joinedload(GenerationRequest.image_resolution))
+        )
+        result = self.db.execute(stmt)
+        return result.scalars().one()
+
     def get_with_relations(self, generation_request_id: int) -> GenerationRequest:
         stmt = (
             select(GenerationRequest).where(GenerationRequest.id == generation_request_id)

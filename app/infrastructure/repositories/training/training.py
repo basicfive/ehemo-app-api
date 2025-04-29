@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import select
 from typing import List, Optional
-
+from fastapi import Depends
+from app.core.db.base import get_db
 from app.infrastructure.repositories.crud_repository import CRUDRepository
 from app.domain.common.enums.ai_status import TrainingJobStatus
 from app.domain.training.models.training import TrainingRequest, TrainingJob
@@ -20,7 +21,7 @@ class TrainingRequestRepository(CRUDRepository[TrainingRequest, TrainingRequestC
         )
         return self.db.execute(stmt).scalars().one()
 
-def get_training_request_repository(db: Session) -> TrainingRequestRepository:
+def get_training_request_repository(db: Session = Depends(get_db)) -> TrainingRequestRepository:
     return TrainingRequestRepository(db=db)
 
 class TrainingJobRepository(CRUDRepository[TrainingJob, TrainingJobCreate, TrainingJobUpdate]):
@@ -58,5 +59,5 @@ class TrainingJobRepository(CRUDRepository[TrainingJob, TrainingJobCreate, Train
         return result.scalars().one()
 
 
-def get_training_job_repository(db: Session) -> TrainingJobRepository:
+def get_training_job_repository(db: Session = Depends(get_db)) -> TrainingJobRepository:
     return TrainingJobRepository(db=db)

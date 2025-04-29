@@ -16,8 +16,8 @@ router.include_router(dev_auth.router, prefix="/dev/user", tags=['dev/user'])
 
 router.include_router(store_url.router, prefix="/prod/store", tags=['store'])
 
-# router.include_router(request.router, prefix="/prod/generation", tags=['generation'])
-# router.include_router(hair_model_options.router, prefix="/prod/generation", tags=['generation'])
+router.include_router(request.router, prefix="/prod/generation", tags=['generation'])
+router.include_router(options.router, prefix="/prod/generation", tags=['generation'])
 
 router.include_router(prod_auth.router, prefix="/prod/user", tags=['user'])
 router.include_router(user.router, prefix="/prod/user", tags=['user'])

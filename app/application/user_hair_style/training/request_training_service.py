@@ -83,7 +83,7 @@ from app.domain.training.services.training_request_service import get_training_r
 from app.infrastructure.mq.rabbit_mq_service import get_rabbit_mq_service
 from app.infrastructure.database.unit_of_work import get_unit_of_work
 
-def get_request_training_usecase(
+def get_request_training_service(
         user_repository: UserRepository = Depends(get_user_repository),
         training_request_service: TrainingRequestService = Depends(get_training_request_service),
         rabbit_mq_service: RabbitMQService = Depends(get_rabbit_mq_service),

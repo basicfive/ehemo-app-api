@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 from app.core.config import rabbit_mq_settings
 from app.domain.generation.schemas.generation.generation_job import GenerationJobInDB
@@ -64,7 +64,7 @@ class RequestGenerationService(TransactionalService):
             self,
             request: GenerationRequestRequest,
             user_id: int
-    ):
+    ) -> Tuple[GenerationPublishMessage, GenerationRequestResponse]:
         # 생성 서버 연결 여부
         _, inference_consumer_count = await self.rabbit_mq_service.get_queue_info(rabbit_mq_settings.RABBITMQ_INFERENCE_CONSUME)
         if inference_consumer_count < 1:

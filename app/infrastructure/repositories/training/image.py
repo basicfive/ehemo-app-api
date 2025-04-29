@@ -1,4 +1,6 @@
 from sqlalchemy.orm import Session
+from fastapi import Depends
+from app.core.db.base import get_db
 from app.infrastructure.repositories.crud_repository import CRUDRepository
 
 from app.domain.training.models.image import UploadedImagesForTraining, TrainingRequestUploadedImages
@@ -12,7 +14,7 @@ class UploadedImagesForTrainingRepository(CRUDRepository[UploadedImagesForTraini
         super().__init__(model=UploadedImagesForTraining, db=db)
 
 
-def get_uploaded_images_for_training_repository(db: Session) -> UploadedImagesForTrainingRepository:
+def get_uploaded_images_for_training_repository(db: Session = Depends(get_db)) -> UploadedImagesForTrainingRepository:
     return UploadedImagesForTrainingRepository(db=db)
 
 
@@ -20,7 +22,7 @@ class TrainingRequestUploadedImagesRepository(CRUDRepository[TrainingRequestUplo
     def __init__(self, db: Session):
         super().__init__(model=TrainingRequestUploadedImages, db=db)
 
-def get_training_request_uploaded_images_repository(db: Session) -> TrainingRequestUploadedImagesRepository:
+def get_training_request_uploaded_images_repository(db: Session = Depends(get_db)) -> TrainingRequestUploadedImagesRepository:
     return TrainingRequestUploadedImagesRepository(db=db)
 
 

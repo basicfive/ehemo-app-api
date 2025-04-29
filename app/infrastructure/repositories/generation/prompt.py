@@ -25,7 +25,7 @@ class PromptComponentQuestionRepository(CRUDRepository[PromptComponentQuestion, 
     def get_all_with_suggestions(self) -> List[PromptComponentQuestion]:
         stmt = select(PromptComponentQuestion).options(joinedload(PromptComponentQuestion.suggestions))
         result = self.db.execute(stmt)
-        return list(result.scalars().all())
+        return list(result.unique().scalars().all())
 
 def get_prompt_component_question_repository(db: Session = Depends(get_db)) -> PromptComponentQuestionRepository:
     return PromptComponentQuestionRepository(db=db)

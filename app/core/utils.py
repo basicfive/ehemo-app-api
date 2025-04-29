@@ -84,6 +84,7 @@ def concatenate_images_horizontally(image_urls: List[str]) -> Tuple[bytes, str]:
 
 
 def compress_and_resize_image(image_bytes: bytes, scale_factor: float = 0.5, quality: int = 85) -> Tuple[bytes, str]:
+    
     """
     이미지 바이트 데이터를 받아서 해상도를 줄이고 품질을 조정하여 압축된 이미지를 반환합니다.
 

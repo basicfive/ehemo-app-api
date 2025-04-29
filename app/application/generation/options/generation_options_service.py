@@ -1,5 +1,8 @@
 from typing import List
+import uuid
 
+from app.application.generation.options.dto.generation_options import ReferenceImageUploadUrlResponse
+from app.core.config import aws_s3_settings
 from app.domain.generation.models.prompt import PromptComponentSuggestion, PromptComponentQuestion
 from app.infrastructure.s3.s3_client import S3Client
 from app.domain.training.models.user_hair_style import UserHairStyle
@@ -26,6 +29,14 @@ class GenerationOptionsService:
         self.image_ratio_repo = image_ratio_repo
         self.prompt_component_question_repo = prompt_component_question_repo
         self.s3_client = s3_client
+    
+    def get_reference_image_upload_url(self) -> ReferenceImageUploadUrlResponse:
+        s3_key = "reference_image/" + str(uuid.uuid4())
+        upload_url = self.s3_client.create_put_presigned_url(s3_key=s3_key)
+        return ReferenceImageUploadUrlResponse(
+            upload_url=upload_url,
+            s3_key=s3_key,
+        )
 
     def get_hair_style_options(self, user_id: int) -> List[HairStyleOption]:
         hair_style: List[HairStyle] = self.hair_style_repo.get_all()
@@ -40,7 +51,7 @@ class GenerationOptionsService:
                 HairStyleOption(
                     is_user_hair_style=True,
                     id=user_hair_style.id,
-                    name=user_hair_style.title,
+                    title=user_hair_style.title,
                     description=user_hair_style.description,
                     thumbnail_url=self.s3_client.create_get_presigned_url(user_hair_style.thumbnail_s3_key),
                 )
@@ -51,7 +62,7 @@ class GenerationOptionsService:
                 HairStyleOption(
                     is_user_hair_style=False,
                     id=hair_style.id,
-                    name=hair_style.title,
+                    title=hair_style.title,
                     description=hair_style.description,
                     thumbnail_url=self.s3_client.create_get_presigned_url(hair_style.thumbnail_s3_key),
                 )
@@ -65,12 +76,13 @@ class GenerationOptionsService:
         prompt_component_options: List[PromptComponentOption] = []
         for question in prompt_component_questions:
             suggestions: List[PromptComponentSuggestion] = question.suggestions
+            suggestions = sorted(suggestions, key=lambda x: x.order)
             prompt_component_options.append(
                 PromptComponentOption(
                     title=question.title,
                     question_id=question.id,
                     question=question.question,
-                    suggestions=sorted(suggestions, key=lambda x: x.order),
+                    suggestions=[suggestion.suggestion for suggestion in suggestions],
                 )
             )
 
@@ -85,7 +97,7 @@ class GenerationOptionsService:
             image_ratio_options.append(
                 ImageRatioOption(
                     id=image_ratio.id,
-                    name=image_ratio.title,
+                    title=image_ratio.title,
                     thumbnail_url=self.s3_client.create_get_presigned_url(image_ratio.thumbnail_s3_key),
                     description=image_ratio.description,
                     aspect_width=image_ratio.aspect_width,
@@ -95,12 +107,19 @@ class GenerationOptionsService:
 
         return image_ratio_options
     
+from fastapi import Depends
+from app.infrastructure.repositories.generation.hair_style import get_hair_style_repository
+from app.infrastructure.repositories.training.user_hair_style import get_user_hair_style_repository
+from app.infrastructure.repositories.generation.prompt import get_prompt_component_question_repository
+from app.infrastructure.repositories.generation.image_resolution import get_image_ratio_repository
+from app.infrastructure.s3.s3_client import get_s3_client
+    
 def get_generation_options_service(
-        hair_style_repo: HairStyleRepository,
-        user_hair_style_repo: UserHairStyleRepository,
-        prompt_component_question_repo: PromptComponentQuestionRepository,
-        image_ratio_repo: ImageRatioRepository,
-        s3_client: S3Client,
+        hair_style_repo: HairStyleRepository = Depends(get_hair_style_repository)   ,
+        user_hair_style_repo: UserHairStyleRepository = Depends(get_user_hair_style_repository),
+        prompt_component_question_repo: PromptComponentQuestionRepository = Depends(get_prompt_component_question_repository),
+        image_ratio_repo: ImageRatioRepository = Depends(get_image_ratio_repository),
+        s3_client: S3Client = Depends(get_s3_client),
 ) -> GenerationOptionsService:
     return GenerationOptionsService(
         hair_style_repo=hair_style_repo,

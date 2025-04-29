@@ -1,11 +1,11 @@
 from typing import List
-
+from fastapi import Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 from app.infrastructure.repositories.crud_repository import CRUDRepository
-
+from app.core.db.base import get_db
 from app.domain.training.models.user_hair_style import UserHairStyle, UserHairStyleLora
 from app.domain.training.schemas.user_hair_style.user_hair_style import UserHairStyleCreate, UserHairStyleUpdate
 from app.domain.training.schemas.user_hair_style.user_hair_style_lora import UserHairStyleLoraCreate, UserHairStyleLoraUpdate
@@ -18,7 +18,7 @@ class UserHairStyleLoraRepository(CRUDRepository[UserHairStyleLora, UserHairStyl
         stmt = select(UserHairStyleLora).where(UserHairStyleLora.training_request_id == training_request_id)
         return self.db.execute(stmt).scalars().one()
 
-def get_user_hair_style_lora_repository(db: Session) -> UserHairStyleLoraRepository:
+def get_user_hair_style_lora_repository(db: Session = Depends(get_db)) -> UserHairStyleLoraRepository:
     return UserHairStyleLoraRepository(db=db)
 
 
@@ -35,5 +35,5 @@ class UserHairStyleRepository(CRUDRepository[UserHairStyle, UserHairStyleCreate,
         result = self.db.execute(stmt)
         return list(result.scalars().all())
 
-def get_user_hair_style_repository(db: Session) -> UserHairStyleRepository:
+def get_user_hair_style_repository(db: Session = Depends(get_db)) -> UserHairStyleRepository:
     return UserHairStyleRepository(db=db)

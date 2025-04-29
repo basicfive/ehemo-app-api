@@ -52,12 +52,14 @@ class GenerationRequestService:
         self.request_prompt_component_question_answer_repository = request_prompt_component_question_answer_repository
     
     def mark_after_generation_success(self, generation_job_id: int) -> Tuple[GenerationJob, List[GeneratedImage]]:
+
         generation_job: GenerationJob = self.generation_job_repository.update_with_flush(
             obj_id=generation_job_id,
             obj_in=GenerationJobUpdate(
                 status=GenerationJobStatus.PENDING_UPSCALE,
             )
         )
+
         generated_images: List[GeneratedImage] = self.generated_image_repository.get_all_by_generation_job_id(generation_job_id)
         for generated_image in generated_images:
             generated_image = self.generated_image_repository.update_with_flush(
