@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.presentation.api.v1.endpoints.dev.user import auth as dev_auth
 
+from app.presentation.api.v1.endpoints.prod.generated_image import generated_image
 from app.presentation.api.v1.endpoints.prod.generation import request, options
 from app.presentation.api.v1.endpoints.prod.user import auth as prod_auth
 from app.presentation.api.v1.endpoints.prod.user import user
@@ -22,6 +23,8 @@ router.include_router(options.router, prefix="/prod/generation", tags=['generati
 router.include_router(prod_auth.router, prefix="/prod/user", tags=['user'])
 router.include_router(user.router, prefix="/prod/user", tags=['user'])
 router.include_router(deletion_survey.router, prefix="/prod/user", tags=['user'])
+
+router.include_router(generated_image.router, prefix="/prod/generated_image", tags=['generated_image'])
 
 router.include_router(app_version.router, prefix="/prod/versioning", tags=['versioning'])
 

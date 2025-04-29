@@ -16,6 +16,11 @@ class GeneratedImageRepository(CRUDRepository[GeneratedImage, GeneratedImageCrea
     def __init__(self, db: Session):
         super().__init__(model=GeneratedImage, db=db)
 
+    def get_user_generated_images(self, user_id: int) -> List[GeneratedImage]:
+        stmt = select(GeneratedImage).filter(GeneratedImage.user_id == user_id)
+        result = self.db.execute(stmt)
+        return list(result.scalars().all())
+
     def get_all_by_generation_job_id(self, generation_job_id: int) -> List[GeneratedImage]:
         stmt = select(GeneratedImage).filter(GeneratedImage.generation_job_id == generation_job_id)
         result = self.db.execute(stmt)
