@@ -50,6 +50,7 @@ class GenerationOptionsService:
             hair_style_options.append(
                 HairStyleOption(
                     is_user_hair_style=True,
+                    gender=user_hair_style.gender,
                     id=user_hair_style.id,
                     title=user_hair_style.title,
                     description=user_hair_style.description,
@@ -61,6 +62,7 @@ class GenerationOptionsService:
             hair_style_options.append(
                 HairStyleOption(
                     is_user_hair_style=False,
+                    gender=hair_style.gender,
                     id=hair_style.id,
                     title=hair_style.title,
                     description=hair_style.description,

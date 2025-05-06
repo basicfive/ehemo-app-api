@@ -1,8 +1,11 @@
 from pydantic import BaseModel
 from typing import List
 
+from app.domain.common.enums.gender import Gender
+
 class HairStyleOption(BaseModel):
     is_user_hair_style: bool
+    gender: Gender
 
     id: int
     title: str
