@@ -6,10 +6,6 @@ from app.domain.generation.enums.prompt_component import PromptComponentType
 from app.domain.generation.dto.request_generation import RequestGenerationDto
 
 
-class CalculateTokenCostRequest(BaseModel):
-    is_high_res: bool
-    is_user_hair_model: bool
-
 class PromptComponentQuestionResponse(BaseModel):
     id: int
     component_type: PromptComponentType

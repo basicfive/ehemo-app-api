@@ -10,7 +10,6 @@ from app.domain.generation.services.build_prompt import replace_hair_with_ohwx_h
 from app.infrastructure.google_genai.genai_api import async_gemini_translate_prompt
 from app.domain.common.enums.gender import Gender
 from app.domain.generation.services.calculate_token import calculate_token_cost
-from app.application.generation.request.dto.request import CalculateTokenCostRequest
 from app.core.errors.http_exceptions import UserHasNotEnoughTokenException
 from app.domain.token.enums.token import TokenSourceType
 from app.domain.token.models.token import TokenWallet
@@ -44,8 +43,11 @@ class RequestGenerationService(TransactionalService):
         self.build_prompt_service = build_prompt_service
         self.rabbit_mq_service = rabbit_mq_service
 
-    def calculate_token_cost(self, request: CalculateTokenCostRequest) -> int:
-        return calculate_token_cost(request.is_high_res, request.is_user_hair_model)
+    def calculate_token_cost(self,
+            is_high_res: bool,
+            is_user_hair_model: bool,
+    ) -> int:
+        return calculate_token_cost(is_high_res, is_user_hair_model)
 
     async def request_generation(
             self,

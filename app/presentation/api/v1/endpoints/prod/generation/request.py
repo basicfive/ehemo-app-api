@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends
 
-from app.application.generation.request.dto.request import CalculateTokenCostRequest
 from app.application.generation.request.dto.request import GenerationRequestRequest, GenerationRequestResponse
 from app.application.user.auth import validate_user_token
 from app.application.generation.request.request_generation_service import RequestGenerationService, get_request_generation_service
@@ -9,11 +8,12 @@ router = APIRouter()
 
 @router.get("/calculate-token-cost", response_model=int, status_code=200)
 def calculate_token_cost(
-    request: CalculateTokenCostRequest,
+    is_high_res: bool,
+    is_user_hair_model: bool,
     _: int = Depends(validate_user_token),
     service: RequestGenerationService = Depends(get_request_generation_service)
 ) -> int:
-    return service.calculate_token_cost(request)
+    return service.calculate_token_cost(is_high_res, is_user_hair_model)
 
 @router.post("/request")
 async def generation_request(
