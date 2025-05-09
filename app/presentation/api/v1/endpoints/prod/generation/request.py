@@ -10,6 +10,7 @@ router = APIRouter()
 @router.get("/calculate-token-cost", response_model=int, status_code=200)
 def calculate_token_cost(
     request: CalculateTokenCostRequest,
+    _: int = Depends(validate_user_token),
     service: RequestGenerationService = Depends(get_request_generation_service)
 ) -> int:
     return service.calculate_token_cost(request)

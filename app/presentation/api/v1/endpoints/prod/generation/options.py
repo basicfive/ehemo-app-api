@@ -16,18 +16,21 @@ def get_hair_options(
 
 @router.get("/prompt-component-options")
 def get_prompt_component_options(
+    _: int = Depends(validate_user_token),
     service: GenerationOptionsService = Depends(get_generation_options_service)
 ) -> List[PromptComponentOption]:
     return service.get_prompt_component_options()
 
 @router.get("/image-ratio-options")
 def get_image_ratio_options(
+    _: int = Depends(validate_user_token),
     service: GenerationOptionsService = Depends(get_generation_options_service)
 ) -> List[ImageRatioOption]:
     return service.get_image_ratio_options()
 
 @router.get("/reference-image-upload-url")
 def get_reference_image_upload_url(
+    _: int = Depends(validate_user_token),
     service: GenerationOptionsService = Depends(get_generation_options_service)
 ) -> ReferenceImageUploadUrlResponse:
     return service.get_reference_image_upload_url()
