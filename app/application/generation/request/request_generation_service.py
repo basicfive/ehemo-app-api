@@ -9,8 +9,8 @@ from app.domain.generation.dto.request_generation import RequestGenerationDto, P
 from app.domain.generation.services.build_prompt import replace_hair_with_ohwx_hair, BuildPromptService
 from app.infrastructure.google_genai.genai_api import async_gemini_translate_prompt
 from app.domain.common.enums.gender import Gender
-from app.domain.generation.services.calculate_token import calculate_required_token
-from app.application.generation.request.dto.request import CalculateTokenRequest, CalculateTokenResponse
+from app.domain.generation.services.calculate_token import calculate_token_cost
+from app.application.generation.request.dto.request import CalculateTokenCostRequest
 from app.core.errors.http_exceptions import UserHasNotEnoughTokenException
 from app.domain.token.enums.token import TokenSourceType
 from app.domain.token.models.token import TokenWallet
@@ -44,10 +44,8 @@ class RequestGenerationService(TransactionalService):
         self.build_prompt_service = build_prompt_service
         self.rabbit_mq_service = rabbit_mq_service
 
-    def calculate_required_token(self, request: CalculateTokenRequest) -> CalculateTokenResponse:
-        return CalculateTokenResponse(
-            token=calculate_required_token(request.is_high_res, request.is_user_hair_model)
-        )
+    def calculate_token_cost(self, request: CalculateTokenCostRequest) -> int:
+        return calculate_token_cost(request.is_high_res, request.is_user_hair_model)
 
     async def request_generation(
             self,
@@ -79,7 +77,7 @@ class RequestGenerationService(TransactionalService):
         user_with_wallet: User = self.user_repo.get_with_token_wallets(user_id)
         token_wallet: TokenWallet = user_with_wallet.current_token_wallet
 
-        consumed_token: int = calculate_required_token(request.is_high_res, request.is_user_hair_style)
+        consumed_token: int = calculate_token_cost(request.is_high_res, request.is_user_hair_style)
 
         if not token_wallet.has_available_token(consumed_token):
             raise UserHasNotEnoughTokenException()

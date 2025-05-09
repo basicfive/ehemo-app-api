@@ -4,6 +4,7 @@ from typing import List, Optional
 class PromptComponentAnswer(BaseModel):
     prompt_component_question_id: int
     is_random: bool
+    is_not_selected: bool
     answer: str
 
 class RequestGenerationDto(BaseModel):

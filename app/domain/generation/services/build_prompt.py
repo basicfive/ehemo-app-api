@@ -109,6 +109,9 @@ class BuildPromptService:
                 else:
                     # 이외의 경우 랜덤 답변을 허용하지 않음.
                     raise ValueError(f"랜덤 답변을 허용하지 않는 질문입니다. 질문: {question_answer.question.question}")
+            elif question_answer.answer.is_not_selected:
+                # 사용자가 선택하지 않은 경우 프롬프트에 추가하지 않음.
+                continue
             else:
                 korean_prompt += f"{question_answer.answer}, "
 
