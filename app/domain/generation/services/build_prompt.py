@@ -119,9 +119,20 @@ class BuildPromptService:
 
 
 from fastapi import Depends
-from app.infrastructure.repositories.generation.prompt import PromptComponentQuestionRepository, get_prompt_component_question_repository
+from app.infrastructure.repositories.generation.prompt import get_prompt_component_question_repository
+from app.infrastructure.repositories.generation.prompt import get_length_prompt_enhancement_repository
+from app.infrastructure.repositories.generation.prompt import get_clothing_prompt_example_repository
+from app.infrastructure.repositories.generation.prompt import get_pose_prompt_example_repository
 
 def get_build_prompt_service(
         prompt_component_question_repo: PromptComponentQuestionRepository = Depends(get_prompt_component_question_repository),
+        length_prompt_enhancement_repo: LengthPromptEnhancementRepository = Depends(get_length_prompt_enhancement_repository),
+        clothing_prompt_example_repo: ClothingPromptExampleRepository = Depends(get_clothing_prompt_example_repository),
+        pose_prompt_example_repo: PosePromptExampleRepository = Depends(get_pose_prompt_example_repository),
 ) -> BuildPromptService:
-    return BuildPromptService(prompt_component_question_repo)
+    return BuildPromptService(
+        prompt_component_question_repo,
+        length_prompt_enhancement_repo,
+        clothing_prompt_example_repo,
+        pose_prompt_example_repo,
+    )
