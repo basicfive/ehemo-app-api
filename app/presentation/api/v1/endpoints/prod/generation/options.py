@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import APIRouter, Depends
 
-from app.application.generation.options.dto.generation_options import HairStyleOption, PromptComponentOption, ImageRatioOption, ReferenceImageUploadUrlResponse
+from app.application.generation.options.dto.generation_options import HairStyleOption, PromptComponentOption, ImageRatioOption
 from app.application.generation.options.generation_options_service import GenerationOptionsService, get_generation_options_service
 from app.application.user.auth import validate_user_token
 
@@ -28,9 +28,3 @@ def get_image_ratio_options(
 ) -> List[ImageRatioOption]:
     return service.get_image_ratio_options()
 
-@router.get("/reference-image-upload-url")
-def get_reference_image_upload_url(
-    _: int = Depends(validate_user_token),
-    service: GenerationOptionsService = Depends(get_generation_options_service)
-) -> ReferenceImageUploadUrlResponse:
-    return service.get_reference_image_upload_url()

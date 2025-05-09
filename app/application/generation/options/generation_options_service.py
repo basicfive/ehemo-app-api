@@ -1,8 +1,6 @@
 from typing import List
 import uuid
 
-from app.application.generation.options.dto.generation_options import ReferenceImageUploadUrlResponse
-from app.core.config import aws_s3_settings
 from app.domain.generation.models.prompt import PromptComponentSuggestion, PromptComponentQuestion
 from app.infrastructure.s3.s3_client import S3Client
 from app.domain.training.models.user_hair_style import UserHairStyle
@@ -30,14 +28,6 @@ class GenerationOptionsService:
         self.prompt_component_question_repo = prompt_component_question_repo
         self.s3_client = s3_client
     
-    def get_reference_image_upload_url(self) -> ReferenceImageUploadUrlResponse:
-        s3_key = "reference_image/" + str(uuid.uuid4())
-        upload_url = self.s3_client.create_put_presigned_url(s3_key=s3_key)
-        return ReferenceImageUploadUrlResponse(
-            upload_url=upload_url,
-            s3_key=s3_key,
-        )
-
     def get_hair_style_options(self, user_id: int) -> List[HairStyleOption]:
         hair_style: List[HairStyle] = self.hair_style_repo.get_all()
         hair_style = sorted(hair_style, key=lambda x: x.order)

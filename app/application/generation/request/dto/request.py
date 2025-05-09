@@ -12,11 +12,18 @@ class PromptComponentQuestionResponse(BaseModel):
     question: str
     suggestions: List[str]
 
+
+class ReferenceImageUploadUrlResponse(BaseModel):
+    upload_url: str
+    s3_key: str
+
 # 제대로 사용하려면 필드 값 모두 가져와야함.
 class GenerationRequestRequest(RequestGenerationDto):
+
     pass
 
 
 class GenerationRequestResponse(BaseModel):
     generation_request_id: int
     remaining_sec: int
+

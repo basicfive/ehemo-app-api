@@ -26,6 +26,3 @@ class ImageRatioOption(BaseModel):
     aspect_width: int
     aspect_height: int
 
-class ReferenceImageUploadUrlResponse(BaseModel):
-    upload_url: str
-    s3_key: str

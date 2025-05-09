@@ -1,6 +1,9 @@
 from typing import List, Tuple
+import uuid
 
 from app.core.config import rabbit_mq_settings
+from app.core.config import aws_s3_settings
+from app.infrastructure.s3.s3_client import S3Client
 from app.domain.generation.schemas.generation.generation_job import GenerationJobInDB
 from app.domain.generation.services.calculate_remaining_time import CalculateRemainingTimeService
 from app.core.errors.exceptions import NoInferenceConsumerException, NoUpscaleConsumerException
@@ -22,7 +25,7 @@ from app.infrastructure.repositories.user.user import UserRepository
 from app.application.transactional_service import TransactionalService
 from app.domain.generation.services.generation_request_service import GenerationRequestService
 from app.application.generation.request.dto.request import GenerationRequestRequest, GenerationRequestResponse
-
+from app.application.generation.request.dto.request import ReferenceImageUploadUrlResponse
 
 class RequestGenerationService(TransactionalService):
     def __init__(
@@ -33,6 +36,7 @@ class RequestGenerationService(TransactionalService):
             generation_request_serivce: GenerationRequestService,
             build_prompt_service: BuildPromptService,
             rabbit_mq_service: RabbitMQService,
+            s3_client: S3Client,
             unit_of_work: UnitOfWork,
     ):
         super().__init__(unit_of_work)
@@ -42,12 +46,21 @@ class RequestGenerationService(TransactionalService):
         self.generation_request_serivce = generation_request_serivce
         self.build_prompt_service = build_prompt_service
         self.rabbit_mq_service = rabbit_mq_service
+        self.s3_client = s3_client
 
     def calculate_token_cost(self,
             is_high_res: bool,
             is_user_hair_model: bool,
     ) -> int:
         return calculate_token_cost(is_high_res, is_user_hair_model)
+        
+    def get_reference_image_upload_url(self) -> ReferenceImageUploadUrlResponse:
+        s3_key = "reference_image/" + str(uuid.uuid4())
+        upload_url = self.s3_client.create_put_presigned_url(s3_key=s3_key)
+        return ReferenceImageUploadUrlResponse(
+            upload_url=upload_url,
+            s3_key=s3_key,
+        )
 
     async def request_generation(
             self,
@@ -169,6 +182,7 @@ from app.domain.token.services.token_domain_sevice import get_token_service
 from app.domain.generation.services.calculate_remaining_time import get_calculate_remaining_time_service
 from app.domain.generation.services.generation_request_service import get_generation_request_service
 from app.domain.generation.services.build_prompt import get_build_prompt_service
+from app.infrastructure.s3.s3_client import get_s3_client
 
 def get_request_generation_service(
         user_repo: UserRepository = Depends(get_user_repository),
@@ -177,6 +191,7 @@ def get_request_generation_service(
         generation_request_serivce: GenerationRequestService = Depends(get_generation_request_service),
         build_prompt_service: BuildPromptService = Depends(get_build_prompt_service),
         rabbit_mq_service: RabbitMQService = Depends(get_rabbit_mq_service),
+        s3_client: S3Client = Depends(get_s3_client),
         unit_of_work: UnitOfWork = Depends(get_unit_of_work),
 ) -> RequestGenerationService:
     return RequestGenerationService(
@@ -186,6 +201,7 @@ def get_request_generation_service(
         generation_request_serivce=generation_request_serivce,
         build_prompt_service=build_prompt_service,
         rabbit_mq_service=rabbit_mq_service,
+        s3_client=s3_client,
         unit_of_work=unit_of_work,
     )
 
