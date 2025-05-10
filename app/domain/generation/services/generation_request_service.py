@@ -122,7 +122,7 @@ class GenerationRequestService:
             user_hair_style_id: Optional[int] = None,
             hair_style_id: Optional[int] = None,
     ) -> Gender:
-        if not is_user_hair_style and not user_hair_style_id:
+        if is_user_hair_style and not user_hair_style_id:
             raise ValueError("user_hair_style_id is required when is_user_hair_style is True")
         if not is_user_hair_style and not hair_style_id:
             raise ValueError("hair_style_id is required when is_user_hair_style is False")

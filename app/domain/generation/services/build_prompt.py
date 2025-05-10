@@ -19,7 +19,7 @@ def replace_hair_with_ohwx_hair(
 
 class PromptCompentQuestionAnswer(BaseModel):
     question: PromptComponentQuestionInDB
-    answer: PromptComponentAnswer
+    answer_info: PromptComponentAnswer
 
 class BuildPromptService:
     def __init__(
@@ -80,7 +80,7 @@ class BuildPromptService:
             prompt_question_answer_list.append(
                 PromptCompentQuestionAnswer(
                     question=prompt_question,
-                    answer=answer.answer
+                    answer_info=answer
                 )
             )
 
@@ -96,7 +96,7 @@ class BuildPromptService:
         korean_prompt = f"25세 한국 {gender_prompt} 의 사진, "
 
         for question_answer in prompt_question_answer_list_sorted:
-            if question_answer.answer.is_random:
+            if question_answer.answer_info.is_random:
                 # 사용자가 랜덤을 선택한 경우 example 중에서 랜덤 프롬프트를 가져온다.
                 if question_answer.question.component_type == PromptComponentType.CLOTHING:
                     # 의상 랜덤이라면
@@ -109,11 +109,11 @@ class BuildPromptService:
                 else:
                     # 이외의 경우 랜덤 답변을 허용하지 않음.
                     raise ValueError(f"랜덤 답변을 허용하지 않는 질문입니다. 질문: {question_answer.question.question}")
-            elif question_answer.answer.is_not_selected:
+            elif question_answer.answer_info.is_not_selected:
                 # 사용자가 선택하지 않은 경우 프롬프트에 추가하지 않음.
                 continue
             else:
-                korean_prompt += f"{question_answer.answer}, "
+                korean_prompt += f"{question_answer.answer_info.answer}, "
 
         return korean_prompt[:-2]
 

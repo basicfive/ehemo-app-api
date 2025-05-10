@@ -86,7 +86,7 @@ class CalculateRemainingTimeService:
         duration = max(
             generation_wait_time + generation_duration,
             upscale_wait_time + generation_duration + upscale_duration
-        )
+        ) 
         return int(duration * image_generation_settings.IMAGE_GENERATION_JOB_EXPIRE_TIME_MULTIPLIER)
 
 

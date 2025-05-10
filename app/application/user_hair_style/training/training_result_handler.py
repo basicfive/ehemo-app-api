@@ -125,7 +125,7 @@ from app.infrastructure.alert.discord_webhook import send_error_notification
 from app.infrastructure.repositories.training.image import get_training_request_uploaded_images_repository, get_uploaded_images_for_training_repository, TrainingRequestUploadedImagesRepository, UploadedImagesForTrainingRepository
 from app.infrastructure.repositories.training.user_hair_style import get_user_hair_style_lora_repository, UserHairStyleLoraRepository
 from app.infrastructure.fcm.fcm_service import get_fcm_service
-from app.infrastructure.mq.rabbit_mq_service import get_rabbit_mq_service
+from app.infrastructure.mq.rabbit_mq_service import get_rabbit_mq_service_singleton
 from app.infrastructure.database.unit_of_work import get_unit_of_work
 
 async def handle_training_result(body: bytes) -> None:
@@ -139,7 +139,7 @@ async def handle_training_result(body: bytes) -> None:
         user_repository: UserRepository = get_user_repository(db)
         user_hair_style_lora_repository: UserHairStyleLoraRepository = get_user_hair_style_lora_repository(db)
         fcm_service: FCMService = get_fcm_service(db)
-        rabbit_mq_service: RabbitMQService = get_rabbit_mq_service(db)
+        rabbit_mq_service: RabbitMQService = await get_rabbit_mq_service_singleton()
         unit_of_work: UnitOfWork = get_unit_of_work()
 
         training_request_service: TrainingRequestService = get_training_request_service(

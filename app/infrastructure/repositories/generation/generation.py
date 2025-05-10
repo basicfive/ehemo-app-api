@@ -1,7 +1,7 @@
 from fastapi import Depends
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import select, or_
-from datetime import datetime
+from sqlalchemy import select, and_
+from datetime import datetime, UTC
 
 from typing import List
 
@@ -21,7 +21,7 @@ class GenerationRequestRepository(CRUDRepository[GenerationRequest, GenerationRe
     def get_by_request_number(self, request_number: str) -> GenerationRequest:
         stmt = select(GenerationRequest).where(GenerationRequest.request_number == request_number)
         result = self.db.execute(stmt)
-        return result.scalars().one()
+        return result.scalars().one_or_none()
     
     def get_with_resolution(self, generation_request_id: int) -> GenerationRequest:
         stmt = (
@@ -59,12 +59,12 @@ class GenerationJobRepository(CRUDRepository[GenerationJob, GenerationJobCreate,
         stmt = (
             select(GenerationJob)
             .where(
-                or_(
+                and_(
                     GenerationJob.status != GenerationJobStatus.COMPLETED,
                     GenerationJob.status != GenerationJobStatus.FAILED
                 )
             )
-            .where(GenerationJob.expires_at < datetime.now())
+            .where(GenerationJob.expires_at < datetime.now(UTC))
         )
         result = self.db.execute(stmt)
         return list(result.scalars().all())

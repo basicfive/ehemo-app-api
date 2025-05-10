@@ -1,6 +1,7 @@
 from typing import List, Tuple
 import uuid
 
+from app.core.enums.inference_types import InferenceType
 from app.core.config import rabbit_mq_settings
 from app.core.config import aws_s3_settings
 from app.infrastructure.s3.s3_client import S3Client
@@ -126,6 +127,7 @@ class RequestGenerationService(TransactionalService):
         # 메시지 및 응답 생성
         generation_job_indb = GenerationJobInDB.model_validate(generation_job)
         message = GenerationPublishMessage(
+            inference_type=InferenceType.NORMAL,
             image_info_list=[
                 ImageInfo(
                     generated_image_id=generated_image.id,
@@ -149,9 +151,13 @@ class RequestGenerationService(TransactionalService):
             self,
             request: GenerationRequestRequest,
     ) -> str:
-
+        print(f"request: {request.model_dump()}")
         # 한국어 프롬프트 제작
-        gender: Gender = self.generation_request_serivce.get_gender_by_hair_style(**request.model_dump())
+        gender: Gender = self.generation_request_serivce.get_gender_by_hair_style(
+            is_user_hair_style=request.is_user_hair_style,
+            user_hair_style_id=request.user_hair_style_id,
+            hair_style_id=request.hair_style_id,
+        )
         korean_prompt = self.build_prompt_service.build_korean_prompt(
             gender=gender,
             prompt_component_answers=request.prompt_component_answers,

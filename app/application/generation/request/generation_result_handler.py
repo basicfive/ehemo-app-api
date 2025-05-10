@@ -55,7 +55,7 @@ class GenerationResultHandler(TransactionalService):
                     await self._resize_and_reupload_image(generated_image.s3_key)
 
             time_delta: timedelta = (generation_job.expires_at - datetime.now(UTC))
-            self._request_generated_image_upscale(
+            await self._request_generated_image_upscale(
                 generation_job_id=generation_job.id,
                 generated_image_list=generated_images,
                 time_to_live_sec=int(time_delta.total_seconds()),
@@ -102,7 +102,7 @@ class GenerationResultHandler(TransactionalService):
             width=width,
             height=height,
         )
-        self.rabbit_mq_service.publish(
+        await self.rabbit_mq_service.publish(
             message=message.model_dump_json(),
             queue_name=rabbit_mq_settings.RABBITMQ_UPSCALE_PUBLISH,
             expiration_sec=message.time_to_live_sec,
@@ -169,7 +169,7 @@ from app.infrastructure.repositories.generation.generation import get_generation
 from app.infrastructure.repositories.generation.generated_image import get_generated_image_repository
 from app.infrastructure.repositories.user.user import get_user_repository
 from app.infrastructure.fcm.fcm_service import get_fcm_service
-from app.infrastructure.mq.rabbit_mq_service import get_rabbit_mq_service
+from app.infrastructure.mq.rabbit_mq_service import get_rabbit_mq_service_singleton
 from app.domain.generation.services.generation_request_service import get_generation_request_service
 from app.infrastructure.s3.s3_client import get_s3_client
 
@@ -186,7 +186,7 @@ async def handle_generation_result(body: bytes) -> None:
             user_repo=get_user_repository(db),
             generation_request_service=generation_request_service,
             generation_request_repo=generation_request_repo,
-            rabbit_mq_service=get_rabbit_mq_service(),
+            rabbit_mq_service=await get_rabbit_mq_service_singleton(),
             fcm_service=get_fcm_service(),
             s3_client=get_s3_client(),
             unit_of_work=get_unit_of_work(db),
