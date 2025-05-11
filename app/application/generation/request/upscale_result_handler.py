@@ -105,8 +105,8 @@ def handle_upscale_result(body: bytes) -> None:
         token_wallet_repository = get_token_wallet_repository(db)
         token_transaction_repository = get_token_transaction_repository(db)
         token_service: TokenService = get_token_service(
-            token_wallet_repository=token_wallet_repository,
-            token_transaction_repository=token_transaction_repository,
+            token_wallet_repo=token_wallet_repository,
+            token_transaction_repo=token_transaction_repository,
         )
         user_repo: UserRepository = get_user_repository(db)
         fcm_service: FCMService = get_fcm_service()
