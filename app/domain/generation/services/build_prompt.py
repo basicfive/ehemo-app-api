@@ -112,6 +112,9 @@ class BuildPromptService:
             elif question_answer.answer_info.is_not_selected:
                 # 사용자가 선택하지 않은 경우 프롬프트에 추가하지 않음.
                 continue
+            elif question_answer.question.component_type == PromptComponentType.HAIR_COLOR:
+                # 색상에는 머리색이라는 명시
+                korean_prompt += f"{question_answer.answer_info.answer} 머리색, "
             else:
                 korean_prompt += f"{question_answer.answer_info.answer}, "
 
