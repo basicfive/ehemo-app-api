@@ -74,7 +74,7 @@ class GenerationRequestService:
         generation_job: GenerationJob = self.generation_job_repository.update_with_flush(
             obj_id=generation_job_id,
             obj_in=GenerationJobUpdate(
-                status=GenerationJobStatus.SUCCEED,
+                status=GenerationJobStatus.COMPLETED,
             )
         )
         generation_request: GenerationRequest = self.generation_request_repository.update_with_flush(
@@ -88,7 +88,7 @@ class GenerationRequestService:
             generated_image = self.generated_image_repository.update_with_flush(
                 obj_id=generated_image.id,
                 obj_in=GeneratedImageUpdate(
-                    status=GeneratedImageStatus.SUCCEED,
+                    status=GeneratedImageStatus.UPSCALED,
                 )
             )
         return generation_request, generation_job, generated_images
