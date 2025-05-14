@@ -1,8 +1,10 @@
 from pydantic import BaseModel
 from typing import Optional
+from app.domain.common.enums.gender import Gender
 
 class UserHairStyleCreate(BaseModel):
     user_id: int
+    gender: Gender
     thumbnail_s3_key: str
     title: str
     description: str
@@ -16,6 +18,7 @@ class UserHairStyleUpdate(BaseModel):
 class UserHairStyleInDB(BaseModel):
     id: int
     user_id: int
+    gender: Gender
     thumbnail_s3_key: str
     title: str
     description: str

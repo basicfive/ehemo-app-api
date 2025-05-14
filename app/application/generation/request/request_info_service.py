@@ -1,6 +1,6 @@
 from fastapi.params import Depends
 from typing import List, Optional, Dict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from collections import defaultdict
 
 from app.infrastructure.database.unit_of_work import UnitOfWork
@@ -133,8 +133,8 @@ class GenerationRequestInfoService(TransactionalService):
 
         # 남은 시간 계산
         generation_job: GenerationJob = self.generation_job_repo.get_by_generation_request(generation_request_w_relations.id)
-        time_delta: timedelta = generation_job.expires_at - datetime.now()
-        remaining_sec: int = time_delta.total_seconds()
+        time_delta: timedelta = generation_job.expires_at - datetime.now(UTC)
+        remaining_sec: int = int(time_delta.total_seconds())
 
         # 헤어스타일 옵션 가져오기
         if generation_request_w_relations.is_user_hair_style:
@@ -143,7 +143,7 @@ class GenerationRequestInfoService(TransactionalService):
             selected_hair_style_option = HairStyleOption(
                 is_user_hair_style=True,
                 **user_hair_style_indb.model_dump(),
-                thumbnail_url=self.s3_client.get_thumbnail_url(user_hair_style.thumbnail_s3_key),
+                thumbnail_url=self.s3_client.create_get_presigned_url(user_hair_style.thumbnail_s3_key),
             )
         else:
             hair_style: HairStyle = generation_request_w_relations.hair_style
@@ -151,7 +151,7 @@ class GenerationRequestInfoService(TransactionalService):
             selected_hair_style_option = HairStyleOption(
                 is_user_hair_style=False,
                 **hair_style_indb.model_dump(),
-                thumbnail_url=self.s3_client.get_thumbnail_url(hair_style.thumbnail_s3_key),
+                thumbnail_url=self.s3_client.create_get_presigned_url(hair_style.thumbnail_s3_key),
             )
 
 
@@ -167,6 +167,7 @@ class GenerationRequestInfoService(TransactionalService):
                     prompt_component_question_id=request_prompt_component_question_answer.prompt_component_question_id,
                     # 서버에서는 해당 값을 저장하지 않고, 프론트에서 answer를 기준으로 random 여부를 결정해서 보내므로 인위적인 False 값을 넣음.
                     is_random=False,
+                    is_not_selected=False,
                     answer=request_prompt_component_question_answer.answer,
                 )
             )
@@ -178,7 +179,7 @@ class GenerationRequestInfoService(TransactionalService):
 
         selected_image_ratio_option = ImageRatioOption(
             **image_ratio_indb.model_dump(),
-            thumbnail_url=self.s3_client.get_thumbnail_url(image_ratio.thumbnail_s3_key),
+            thumbnail_url=self.s3_client.create_get_presigned_url(image_ratio.thumbnail_s3_key),
         )
 
         generation_request_indb: GenerationRequestInDB = GenerationRequestInDB.model_validate(generation_request_w_relations)

@@ -176,15 +176,6 @@ class GenerationRequestService:
             )
 
         # 생성 작업 생성
-        for prompt_component_answer in request_dto.prompt_component_answers:
-            self.request_prompt_component_question_answer_repository.create_with_flush(
-                obj_in=RequestPromptComponentQuestionAnswerCreate(
-                    generation_request_id=generation_request.id,
-                    prompt_component_question_id=prompt_component_answer.prompt_component_question_id,
-                    answer=prompt_component_answer.answer,
-                ),
-            )
-
         is_user_hair_style = generation_request.is_user_hair_style
 
         hair_lora_model_name = None

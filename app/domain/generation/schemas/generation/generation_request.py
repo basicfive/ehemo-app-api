@@ -1,5 +1,6 @@
 
 from pydantic import BaseModel
+from datetime import datetime
 from typing_extensions import Optional
 
 from app.domain.generation.enums.generation_status import GenerationRequestResult
@@ -49,6 +50,9 @@ class GenerationRequestInDB(BaseModel):
     consumed_tokens: int
 
     is_favorite: bool
+
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes=True

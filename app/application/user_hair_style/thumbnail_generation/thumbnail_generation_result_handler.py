@@ -47,6 +47,7 @@ class ThumbnailGenerationResultHandler(TransactionalService):
         user_hair_style: UserHairStyle = self.user_hair_style_repository.create_with_flush(
             obj_in=UserHairStyleCreate(
                 user_id=user.id,
+                gender=training_request.gender,
                 thumbnail_s3_key=message.thumbnail_s3_key,
                 title=training_request.title,
                 description=training_request.description,
