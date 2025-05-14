@@ -17,6 +17,15 @@ from app.domain.generation.schemas.generation.request_prompt_component_question_
 class GenerationRequestRepository(CRUDRepository[GenerationRequest, GenerationRequestCreate, GenerationRequestUpdate]):
     def __init__(self, db: Session):
         super().__init__(model=GenerationRequest, db=db)
+    
+    def get_all_by_user_with_hair_style(self, user_id: int) -> List[GenerationRequest]:
+        stmt = (
+            select(GenerationRequest)
+            .where(GenerationRequest.user_id == user_id)
+            .options(joinedload(GenerationRequest.hair_style))
+        )
+        result = self.db.execute(stmt)
+        return list(result.scalars().all())
 
     def get_by_request_number(self, request_number: str) -> GenerationRequest:
         stmt = select(GenerationRequest).where(GenerationRequest.request_number == request_number)
@@ -49,6 +58,13 @@ def get_generation_request_repository(db: Session = Depends(get_db)) -> Generati
 class GenerationJobRepository(CRUDRepository[GenerationJob, GenerationJobCreate, GenerationJobUpdate]):
     def __init__(self, db: Session):
         super().__init__(model=GenerationJob, db=db)
+    
+    def get_all_in_generation_requests(self, generation_request_ids: List[int]) -> List[GenerationJob]:
+        stmt = (
+            select(GenerationJob).where(GenerationJob.generation_request_id.in_(generation_request_ids))
+        )
+        result = self.db.execute(stmt)
+        return list(result.scalars().all())
     
     def get_by_generation_request(self, generation_request_id: int) -> GenerationJob:
         stmt = select(GenerationJob).where(GenerationJob.generation_request_id == generation_request_id)
@@ -101,6 +117,13 @@ class RequestPromptComponentQuestionAnswerRepository(CRUDRepository[RequestPromp
         stmt = (
             select(RequestPromptComponentQuestionAnswer).where(RequestPromptComponentQuestionAnswer.generation_request_id == generation_request_id)
             .options(joinedload(RequestPromptComponentQuestionAnswer.prompt_component_question))
+        )
+        result = self.db.execute(stmt)
+        return list(result.scalars().all())
+    
+    def get_all_in_generation_requests(self, generation_request_ids: List[int]) -> List[RequestPromptComponentQuestionAnswer]:
+        stmt = (
+            select(RequestPromptComponentQuestionAnswer).where(RequestPromptComponentQuestionAnswer.generation_request_id.in_(generation_request_ids))
         )
         result = self.db.execute(stmt)
         return list(result.scalars().all())

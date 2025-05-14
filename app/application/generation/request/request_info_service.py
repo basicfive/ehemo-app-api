@@ -1,8 +1,13 @@
-import logging
 from fastapi.params import Depends
-from typing import List, Optional
+from typing import List, Optional, Dict
 from datetime import datetime, timedelta
+from collections import defaultdict
 
+from app.infrastructure.database.unit_of_work import UnitOfWork
+from app.domain.generation.schemas.generation.generation_request import GenerationRequestUpdate
+from app.infrastructure.database.transaction import transactional
+from app.domain.generation.models.generated_image import GeneratedImage
+from app.application.generation.request.dto.request_info import GenerationRequestInfoPreview
 from app.domain.generation.schemas.hair_style.hair_style import HairStyleInDB
 from app.domain.training.schemas.user_hair_style.user_hair_style import UserHairStyleInDB
 from app.domain.generation.models.image_resolution import ImageRatio
@@ -23,6 +28,7 @@ from app.domain.generation.models.generation import RequestPromptComponentQuesti
 from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
 from app.core.errors.http_exceptions import AccessUnauthorizedException
 from app.infrastructure.repositories.generation.generation import RequestPromptComponentQuestionAnswerRepository
+from app.infrastructure.repositories.generation.generated_image import GeneratedImageRepository
 from app.infrastructure.s3.s3_client import S3Client
 
 class GenerationRequestInfoService(TransactionalService):
@@ -32,20 +38,82 @@ class GenerationRequestInfoService(TransactionalService):
             generation_request_repo: GenerationRequestRepository,
             image_ratio_repo: ImageRatioRepository,
             generation_job_repo: GenerationJobRepository,
+            generated_image_repo: GeneratedImageRepository,
             request_prompt_component_question_answer_repo: RequestPromptComponentQuestionAnswerRepository,
             s3_client: S3Client,
+            unit_of_work: UnitOfWork,
     ):
+        super().__init__(unit_of_work)
         self.user_repo = user_repo
         self.generation_request_repo = generation_request_repo
         self.generation_job_repo = generation_job_repo
         self.image_ratio_repo = image_ratio_repo
+        self.generated_image_repo = generated_image_repo
         self.request_prompt_component_question_answer_repo = request_prompt_component_question_answer_repo
         self.s3_client = s3_client
 
+    # TODO: 함수 완성
     def get_generation_request_status(self, generation_request_id: int, user_id: int):
         generation_request: GenerationRequest = self.generation_request_repo.get(generation_request_id)
         if generation_request.user_id != user_id:
             raise AccessUnauthorizedException()
+    
+    @transactional
+    def update_request_is_favorite(self, generation_request_id: int, user_id: int, is_favorite: bool):
+        generation_request: GenerationRequest = self.generation_request_repo.get(generation_request_id)
+        if generation_request.user_id != user_id:
+            raise AccessUnauthorizedException()
+        self.generation_request_repo.update(
+            obj_id=generation_request_id,
+            obj_in=GenerationRequestUpdate(
+                is_favorite=is_favorite,
+            )
+        )
+        
+    def get_all_user_generation_request_preview(self, user_id: int) -> List[GenerationRequestInfoPreview]:
+        generation_requests: List[GenerationRequest] = self.generation_request_repo.get_all_by_user_with_hair_style(user_id)
+        generation_requests = sorted(generation_requests, key=lambda x: x.created_at, reverse=True)
+
+        generation_jobs: List[GenerationJob] = self.generation_job_repo.get_all_in_generation_requests(
+            [generation_request.id for generation_request in generation_requests]
+        )
+
+        # 프롬프트 컴포넌트 답변 가져오기
+        request_prompt_component_question_answers: List[RequestPromptComponentQuestionAnswer] = sorted(
+            self.request_prompt_component_question_answer_repo.get_all_in_generation_requests(
+                [generation_request.id for generation_request in generation_requests]
+            ), 
+            key=lambda x: x.prompt_component_question_id,
+        )
+        request_prompt_component_question_answers_dict: Dict[int, List[RequestPromptComponentQuestionAnswer]] = defaultdict(list)
+        for request_prompt_component_question_answer in request_prompt_component_question_answers:
+            request_prompt_component_question_answers_dict[request_prompt_component_question_answer.generation_request_id].append(request_prompt_component_question_answer)
+
+        generated_images: List[GeneratedImage] = self.generated_image_repo.get_all_in_generation_jobs_with_job([generation_job.id for generation_job in generation_jobs])
+        generated_images_dict: Dict[int, GeneratedImage] = {generated_image.generation_job.generation_request_id: generated_image for generated_image in generated_images}
+
+        generation_request_infos: List[GenerationRequestInfoPreview] = []
+        for generation_request in generation_requests:
+            hair_style: HairStyle = generation_request.hair_style
+
+            selected_options: str = ""
+            for request_prompt_component_question_answer in request_prompt_component_question_answers_dict[generation_request.id]:
+                selected_options += f"{request_prompt_component_question_answer.answer}, "
+            
+            thumbnail_url: str = self.s3_client.create_get_presigned_url(generated_images_dict[generation_request.id].s3_key)
+
+            generation_request_infos.append(
+                GenerationRequestInfoPreview(
+                    generation_request_id=generation_request.id,
+                    hair_style_name=hair_style.title,
+                    thumbnail_url=thumbnail_url,
+                    selected_options=selected_options,
+                    created_at=generation_request.created_at,
+                    generation_result=generation_request.generation_result,
+                    is_favorite=generation_request.is_favorite,
+                )
+            )
+        return generation_request_infos
 
     def get_generated_request_info(self, generation_request_id: int, user_id: int) -> GenerationRequestInfo:
         
@@ -106,11 +174,12 @@ class GenerationRequestInfoService(TransactionalService):
 
         generation_request_indb: GenerationRequestInDB = GenerationRequestInDB.model_validate(generation_request_w_relations)
 
+        generated_image: GeneratedImage = self.generated_image_repo.get_any_by_generation_job_id(generation_job.id)
+
         return GenerationRequestInfo(
             **generation_request_indb.model_dump(),
             generation_request_id=generation_request_w_relations.id,
             remaining_sec=remaining_sec,
-            user_reference_image_thumbnail_url=self.s3_client.get_thumbnail_url(generation_request_w_relations.user_reference_image_s3_key),
             selected_hair_style_option=selected_hair_style_option,
             selected_prompt_component_answer=selected_prompt_component_answer,
             selected_image_ratio_option=selected_image_ratio_option,
@@ -124,20 +193,26 @@ from app.infrastructure.repositories.generation.generation import get_generation
 from app.infrastructure.s3.s3_client import get_s3_client
 from app.infrastructure.repositories.user.user import get_user_repository
 from app.infrastructure.repositories.generation.image_resolution import get_image_ratio_repository
+from app.infrastructure.repositories.generation.generated_image import get_generated_image_repository
+from app.infrastructure.database.unit_of_work import get_unit_of_work
 
 def get_generation_request_info_service(
     user_repo: UserRepository = Depends(get_user_repository),
     generation_request_repo: GenerationRequestRepository = Depends(get_generation_request_repository),
     image_ratio_repo: ImageRatioRepository = Depends(get_image_ratio_repository),
     generation_job_repo: GenerationJobRepository = Depends(get_generation_job_repository),
+    generated_image_repo: GeneratedImageRepository = Depends(get_generated_image_repository),
     request_prompt_component_question_answer_repo: RequestPromptComponentQuestionAnswerRepository = Depends(get_request_prompt_component_question_answer_repository),
     s3_client: S3Client = Depends(get_s3_client),
+    unit_of_work: UnitOfWork = Depends(get_unit_of_work),
 ) -> GenerationRequestInfoService:
     return GenerationRequestInfoService(
         user_repo=user_repo,
         generation_request_repo=generation_request_repo,
         image_ratio_repo=image_ratio_repo,
         generation_job_repo=generation_job_repo,
+        generated_image_repo=generated_image_repo,
         request_prompt_component_question_answer_repo=request_prompt_component_question_answer_repo,
         s3_client=s3_client,
+        unit_of_work=unit_of_work,
     )

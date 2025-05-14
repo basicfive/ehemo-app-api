@@ -13,13 +13,27 @@ class GenerationRequestStatus(BaseModel):
     generation_status: GenerationRequestResult
     remaining_sec: int
 
+class GenerationRequestInfoPreview(BaseModel):
+    generation_request_id: int
+
+    thumbnail_url: str
+
+    created_at: datetime
+    generation_result: GenerationRequestResult
+
+    hair_style_name: str
+    selected_options: str
+
+    is_favorite: bool
+
 class GenerationRequestInfo(BaseModel):
     generation_request_id: int
-    user_id: int
 
     request_number: str
     generation_result: GenerationRequestResult
     created_at: datetime
+
+    is_favorite: bool
 
     remaining_sec: int
 
@@ -28,7 +42,6 @@ class GenerationRequestInfo(BaseModel):
     selected_image_ratio_option: ImageRatioOption
 
     is_user_reference_image: bool
-    user_reference_image_s3_key: str
-    user_reference_image_thumbnail_url: str
+    user_reference_image_s3_key: Optional[str] = None
 
     consumed_token: int

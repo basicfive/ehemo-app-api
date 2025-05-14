@@ -15,11 +15,25 @@ from app.infrastructure.repositories.crud_repository import CRUDRepository
 class GeneratedImageRepository(CRUDRepository[GeneratedImage, GeneratedImageCreate, GeneratedImageUpdate]):
     def __init__(self, db: Session):
         super().__init__(model=GeneratedImage, db=db)
+    
+    def get_all_in_generation_jobs_with_job(self, generation_job_ids: List[int]) -> List[GeneratedImage]:
+        stmt = (
+            select(GeneratedImage)
+            .where(GeneratedImage.generation_job_id.in_(generation_job_ids))
+            .options(joinedload(GeneratedImage.generation_job))
+        )
+        result = self.db.execute(stmt)
+        return list(result.scalars().all())
 
     def get_user_generated_images(self, user_id: int) -> List[GeneratedImage]:
         stmt = select(GeneratedImage).filter(GeneratedImage.user_id == user_id)
         result = self.db.execute(stmt)
         return list(result.scalars().all())
+    
+    def get_any_by_generation_job_id(self, generation_job_id: int) -> GeneratedImage:
+        stmt = select(GeneratedImage).filter(GeneratedImage.generation_job_id == generation_job_id)
+        result = self.db.execute(stmt)
+        return result.scalars().first()
 
     def get_all_by_generation_job_id(self, generation_job_id: int) -> List[GeneratedImage]:
         stmt = select(GeneratedImage).filter(GeneratedImage.generation_job_id == generation_job_id)
