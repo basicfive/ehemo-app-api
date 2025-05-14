@@ -94,18 +94,27 @@ class GenerationRequestInfoService(TransactionalService):
 
         generation_request_infos: List[GenerationRequestInfoPreview] = []
         for generation_request in generation_requests:
-            hair_style: HairStyle = generation_request.hair_style
 
+            # 헤어스타일 이름 가져오기
+            if generation_request.is_user_hair_style:
+                user_hair_style: UserHairStyle = generation_request.user_hair_style
+                hair_style_name = user_hair_style.title
+            else:
+                hair_style: HairStyle = generation_request.hair_style
+                hair_style_name = hair_style.title
+
+            # 프롬프트 컴포넌트 답변 가져오기
             selected_options: str = ""
             for request_prompt_component_question_answer in request_prompt_component_question_answers_dict[generation_request.id]:
                 selected_options += f"{request_prompt_component_question_answer.answer}, "
-            
+
+            # 생성된 대표 이미지            
             thumbnail_url: str = self.s3_client.create_get_presigned_url(generated_images_dict[generation_request.id].s3_key)
 
             generation_request_infos.append(
                 GenerationRequestInfoPreview(
                     generation_request_id=generation_request.id,
-                    hair_style_name=hair_style.title,
+                    hair_style_name=hair_style_name,
                     thumbnail_url=thumbnail_url,
                     selected_options=selected_options,
                     created_at=generation_request.created_at,
