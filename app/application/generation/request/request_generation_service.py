@@ -80,12 +80,12 @@ class RequestGenerationService(TransactionalService):
             user_id: int
     ) -> Tuple[GenerationPublishMessage, GenerationRequestResponse]:
         # 생성 서버 연결 여부
-        _, inference_consumer_count = await self.rabbit_mq_service.get_queue_info(rabbit_mq_settings.RABBITMQ_INFERENCE_CONSUME)
+        _, inference_consumer_count = await self.rabbit_mq_service.get_queue_info(rabbit_mq_settings.RABBITMQ_INFERENCE_PUBLISH)
         if inference_consumer_count < 1:
             raise NoInferenceConsumerException()
 
         # 업스케일 서버 연결 여부
-        _, upscale_consumer_count = await self.rabbit_mq_service.get_queue_info(rabbit_mq_settings.RABBITMQ_UPSCALE_CONSUME)
+        _, upscale_consumer_count = await self.rabbit_mq_service.get_queue_info(rabbit_mq_settings.RABBITMQ_UPSCALE_PUBLISH)
         if upscale_consumer_count < 1:
             raise NoUpscaleConsumerException()
 
@@ -151,7 +151,6 @@ class RequestGenerationService(TransactionalService):
             self,
             request: GenerationRequestRequest,
     ) -> str:
-        print(f"request: {request.model_dump()}")
         # 한국어 프롬프트 제작
         gender: Gender = self.generation_request_serivce.get_gender_by_hair_style(
             is_user_hair_style=request.is_user_hair_style,

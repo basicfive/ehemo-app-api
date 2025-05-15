@@ -186,8 +186,13 @@ class GenerationRequestInfoService(TransactionalService):
 
         generated_image: GeneratedImage = self.generated_image_repo.get_any_by_generation_job_id(generation_job.id)
 
+        user_reference_image_url = None
+        if generation_request_w_relations.user_reference_image_s3_key:
+            user_reference_image_url = self.s3_client.create_get_presigned_url(generation_request_w_relations.user_reference_image_s3_key)
+
         return GenerationRequestInfo(
             **generation_request_indb.model_dump(),
+            user_reference_image_url=user_reference_image_url,
             generation_request_id=generation_request_w_relations.id,
             remaining_sec=remaining_sec,
             selected_hair_style_option=selected_hair_style_option,
