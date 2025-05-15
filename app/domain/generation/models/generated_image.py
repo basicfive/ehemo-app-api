@@ -17,5 +17,5 @@ class GeneratedImage(TimeStampModel):
     user_id = Column(Integer, ForeignKey("user.id"), index=True)
     user = relationship("User")
 
-    generation_job_id = Column(Integer, ForeignKey("generation_job.id"))
+    generation_job_id = Column(Integer, ForeignKey("generation_job.id"), index=True)
     generation_job = relationship("GenerationJob")

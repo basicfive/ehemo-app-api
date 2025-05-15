@@ -25,8 +25,11 @@ class GeneratedImageRepository(CRUDRepository[GeneratedImage, GeneratedImageCrea
         result = self.db.execute(stmt)
         return list(result.scalars().all())
 
-    def get_user_generated_images(self, user_id: int) -> List[GeneratedImage]:
-        stmt = select(GeneratedImage).filter(GeneratedImage.user_id == user_id)
+    def get_upscaled_user_generated_images_with_job(self, user_id: int) -> List[GeneratedImage]:
+        stmt = select(GeneratedImage).filter(
+            GeneratedImage.user_id == user_id,
+            GeneratedImage.status == GeneratedImageStatus.UPSCALED,
+        ).options(joinedload(GeneratedImage.generation_job))
         result = self.db.execute(stmt)
         return list(result.scalars().all())
     
@@ -37,6 +40,16 @@ class GeneratedImageRepository(CRUDRepository[GeneratedImage, GeneratedImageCrea
 
     def get_all_by_generation_job_id(self, generation_job_id: int) -> List[GeneratedImage]:
         stmt = select(GeneratedImage).filter(GeneratedImage.generation_job_id == generation_job_id)
+        result = self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    def get_all_by_generation_request_id(self, generation_request_id: int) -> List[GeneratedImage]:
+        stmt = (
+            select(GeneratedImage)
+            .join(GenerationJob, GeneratedImage.generation_job_id == GenerationJob.id)
+            .where(GenerationJob.generation_request_id == generation_request_id)
+            .options(joinedload(GeneratedImage.generation_job))
+        )
         result = self.db.execute(stmt)
         return list(result.scalars().all())
 
