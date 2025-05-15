@@ -44,5 +44,6 @@ class GenerationRequestInfo(BaseModel):
     is_user_reference_image: bool
     user_reference_image_s3_key: Optional[str] = None
     user_reference_image_url: Optional[str] = None
+    user_reference_image_denoise_strength: Optional[float] = None
 
     consumed_tokens: int
