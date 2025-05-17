@@ -9,10 +9,6 @@ from app.domain.generation.enums.generation_status import GenerationRequestResul
 
 from app.application.generation.options.dto.generation_options import HairStyleOption, PromptComponentOption, ImageRatioOption
 
-class GenerationRequestStatus(BaseModel):
-    generation_status: GenerationRequestResult
-    remaining_sec: int
-
 class GenerationRequestInfoPreview(BaseModel):
     generation_request_id: int
 

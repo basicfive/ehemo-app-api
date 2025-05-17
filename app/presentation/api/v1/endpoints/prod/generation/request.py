@@ -6,6 +6,7 @@ from app.application.user.auth import validate_user_token
 from app.application.generation.request.request_generation_service import RequestGenerationService, get_request_generation_service
 from app.application.generation.request.request_info_service import get_generation_request_info_service, GenerationRequestInfoService
 from app.application.generation.request.dto.request_info import GenerationRequestInfo, GenerationRequestInfoPreview
+from app.application.generation.request.dto.request_status import RequestStatus
 
 router = APIRouter()
 
@@ -33,12 +34,20 @@ async def generation_request(
 ) -> GenerationRequestResponse:
     return await service.request_generation(request, user_id)
 
-@router.get("/request-info-previews")
+@router.get("/request-info/all/preview")
 def get_generation_request_info_previews(
     user_id: int = Depends(validate_user_token),
     service: GenerationRequestInfoService = Depends(get_generation_request_info_service)
 ) -> List[GenerationRequestInfoPreview]:
     return service.get_all_user_generation_request_preview(user_id)
+
+@router.get("/request-info/{generation_request_id}/preview")
+def get_generation_request_info_preview(
+    generation_request_id: int,
+    user_id: int = Depends(validate_user_token),
+    service: GenerationRequestInfoService = Depends(get_generation_request_info_service)
+) -> GenerationRequestInfoPreview:
+    return service.get_generation_request_info_preview(generation_request_id, user_id)
 
 @router.get("/request-info/{generation_request_id}")
 def get_generation_request_info(
@@ -56,3 +65,18 @@ def update_request_is_favorite(
     service: GenerationRequestInfoService = Depends(get_generation_request_info_service)
 ) -> None:
     service.update_request_is_favorite(generation_request_id, user_id, is_favorite)
+
+@router.get("/pending")
+async def get_pending_generation_requests(
+    user_id: int = Depends(validate_user_token),
+    service: GenerationRequestInfoService = Depends(get_generation_request_info_service)
+) -> List[RequestStatus]:
+    return service.get_pending_generation_requests(user_id)
+
+@router.get("/{generation_request_id}/status")
+async def get_generation_request_status(
+    generation_request_id: int,
+    user_id: int = Depends(validate_user_token),
+    service: GenerationRequestInfoService = Depends(get_generation_request_info_service)
+) -> RequestStatus:
+    return service.get_generation_request_status(generation_request_id, user_id)

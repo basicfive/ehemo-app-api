@@ -13,11 +13,41 @@ from app.domain.generation.schemas.generation.generation_job import GenerationJo
 from app.infrastructure.repositories.crud_repository import CRUDRepository
 from app.domain.generation.models.generation import RequestPromptComponentQuestionAnswer
 from app.domain.generation.schemas.generation.request_prompt_component_question_answer import RequestPromptComponentQuestionAnswerCreate, RequestPromptComponentQuestionAnswerUpdate
+from app.domain.generation.enums.generation_status import GenerationRequestResult
 
 class GenerationRequestRepository(CRUDRepository[GenerationRequest, GenerationRequestCreate, GenerationRequestUpdate]):
     def __init__(self, db: Session):
         super().__init__(model=GenerationRequest, db=db)
+
+    def get_with_hair_style(self, generation_request_id: int) -> GenerationRequest:
+        stmt = (
+            select(GenerationRequest).where(GenerationRequest.id == generation_request_id)
+            .options(joinedload(GenerationRequest.hair_style))
+        )
+        result = self.db.execute(stmt)
+        return result.scalars().one()
+
+    def get_with_job(self, generation_request_id: int) -> GenerationRequest:
+        stmt = (
+            select(GenerationRequest).where(GenerationRequest.id == generation_request_id)
+            .options(joinedload(GenerationRequest.generation_job))
+        )
+        result = self.db.execute(stmt)
+        return result.scalars().one()
     
+    def get_all_user_pending_generation_requests_with_job(self, user_id: int) -> List[GenerationRequest]:
+        stmt = (
+            select(GenerationRequest).where(
+                and_(
+                    GenerationRequest.user_id == user_id,
+                    GenerationRequest.status == GenerationRequestResult.PENDING,
+                )
+            )
+            .options(joinedload(GenerationRequest.generation_job))
+        )
+        result = self.db.execute(stmt)
+        return list(result.scalars().all())
+
     def get_all_by_user_with_hair_style(self, user_id: int) -> List[GenerationRequest]:
         stmt = (
             select(GenerationRequest)

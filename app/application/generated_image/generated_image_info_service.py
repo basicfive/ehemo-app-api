@@ -34,6 +34,8 @@ class GeneratedImageService(TransactionalService):
                 s3_key=generated_image.upscaled_s3_key,
                 generation_request_id=generated_image.generation_job.generation_request_id,
                 created_at=generated_image.created_at,
+                width=generated_image.generation_job.width,
+                height=generated_image.generation_job.height,
             ) for generated_image in generated_images
         ], key=lambda x: x.created_at, reverse=True)
     

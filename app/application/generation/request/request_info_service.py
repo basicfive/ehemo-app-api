@@ -3,6 +3,7 @@ from typing import List, Optional, Dict
 from datetime import datetime, timedelta, UTC
 from collections import defaultdict
 
+from app.application.generation.request.dto.request_status import RequestStatus
 from app.infrastructure.database.unit_of_work import UnitOfWork
 from app.domain.generation.schemas.generation.generation_request import GenerationRequestUpdate
 from app.infrastructure.database.transaction import transactional
@@ -52,11 +53,27 @@ class GenerationRequestInfoService(TransactionalService):
         self.request_prompt_component_question_answer_repo = request_prompt_component_question_answer_repo
         self.s3_client = s3_client
 
-    # TODO: 함수 완성
-    def get_generation_request_status(self, generation_request_id: int, user_id: int):
+    def get_generation_request_status(self, generation_request_id: int, user_id: int) -> RequestStatus:
         generation_request: GenerationRequest = self.generation_request_repo.get(generation_request_id)
         if generation_request.user_id != user_id:
             raise AccessUnauthorizedException()
+        return RequestStatus(
+            generation_request_id=generation_request.id,
+            generation_result=generation_request.generation_result,
+            # expires_at=generation_request.generation_job.expires_at,
+            expires_at=datetime.now(UTC) + timedelta(minutes=1),
+        )
+    
+    def get_pending_generation_requests(self, user_id: int) -> List[RequestStatus]:
+        generation_requests: List[GenerationRequest] = self.generation_request_repo.get_all_user_pending_generation_requests_with_job(user_id)
+        return [
+            RequestStatus(
+                generation_request_id=generation_request.id,
+                generation_result=generation_request.generation_result,
+                # expires_at=generation_request.generation_job.expires_at,
+                expires_at=datetime.now(UTC) + timedelta(minutes=1),
+            ) for generation_request in generation_requests
+        ]
     
     @transactional
     def update_request_is_favorite(self, generation_request_id: int, user_id: int, is_favorite: bool):
@@ -69,6 +86,36 @@ class GenerationRequestInfoService(TransactionalService):
                 is_favorite=is_favorite,
             )
         )
+    
+    def get_generation_request_info_preview(self, generation_request_id: int, user_id: int) -> GenerationRequestInfoPreview:
+        # request 조회
+        generation_request: GenerationRequest = self.generation_request_repo.get_with_hair_style(generation_request_id)
+        if generation_request.user_id != user_id:
+            raise AccessUnauthorizedException()
+        hair_style: HairStyle = generation_request.hair_style
+
+        # 썸네일 이미지 조회
+        generated_image: GeneratedImage = self.generated_image_repo.get_any_by_generation_request_id(generation_request_id)
+
+        # 프롬프트 컴포넌트 답변 조회
+        request_prompt_component_question_answers: List[RequestPromptComponentQuestionAnswer] = sorted(
+            self.request_prompt_component_question_answer_repo.get_all_in_generation_requests([generation_request_id]), 
+            key=lambda x: x.prompt_component_question_id,
+        )
+        selected_options: str = ""
+        for request_prompt_component_question_answer in request_prompt_component_question_answers:
+            selected_options += f"{request_prompt_component_question_answer.answer}, "
+
+        return GenerationRequestInfoPreview(
+            generation_request_id=generation_request.id,
+            thumbnail_url=self.s3_client.create_get_presigned_url(generated_image.s3_key),
+            created_at=generation_request.created_at,
+            generation_result=generation_request.generation_result,
+            hair_style_name=hair_style.title,
+            selected_options=selected_options,
+            is_favorite=generation_request.is_favorite,
+        )
+
         
     def get_all_user_generation_request_preview(self, user_id: int) -> List[GenerationRequestInfoPreview]:
         generation_requests: List[GenerationRequest] = self.generation_request_repo.get_all_by_user_with_hair_style(user_id)

@@ -37,6 +37,8 @@ class GenerationRequest(TimeStampModel):
 
     is_favorite = Column(Boolean, default=False, nullable=False)
 
+    generation_job = relationship("GenerationJob", back_populates="generation_request", uselist=False)
+
 class GenerationJob(TimeStampModel):
     __tablename__ = "generation_job"
     status = Column(Enum(GenerationJobStatus), default=GenerationJobStatus.PENDING, nullable=False)
@@ -59,8 +61,8 @@ class GenerationJob(TimeStampModel):
     user_reference_image_s3_key = Column(String(1024), nullable=True)
     user_reference_image_denoise_strength = Column(Float, nullable=True)
 
-    generation_request_id = Column(Integer, ForeignKey("generation_request.id"), index=True)
-    generation_request = relationship("GenerationRequest")
+    generation_request_id = Column(Integer, ForeignKey("generation_request.id"), index=True, nullable=True)
+    generation_request = relationship("GenerationRequest", back_populates="generation_job")
 
 class RequestPromptComponentQuestionAnswer(TimeStampModel):
     __tablename__ = "request_prompt_component_question_answer"

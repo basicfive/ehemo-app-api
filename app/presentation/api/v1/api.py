@@ -24,7 +24,7 @@ router.include_router(prod_auth.router, prefix="/prod/user", tags=['user'])
 router.include_router(user.router, prefix="/prod/user", tags=['user'])
 router.include_router(deletion_survey.router, prefix="/prod/user", tags=['user'])
 
-router.include_router(generated_image.router, prefix="/prod/generated_image", tags=['generated_image'])
+router.include_router(generated_image.router, prefix="/prod/generated-image", tags=['generated-image'])
 
 router.include_router(app_version.router, prefix="/prod/versioning", tags=['versioning'])
 

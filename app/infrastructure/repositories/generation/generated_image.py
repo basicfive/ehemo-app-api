@@ -42,6 +42,16 @@ class GeneratedImageRepository(CRUDRepository[GeneratedImage, GeneratedImageCrea
         stmt = select(GeneratedImage).filter(GeneratedImage.generation_job_id == generation_job_id)
         result = self.db.execute(stmt)
         return list(result.scalars().all())
+    
+    def get_any_by_generation_request_id(self, generation_request_id: int) -> GeneratedImage:
+        stmt = (
+            select(GeneratedImage)
+            .join(GenerationJob, GeneratedImage.generation_job_id == GenerationJob.id)
+            .where(GenerationJob.generation_request_id == generation_request_id)
+            .options(joinedload(GeneratedImage.generation_job))
+        )
+        result = self.db.execute(stmt)
+        return result.scalars().first()
 
     def get_all_by_generation_request_id(self, generation_request_id: int) -> List[GeneratedImage]:
         stmt = (
