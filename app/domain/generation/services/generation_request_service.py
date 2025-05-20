@@ -80,7 +80,7 @@ class GenerationRequestService:
         generation_request: GenerationRequest = self.generation_request_repository.update_with_flush(
             obj_id=generation_job.generation_request_id,
             obj_in=GenerationRequestUpdate(
-                generation_result=GenerationRequestResult.SUCCEED,
+                result=GenerationRequestResult.SUCCEED,
             )
         )
         generated_images: List[GeneratedImage] = self.generated_image_repository.get_all_by_generation_job_id(generation_job_id)
@@ -103,7 +103,7 @@ class GenerationRequestService:
         generation_request: GenerationRequest = self.generation_request_repository.update_with_flush(
             obj_id=generation_job.generation_request_id,
             obj_in=GenerationRequestUpdate(
-                generation_result=GenerationRequestResult.FAILED,
+                result=GenerationRequestResult.FAILED,
             )
         )
         generated_images: List[GeneratedImage] = self.generated_image_repository.get_all_by_generation_job_id(generation_job_id)

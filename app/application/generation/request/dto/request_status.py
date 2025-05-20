@@ -5,7 +5,7 @@ from app.domain.generation.enums.generation_status import GenerationRequestResul
 
 class RequestStatus(BaseModel):
     generation_request_id: int
-    generation_result: GenerationRequestResult
+    result: GenerationRequestResult
     expires_at: datetime
 
     

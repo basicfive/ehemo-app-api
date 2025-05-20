@@ -15,7 +15,7 @@ class GenerationRequestInfoPreview(BaseModel):
     thumbnail_url: str
 
     created_at: datetime
-    generation_result: GenerationRequestResult
+    result: GenerationRequestResult
 
     hair_style_name: str
     selected_options: str
@@ -26,7 +26,7 @@ class GenerationRequestInfo(BaseModel):
     generation_request_id: int
 
     request_number: str
-    generation_result: GenerationRequestResult
+    result: GenerationRequestResult
     created_at: datetime
 
     is_favorite: bool

@@ -59,6 +59,7 @@ class ProcessFailedRequestService(TransactionalService):
                 token=fcm_token,
                 title=FCMConstants.FAILURE_TITLE,
                 body=FCMConstants.FAILURE_BODY,
+                data={"generation_request_id": str(expired_job.generation_request_id)},
             )
         except Exception as e:
             logger.error(

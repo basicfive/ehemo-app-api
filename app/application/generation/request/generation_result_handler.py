@@ -66,7 +66,7 @@ class GenerationResultHandler(TransactionalService):
         else:
             generation_request, generation_job, generated_images = self.mark_as_failed(message.generation_job_id)
             user: User = self.user_repo.get(generation_request.user_id)
-            self._notify_user_failure(user)
+            self._notify_user_failure(generation_request.id, user)
 
     @transactional
     def mark_after_generation_success(self, generation_job_id: int) -> Tuple[GenerationJob, List[GeneratedImage]]:
@@ -110,12 +110,14 @@ class GenerationResultHandler(TransactionalService):
 
     def _notify_user_failure(
             self,
+            generation_request_id: int,
             user: User,
     ):
         self.fcm_service.send_to_token(
             token=user.fcm_token,
             title=FCMConstants.FAILURE_TITLE,
             body=FCMConstants.FAILURE_BODY,
+            data={"generation_request_id": str(generation_request_id)},
         )
 
     async def _resize_and_reupload_image(self, s3_key: str) -> None:

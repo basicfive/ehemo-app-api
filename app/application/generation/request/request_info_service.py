@@ -59,9 +59,9 @@ class GenerationRequestInfoService(TransactionalService):
             raise AccessUnauthorizedException()
         return RequestStatus(
             generation_request_id=generation_request.id,
-            generation_result=generation_request.generation_result,
-            # expires_at=generation_request.generation_job.expires_at,
-            expires_at=datetime.now(UTC) + timedelta(minutes=1),
+            result=generation_request.result,
+            expires_at=generation_request.generation_job.expires_at,
+            # expires_at=datetime.now(UTC) + timedelta(minutes=1),
         )
     
     def get_pending_generation_requests(self, user_id: int) -> List[RequestStatus]:
@@ -69,9 +69,9 @@ class GenerationRequestInfoService(TransactionalService):
         return [
             RequestStatus(
                 generation_request_id=generation_request.id,
-                generation_result=generation_request.generation_result,
-                # expires_at=generation_request.generation_job.expires_at,
-                expires_at=datetime.now(UTC) + timedelta(minutes=1),
+                result=generation_request.result,
+                expires_at=generation_request.generation_job.expires_at,
+                # expires_at=datetime.now(UTC) + timedelta(minutes=1),
             ) for generation_request in generation_requests
         ]
     
@@ -110,7 +110,7 @@ class GenerationRequestInfoService(TransactionalService):
             generation_request_id=generation_request.id,
             thumbnail_url=self.s3_client.create_get_presigned_url(generated_image.s3_key),
             created_at=generation_request.created_at,
-            generation_result=generation_request.generation_result,
+            result=generation_request.result,
             hair_style_name=hair_style.title,
             selected_options=selected_options,
             is_favorite=generation_request.is_favorite,
@@ -165,7 +165,7 @@ class GenerationRequestInfoService(TransactionalService):
                     thumbnail_url=thumbnail_url,
                     selected_options=selected_options,
                     created_at=generation_request.created_at,
-                    generation_result=generation_request.generation_result,
+                    result=generation_request.result,
                     is_favorite=generation_request.is_favorite,
                 )
             )

@@ -80,6 +80,7 @@ class ImageGenerationSetting(BaseModel):
     GENERATED_IMAGE_CNT_PER_REQUEST: int = 4
     DISTILLED_CFG_SCALE: float = 2.0
 
+    # SINGLE_INFERENCE_SEC_EST: int = 1000
     SINGLE_INFERENCE_SEC_EST: int = 30
     SINGLE_INFERENCE_HIGH_RES_SEC_EST: int = 60
     

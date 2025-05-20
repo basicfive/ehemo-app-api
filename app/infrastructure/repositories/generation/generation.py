@@ -40,7 +40,7 @@ class GenerationRequestRepository(CRUDRepository[GenerationRequest, GenerationRe
             select(GenerationRequest).where(
                 and_(
                     GenerationRequest.user_id == user_id,
-                    GenerationRequest.status == GenerationRequestResult.PENDING,
+                    GenerationRequest.result == GenerationRequestResult.PENDING,
                 )
             )
             .options(joinedload(GenerationRequest.generation_job))

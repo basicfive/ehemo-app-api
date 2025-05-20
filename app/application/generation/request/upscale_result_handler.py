@@ -41,7 +41,7 @@ class UpscaleResultHandler(TransactionalService):
             generation_request, generation_job, generated_images = self.mark_as_failed(message.generation_job_id)
 
         user: User = self.user_repo.get(generation_request.user_id)
-        self._notify_user(user, message.is_success)
+        self._notify_user(user, message.is_success, generation_request.id)
 
     @transactional
     def mark_as_success(self, generation_job_id: int) -> Tuple[GenerationRequest, GenerationJob, List[GeneratedImage]]:
@@ -66,18 +66,21 @@ class UpscaleResultHandler(TransactionalService):
             self,
             user: User,
             is_success: bool,
+            generation_request_id: int,
     ):
         if is_success:
             self.fcm_service.send_to_token(
                 token=user.fcm_token,
                 title=FCMConstants.SUCCESS_TITLE,
                 body=FCMConstants.SUCCESS_BODY,
+                data={"generation_request_id": str(generation_request_id)},
             )
         else:
             self.fcm_service.send_to_token(
                 token=user.fcm_token,
                 title=FCMConstants.FAILURE_TITLE,
                 body=FCMConstants.FAILURE_BODY,
+                data={"generation_request_id": str(generation_request_id)},
             )
 
 

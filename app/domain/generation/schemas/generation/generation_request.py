@@ -26,14 +26,14 @@ class GenerationRequestCreate(BaseModel):
 
 
 class GenerationRequestUpdate(BaseModel):
-    generation_result: Optional[GenerationRequestResult] = None
+    result: Optional[GenerationRequestResult] = None
     is_favorite: Optional[bool] = None
 
 
 class GenerationRequestInDB(BaseModel):
     id: int
     request_number: str
-    generation_result: GenerationRequestResult
+    result: GenerationRequestResult
     user_id: int
 
     is_user_hair_style: bool

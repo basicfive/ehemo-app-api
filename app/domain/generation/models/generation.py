@@ -8,7 +8,7 @@ class GenerationRequest(TimeStampModel):
     __tablename__ = "generation_request"
 
     request_number = Column(String(20), nullable=False)
-    generation_result = Column(Enum(GenerationRequestResult), default=GenerationRequestResult.PENDING, nullable=False)
+    result = Column(Enum(GenerationRequestResult), default=GenerationRequestResult.PENDING, nullable=False)
 
     user_id = Column(Integer, ForeignKey("user.id"), index=True)
 
