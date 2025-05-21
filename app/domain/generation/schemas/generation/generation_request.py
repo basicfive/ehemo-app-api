@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing_extensions import Optional
 
+from app.domain.generation.enums.reference_image_similarity import ReferenceImageSimilarity
 from app.domain.generation.enums.generation_status import GenerationRequestResult
 
 
@@ -19,7 +20,7 @@ class GenerationRequestCreate(BaseModel):
 
     is_user_reference_image: bool
     user_reference_image_s3_key: Optional[str] = None
-    user_reference_image_denoise_strength: Optional[float] = None
+    user_reference_image_similarity: Optional[ReferenceImageSimilarity] = None
 
     final_generation_prompt: str
     consumed_tokens: int
@@ -44,7 +45,7 @@ class GenerationRequestInDB(BaseModel):
 
     is_user_reference_image: bool
     user_reference_image_s3_key: Optional[str] = None
-    user_reference_image_denoise_strength: Optional[float] = None
+    user_reference_image_similarity: Optional[ReferenceImageSimilarity] = None
 
     final_generation_prompt: str
     consumed_tokens: int

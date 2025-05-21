@@ -6,6 +6,7 @@ from app.domain.common.enums.gender import Gender
 
 from app.domain.generation.dto.request_generation import PromptComponentAnswer
 from app.domain.generation.enums.generation_status import GenerationRequestResult
+from app.domain.generation.enums.reference_image_similarity import ReferenceImageSimilarity
 
 from app.application.generation.options.dto.generation_options import HairStyleOption, PromptComponentOption, ImageRatioOption
 
@@ -40,6 +41,6 @@ class GenerationRequestInfo(BaseModel):
     is_user_reference_image: bool
     user_reference_image_s3_key: Optional[str] = None
     user_reference_image_url: Optional[str] = None
-    user_reference_image_denoise_strength: Optional[float] = None
+    user_reference_image_similarity: Optional[ReferenceImageSimilarity] = None
 
     consumed_tokens: int

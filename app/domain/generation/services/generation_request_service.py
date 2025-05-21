@@ -193,6 +193,9 @@ class GenerationRequestService:
         
         width = image_resolution.width
         height = image_resolution.height
+        denoise_strength = None
+        if generation_request.user_reference_image_similarity:
+            denoise_strength = generation_request.user_reference_image_similarity.float_value
 
         generation_job: GenerationJob = self.generation_job_repository.create_with_flush(
             obj_in=GenerationJobCreate(
@@ -212,7 +215,7 @@ class GenerationRequestService:
 
                 is_user_reference_image=generation_request.is_user_reference_image,
                 user_reference_image_s3_key=generation_request.user_reference_image_s3_key,
-                user_reference_image_denoise_strength=generation_request.user_reference_image_denoise_strength,
+                user_reference_image_denoise_strength=denoise_strength,
 
                 generation_request_id=generation_request.id,
             ),

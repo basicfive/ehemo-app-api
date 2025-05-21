@@ -2,6 +2,7 @@ from sqlalchemy import Column, String, Integer, DateTime, Float, Enum, ForeignKe
 from sqlalchemy.orm import relationship
 
 from app.domain.generation.enums.generation_status import GenerationJobStatus, GenerationRequestResult
+from app.domain.generation.enums.reference_image_similarity import ReferenceImageSimilarity
 from app.domain.time_stamp_model import TimeStampModel
 
 class GenerationRequest(TimeStampModel):
@@ -27,7 +28,7 @@ class GenerationRequest(TimeStampModel):
     # img2img 이미지
     is_user_reference_image = Column(Boolean, default=False, nullable=False)
     user_reference_image_s3_key = Column(String(2048), nullable=True)
-    user_reference_image_denoise_strength = Column(Float, nullable=True)
+    user_reference_image_similarity = Column(Enum(ReferenceImageSimilarity), nullable=True)
 
     # 완성된 프롬프트
     final_generation_prompt = Column(String(1024), nullable=False)

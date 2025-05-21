@@ -215,6 +215,7 @@ class GenerationRequestInfoService(TransactionalService):
                     # 서버에서는 해당 값을 저장하지 않고, 프론트에서 answer를 기준으로 random 여부를 결정해서 보내므로 인위적인 False 값을 넣음.
                     is_random=False,
                     is_not_selected=False,
+                    prompt_component_question_title=request_prompt_component_question_answer.prompt_component_question.title,
                     answer=request_prompt_component_question_answer.answer,
                 )
             )
