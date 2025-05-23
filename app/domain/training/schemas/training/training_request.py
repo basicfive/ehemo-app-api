@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
-from app.domain.common.enums.ai_status import TrainingRequestStatus
+from app.domain.training.enums.training_status import TrainingRequestStatus
 from app.domain.common.enums.gender import Gender
 
 class TrainingRequestCreate(BaseModel):

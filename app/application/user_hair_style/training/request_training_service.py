@@ -47,7 +47,7 @@ class RequestTrainingService(TransactionalService):
         if self.training_request_service.is_user_training_job_pending(user.id):
             raise ValueException("현재 등록 중인 헤어스타일이 있어요. 등록이 완료된 후 새로운 스타일을 등록해주세요")
 
-        images_for_training, training_request, training_job = self.training_request_service.create_training_request_and_job(
+        images_for_training, training_request, training_job, user_hair_style = self.training_request_service.create_training_request_and_job(
             gender=request.gender,
             user=user,
             title=request.title,

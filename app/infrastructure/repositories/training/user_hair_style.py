@@ -25,13 +25,29 @@ def get_user_hair_style_lora_repository(db: Session = Depends(get_db)) -> UserHa
 class UserHairStyleRepository(CRUDRepository[UserHairStyle, UserHairStyleCreate, UserHairStyleUpdate]):
     def __init__(self, db: Session):
         super().__init__(model=UserHairStyle, db=db)
+
+    def get_training_request_id(self, id: int) -> int:
+        stmt = (
+            select(UserHairStyleLora.training_request_id)
+            .join(UserHairStyle, UserHairStyleLora.id == UserHairStyle.user_hair_style_lora_id)
+            .where(UserHairStyle.id == id)
+        )
+        return self.db.execute(stmt).scalar_one()
+
+    def get_by_training_request(self, training_request_id: int) -> UserHairStyle:
+        stmt = select(UserHairStyle).where(UserHairStyle.training_request_id == training_request_id)
+        result = self.db.execute(stmt)
+        return result.scalars().one()
     
     def get_with_lora(self, id: int) -> UserHairStyle:
         stmt = select(UserHairStyle).options(joinedload(UserHairStyle.user_hair_style_lora)).filter(UserHairStyle.id == id)
         return self.db.execute(stmt).scalars().one()
     
     def get_all_by_user(self, user_id: int) -> List[UserHairStyle]:
-        stmt = select(UserHairStyle).filter(UserHairStyle.user_id == user_id)
+        stmt = (
+            select(UserHairStyle)
+            .where(UserHairStyle.user_id == user_id)
+        )
         result = self.db.execute(stmt)
         return list(result.scalars().all())
 

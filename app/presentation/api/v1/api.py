@@ -10,6 +10,7 @@ from app.presentation.api.v1.endpoints.prod.user import deletion_survey
 from app.presentation.api.v1.endpoints.prod.versioning import app_version
 from app.presentation.api.v1.endpoints.prod.store import store_url
 from app.presentation.api.v1.endpoints.prod.subscription import free_subscription, paid_subscription, plans
+from app.presentation.api.v1.endpoints.prod.user_hair_style import user_hair_style
 
 router = APIRouter()
 
@@ -25,6 +26,8 @@ router.include_router(user.router, prefix="/prod/user", tags=['user'])
 router.include_router(deletion_survey.router, prefix="/prod/user", tags=['user'])
 
 router.include_router(generated_image.router, prefix="/prod/generated-image", tags=['generated-image'])
+
+router.include_router(user_hair_style.router, prefix="/prod/user-hair-style", tags=['user-hair-style'])
 
 router.include_router(app_version.router, prefix="/prod/versioning", tags=['versioning'])
 

@@ -4,15 +4,24 @@ from typing import List, Optional
 from fastapi import Depends
 from app.core.db.base import get_db
 from app.infrastructure.repositories.crud_repository import CRUDRepository
-from app.domain.common.enums.ai_status import TrainingJobStatus
+from app.domain.training.enums.training_status import TrainingJobStatus
 from app.domain.training.models.training import TrainingRequest, TrainingJob
 from app.domain.training.schemas.training.training_request import TrainingRequestCreate, TrainingRequestUpdate
 from app.domain.training.schemas.training.training_job import TrainingJobCreate, TrainingJobUpdate
+from app.domain.training.enums.training_status import TrainingRequestStatus
 
 class TrainingRequestRepository(CRUDRepository[TrainingRequest, TrainingRequestCreate, TrainingRequestUpdate]):
     def __init__(self, db: Session):
         super().__init__(model=TrainingRequest, db=db)
     
+    def get_user_pending_request_or_none(self, user_id: int) -> Optional[TrainingRequest]:
+        stmt = (
+            select(TrainingRequest)
+            .where(TrainingRequest.user_id == user_id)
+            .where(TrainingRequest.status == TrainingRequestStatus.PENDING)
+        )
+        return self.db.execute(stmt).scalars().one_or_none()
+
     def get_with_user(self, training_request_id: int) -> TrainingRequest:
         stmt = (
             select(TrainingRequest)

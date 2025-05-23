@@ -3,13 +3,12 @@ import uuid
 
 from app.core.enums.inference_types import InferenceType
 from app.core.config import rabbit_mq_settings
-from app.core.config import aws_s3_settings
 from app.infrastructure.s3.s3_client import S3Client
 from app.domain.generation.schemas.generation.generation_job import GenerationJobInDB
 from app.domain.generation.services.calculate_remaining_time import CalculateRemainingTimeService
 from app.core.errors.exceptions import NoInferenceConsumerException, NoUpscaleConsumerException
-from app.application.generation.request.dto.generation_mq import ImageInfo, GenerationPublishMessage
-from app.domain.generation.dto.request_generation import RequestGenerationDto, PromptComponentAnswer
+from app.application.generation.request.dto.generation_mq import ImageInfo, NormalGenerationPublishMessage
+from app.domain.generation.dto.request_generation import RequestGenerationDto
 from app.domain.generation.services.build_prompt import replace_hair_with_ohwx_hair, BuildPromptService
 from app.infrastructure.google_genai.genai_api import async_gemini_translate_prompt
 from app.domain.common.enums.gender import Gender
@@ -78,7 +77,7 @@ class RequestGenerationService(TransactionalService):
             self,
             request: GenerationRequestRequest,
             user_id: int
-    ) -> Tuple[GenerationPublishMessage, GenerationRequestResponse]:
+    ) -> Tuple[NormalGenerationPublishMessage, GenerationRequestResponse]:
         # 생성 서버 연결 여부
         _, inference_consumer_count = await self.rabbit_mq_service.get_queue_info(rabbit_mq_settings.RABBITMQ_INFERENCE_PUBLISH)
         if inference_consumer_count < 1:
@@ -126,8 +125,7 @@ class RequestGenerationService(TransactionalService):
 
         # 메시지 및 응답 생성
         generation_job_indb = GenerationJobInDB.model_validate(generation_job)
-        message = GenerationPublishMessage(
-            inference_type=InferenceType.NORMAL,
+        message = NormalGenerationPublishMessage(
             image_info_list=[
                 ImageInfo(
                     generated_image_id=generated_image.id,
@@ -170,7 +168,7 @@ class RequestGenerationService(TransactionalService):
 
     async def _publish_message(
             self,
-            message: GenerationPublishMessage,
+            message: NormalGenerationPublishMessage,
     ):
         await self.rabbit_mq_service.publish(
             message=message.model_dump_json(),

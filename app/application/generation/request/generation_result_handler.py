@@ -4,13 +4,13 @@ from typing import List, Tuple
 from datetime import datetime, timedelta, UTC
 
 from app.core.config import rabbit_mq_settings
-from app.application.generation.request.dto.upscale_mq import UpscalePublishMessage, UpscaleImageInfo
+from app.application.generation.request.dto.upscale_mq import NormalUpscalePublishMessage, UpscaleImageInfo
 from app.domain.generation.models.generated_image import GeneratedImage
 from app.domain.generation.models.generation import GenerationJob, GenerationRequest
 from app.domain.user.models.user import User
 from app.core.constants import FCMConstants
 from app.infrastructure.database.transaction import transactional
-from app.application.generation.request.dto.generation_mq import GenerationConsumeMessage
+from app.application.generation.request.dto.generation_mq import NormalGenerationConsumeMessage
 from app.domain.generation.services.generation_request_service import GenerationRequestService
 from app.infrastructure.mq.rabbit_mq_service import RabbitMQService
 from app.application.transactional_service import TransactionalService
@@ -43,7 +43,7 @@ class GenerationResultHandler(TransactionalService):
 
     async def handle_generation_result(self, body: bytes) -> None:
         data_dict = json.loads(body)
-        message = GenerationConsumeMessage(**data_dict)
+        message = NormalGenerationConsumeMessage(**data_dict)
         logger.info(f"[MQ] Consumed Job ID: {message.generation_job_id}. DETAILS: {message.model_dump_json()}")
 
         if message.is_success:
@@ -94,7 +94,7 @@ class GenerationResultHandler(TransactionalService):
                     upscale_s3_key=generated_image.upscaled_s3_key,
                 )
             )
-        message = UpscalePublishMessage(
+        message = NormalUpscalePublishMessage(
             generation_job_id=generation_job_id,
             image_info_list=image_info_list,
             time_to_live_sec=time_to_live_sec,

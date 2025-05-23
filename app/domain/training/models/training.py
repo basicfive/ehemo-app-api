@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey, Enum, DateTime
 from sqlalchemy.orm import relationship
 
 from app.domain.time_stamp_model import TimeStampModel
-from app.domain.common.enums.ai_status import TrainingRequestStatus, TrainingJobStatus
+from app.domain.training.enums.training_status import TrainingRequestStatus, TrainingJobStatus
 from app.domain.common.enums.gender import Gender
 
 
@@ -38,4 +38,5 @@ class TrainingJob(TimeStampModel):
 
     status = Column(Enum(TrainingJobStatus), default=TrainingJobStatus.PENDING, nullable=False)
 
-    
+    thumbnail_creation_failure_count = Column(Integer, default=0, nullable=False)
+    thumbnail_creation_expires_at = Column(DateTime(timezone=True), nullable=True)

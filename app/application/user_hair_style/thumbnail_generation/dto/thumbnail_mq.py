@@ -1,20 +1,19 @@
-from pydantic import BaseModel
+from app.application.generation.request.dto.generation_mq import GenerationPublishMessage, GenerationConsumeMessage
+from app.application.generation.request.dto.upscale_mq import UpscalePublishMessage, UpscaleConsumeMessage
+from app.core.enums.inference_types import InferenceType
 
-from app.infrastructure.mq.dto.base_messages import InferenceBaseMessage
+class ThumbnailGenerationPublishMessage(GenerationPublishMessage):
+    inference_type: InferenceType = InferenceType.THUMBNAIL
+    training_job_id: int
 
-class ThumbnailGenerationPublishMessage(InferenceBaseMessage):
-    training_request_id: int
-    user_hair_lora_s3_key: str
-    user_hair_lora_name: str
-    thumbnail_s3_key: str
+class ThumbnailGenerationConsumeMessage(GenerationConsumeMessage):
+    inference_type: InferenceType = InferenceType.THUMBNAIL
+    training_job_id: int
 
-    prompt: str
-    width: int
-    height: int
-    distilled_cfg_scale: float
+class ThumbnailUpscalePublishMessage(UpscalePublishMessage):
+    inference_type: InferenceType = InferenceType.THUMBNAIL
+    training_job_id: int
 
-class ThumbnailGenerationConsumeMessage(InferenceBaseMessage):
-    training_request_id: int
-    thumbnail_s3_key: str
-
-
+class ThumbnailUpscaleConsumeMessage(UpscaleConsumeMessage):
+    inference_type: InferenceType = InferenceType.THUMBNAIL
+    training_job_id: int

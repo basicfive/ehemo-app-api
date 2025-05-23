@@ -17,6 +17,15 @@ class ReferenceImageSimilarity(Enum):
     MEDIUM = SimilarityValue("MEDIUM", 0.9)
     HIGH = SimilarityValue("HIGH", 0.7)
     
+    @classmethod
+    def _missing_(cls, value):
+        """Pydantic이 문자열을 enum으로 변환할 수 있도록 지원"""
+        if isinstance(value, str):
+            for member in cls:
+                if member.value.code == value:
+                    return member
+        return None
+    
     @property
     def float_value(self) -> float:
         return self.value.float_value

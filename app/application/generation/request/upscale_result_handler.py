@@ -7,7 +7,7 @@ from app.domain.user.models.user import User
 from app.infrastructure.repositories.user.user import UserRepository
 from app.core.constants import FCMConstants
 from app.infrastructure.fcm.fcm_service import FCMService
-from app.application.generation.request.dto.upscale_mq import UpscaleConsumeMessage
+from app.application.generation.request.dto.upscale_mq import NormalUpscaleConsumeMessage
 from app.domain.generation.models.generation import GenerationJob, GenerationRequest
 from app.domain.generation.models.generated_image import GeneratedImage
 from app.infrastructure.database.transaction import transactional
@@ -33,7 +33,7 @@ class UpscaleResultHandler(TransactionalService):
     
     def handle_upscale_result(self, body: bytes) -> None:
         dict_data = json.loads(body)
-        message = UpscaleConsumeMessage(**dict_data)
+        message = NormalUpscaleConsumeMessage(**dict_data)
 
         if message.is_success:
             generation_request, generation_job, generated_images = self.mark_as_success(message.generation_job_id)

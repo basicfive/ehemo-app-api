@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 
 from app.domain.time_stamp_model import TimeStampModel
 from app.domain.common.enums.gender import Gender
+from app.domain.training.enums.user_hair_style_status import UserHairStyleStatus
 
 class UserHairStyleLora(TimeStampModel):
     __tablename__ = "user_hair_style_lora"
@@ -20,6 +21,8 @@ class UserHairStyleLora(TimeStampModel):
 class UserHairStyle(TimeStampModel):
     __tablename__ = "user_hair_style"
 
+    status = Column(Enum(UserHairStyleStatus), default=UserHairStyleStatus.PENDING, nullable=False)
+
     user_id = Column(Integer, ForeignKey("user.id"), index=True)
     user = relationship("User")
 
@@ -30,9 +33,5 @@ class UserHairStyle(TimeStampModel):
     title = Column(String, nullable=False)
     description = Column(String, nullable=False)
 
-    user_hair_style_lora_id = Column(Integer, ForeignKey("user_hair_style_lora.id"), nullable=False)
+    user_hair_style_lora_id = Column(Integer, ForeignKey("user_hair_style_lora.id"), nullable=True)
     user_hair_style_lora = relationship("UserHairStyleLora")
-
-
-
-
