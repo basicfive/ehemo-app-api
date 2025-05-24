@@ -31,15 +31,19 @@ from app.core.errors.http_exceptions import AccessUnauthorizedException
 from app.infrastructure.repositories.generation.generation import RequestPromptComponentQuestionAnswerRepository
 from app.infrastructure.repositories.generation.generated_image import GeneratedImageRepository
 from app.infrastructure.s3.s3_client import S3Client
+from app.infrastructure.repositories.generation.hair_style import HairStyleRepository
+from app.infrastructure.repositories.training.user_hair_style import UserHairStyleRepository
 
 class GenerationRequestInfoService(TransactionalService):
     def __init__(
             self,
             user_repo: UserRepository,
             generation_request_repo: GenerationRequestRepository,
-            image_ratio_repo: ImageRatioRepository,
             generation_job_repo: GenerationJobRepository,
+            image_ratio_repo: ImageRatioRepository,
             generated_image_repo: GeneratedImageRepository,
+            hair_style_repo: HairStyleRepository,
+            user_hair_style_repo: UserHairStyleRepository,
             request_prompt_component_question_answer_repo: RequestPromptComponentQuestionAnswerRepository,
             s3_client: S3Client,
             unit_of_work: UnitOfWork,
@@ -50,6 +54,8 @@ class GenerationRequestInfoService(TransactionalService):
         self.generation_job_repo = generation_job_repo
         self.image_ratio_repo = image_ratio_repo
         self.generated_image_repo = generated_image_repo
+        self.hair_style_repo = hair_style_repo
+        self.user_hair_style_repo = user_hair_style_repo
         self.request_prompt_component_question_answer_repo = request_prompt_component_question_answer_repo
         self.s3_client = s3_client
 
@@ -61,7 +67,6 @@ class GenerationRequestInfoService(TransactionalService):
             generation_request_id=generation_request.id,
             result=generation_request.result,
             expires_at=generation_request.generation_job.expires_at,
-            # expires_at=datetime.now(UTC) + timedelta(minutes=1),
         )
     
     def get_pending_generation_requests(self, user_id: int) -> List[RequestStatus]:
@@ -71,7 +76,6 @@ class GenerationRequestInfoService(TransactionalService):
                 generation_request_id=generation_request.id,
                 result=generation_request.result,
                 expires_at=generation_request.generation_job.expires_at,
-                # expires_at=datetime.now(UTC) + timedelta(minutes=1),
             ) for generation_request in generation_requests
         ]
     
@@ -87,12 +91,22 @@ class GenerationRequestInfoService(TransactionalService):
             )
         )
     
+    def _get_hair_style_name(self, generation_request: GenerationRequest) -> str:
+        if generation_request.is_user_hair_style:
+            user_hair_style: UserHairStyle = self.user_hair_style_repo.get(generation_request.user_hair_style_id)
+            return user_hair_style.title
+        else:
+            hair_style: HairStyle = self.hair_style_repo.get(generation_request.hair_style_id)
+            return hair_style.title
+    
     def get_generation_request_info_preview(self, generation_request_id: int, user_id: int) -> GenerationRequestInfoPreview:
         # request 조회
-        generation_request: GenerationRequest = self.generation_request_repo.get_with_hair_style(generation_request_id)
+        generation_request: GenerationRequest = self.generation_request_repo.get(generation_request_id)
         if generation_request.user_id != user_id:
             raise AccessUnauthorizedException()
-        hair_style: HairStyle = generation_request.hair_style
+
+        # 헤어스타일 이름 가져오기
+        hair_style_name = self._get_hair_style_name(generation_request)
 
         # 썸네일 이미지 조회
         generated_image: GeneratedImage = self.generated_image_repo.get_any_by_generation_request_id(generation_request_id)
@@ -111,7 +125,7 @@ class GenerationRequestInfoService(TransactionalService):
             thumbnail_url=self.s3_client.create_get_presigned_url(generated_image.s3_key),
             created_at=generation_request.created_at,
             result=generation_request.result,
-            hair_style_name=hair_style.title,
+            hair_style_name=hair_style_name,
             selected_options=selected_options,
             is_favorite=generation_request.is_favorite,
         )
@@ -258,6 +272,8 @@ from app.infrastructure.repositories.user.user import get_user_repository
 from app.infrastructure.repositories.generation.image_resolution import get_image_ratio_repository
 from app.infrastructure.repositories.generation.generated_image import get_generated_image_repository
 from app.infrastructure.database.unit_of_work import get_unit_of_work
+from app.infrastructure.repositories.generation.hair_style import get_hair_style_repository
+from app.infrastructure.repositories.training.user_hair_style import get_user_hair_style_repository
 
 def get_generation_request_info_service(
     user_repo: UserRepository = Depends(get_user_repository),
@@ -265,6 +281,8 @@ def get_generation_request_info_service(
     image_ratio_repo: ImageRatioRepository = Depends(get_image_ratio_repository),
     generation_job_repo: GenerationJobRepository = Depends(get_generation_job_repository),
     generated_image_repo: GeneratedImageRepository = Depends(get_generated_image_repository),
+    hair_style_repo: HairStyleRepository = Depends(get_hair_style_repository),
+    user_hair_style_repo: UserHairStyleRepository = Depends(get_user_hair_style_repository),
     request_prompt_component_question_answer_repo: RequestPromptComponentQuestionAnswerRepository = Depends(get_request_prompt_component_question_answer_repository),
     s3_client: S3Client = Depends(get_s3_client),
     unit_of_work: UnitOfWork = Depends(get_unit_of_work),
@@ -272,9 +290,11 @@ def get_generation_request_info_service(
     return GenerationRequestInfoService(
         user_repo=user_repo,
         generation_request_repo=generation_request_repo,
-        image_ratio_repo=image_ratio_repo,
         generation_job_repo=generation_job_repo,
+        image_ratio_repo=image_ratio_repo,
         generated_image_repo=generated_image_repo,
+        hair_style_repo=hair_style_repo,
+        user_hair_style_repo=user_hair_style_repo,
         request_prompt_component_question_answer_repo=request_prompt_component_question_answer_repo,
         s3_client=s3_client,
         unit_of_work=unit_of_work,

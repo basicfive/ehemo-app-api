@@ -13,7 +13,7 @@ class PromptComponentQuestionResponse(BaseModel):
     suggestions: List[str]
 
 
-class ReferenceImageUploadUrlResponse(BaseModel):
+class ImageUploadUrlDto(BaseModel):
     upload_url: str
     s3_key: str
 

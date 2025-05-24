@@ -14,6 +14,15 @@ class TrainingRequestRepository(CRUDRepository[TrainingRequest, TrainingRequestC
     def __init__(self, db: Session):
         super().__init__(model=TrainingRequest, db=db)
     
+    def get_latest_training_request_by_user(self, user_id: int) -> Optional[TrainingRequest]:
+        stmt = (
+            select(TrainingRequest)
+            .where(TrainingRequest.user_id == user_id)
+            .order_by(TrainingRequest.created_at.desc())
+            .limit(1)
+        )
+        return self.db.execute(stmt).scalars().one_or_none()
+
     def get_user_pending_request_or_none(self, user_id: int) -> Optional[TrainingRequest]:
         stmt = (
             select(TrainingRequest)
@@ -36,16 +45,6 @@ def get_training_request_repository(db: Session = Depends(get_db)) -> TrainingRe
 class TrainingJobRepository(CRUDRepository[TrainingJob, TrainingJobCreate, TrainingJobUpdate]):
     def __init__(self, db: Session):
         super().__init__(model=TrainingJob, db=db)
-    
-    def get_latest_training_job_by_user(self, user_id: int) -> Optional[TrainingJob]:
-        stmt = (
-            select(TrainingJob)
-            .where(TrainingJob.user_id == user_id)
-            .order_by(TrainingJob.requested_at.desc())
-            .limit(1)
-        )
-        result = self.db.execute(stmt)
-        return result.scalars().one_or_none()
 
     def get_pending_training_jobs(self) -> List[TrainingJob]:
         stmt = (

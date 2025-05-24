@@ -41,7 +41,8 @@ class AWSS3Setting(BaseSetting):
     BUCKET_NAME: str = os.getenv("BUCKET_NAME")
 
     GENERATED_IMAGE_S3KEY_PREFIX: str = "generated_image/"
-    GENERATED_IMAGE_GROUP_S3KEY_PREFIX: str = "generated_image_group_thumbnail/"
+
+    USER_REFERENCE_IMAGE_S3KEY_PREFIX: str = "user_reference_image/"
 
     USER_UPLOADED_IMAGE_FOR_TRAINING_S3KEY_PREFIX: str = "user_uploaded_image_for_training/"
     USER_HAIR_STYLE_LORA_S3KEY_PREFIX: str = "user_hair_style_lora/"

@@ -7,12 +7,12 @@ from app.domain.training.schemas.suggestion.user_hair_style_description_suggesti
 from fastapi import Depends
 from app.core.db.base import get_db
 
-class UserHairStyleSuggestionRepository(CRUDRepository[UserHairStyleTitleSuggestion, UserHairStyleTitleSuggestionCreate, UserHairStyleTitleSuggestionUpdate]):
+class UserHairStyleTitleSuggestionRepository(CRUDRepository[UserHairStyleTitleSuggestion, UserHairStyleTitleSuggestionCreate, UserHairStyleTitleSuggestionUpdate]):
     def __init__(self, db: Session):
         super().__init__(model=UserHairStyleTitleSuggestion, db=db)
 
-def get_user_hair_style_title_suggestion_repository(db: Session = Depends(get_db)) -> UserHairStyleSuggestionRepository:
-    return UserHairStyleSuggestionRepository(db=db)
+def get_user_hair_style_title_suggestion_repository(db: Session = Depends(get_db)) -> UserHairStyleTitleSuggestionRepository:
+    return UserHairStyleTitleSuggestionRepository(db=db)
 
 
 class UserHairStyleDescriptionSuggestionRepository(CRUDRepository[UserHairStyleDescriptionSuggestion, UserHairStyleDescriptionSuggestionCreate, UserHairStyleDescriptionSuggestionUpdate]):

@@ -10,6 +10,7 @@ class UserHairStyleCreate(BaseModel):
     thumbnail_s3_key: str
     title: str
     description: str
+    order: int
 
 class UserHairStyleUpdate(BaseModel):
     status: Optional[UserHairStyleStatus] = None

@@ -23,6 +23,11 @@ class NoUpscaleConsumerException(CustomServerException):
         message = "No Upscale server is connected to queue"
         super().__init__(message, context)
 
+class NoTrainingConsumerException(CustomServerException):
+    def __init__(self, context: str = None):
+        message = "No Training server is connected to queue"
+        super().__init__(message, context)
+
 class FCMException(CustomServerException):
     def __init__(self, context: str = None):
         message = "FCM Service error occurred"

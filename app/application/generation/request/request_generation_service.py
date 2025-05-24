@@ -25,7 +25,8 @@ from app.infrastructure.repositories.user.user import UserRepository
 from app.application.transactional_service import TransactionalService
 from app.domain.generation.services.generation_request_service import GenerationRequestService
 from app.application.generation.request.dto.request import GenerationRequestRequest, GenerationRequestResponse
-from app.application.generation.request.dto.request import ReferenceImageUploadUrlResponse
+from app.application.generation.request.dto.request import ImageUploadUrlDto
+from app.domain.generation.services.reference_image import create_reference_image_s3_key
 
 class RequestGenerationService(TransactionalService):
     def __init__(
@@ -54,10 +55,10 @@ class RequestGenerationService(TransactionalService):
     ) -> int:
         return calculate_token_cost(is_high_res, is_user_hair_model)
         
-    def get_reference_image_upload_url(self) -> ReferenceImageUploadUrlResponse:
-        s3_key = "reference_image/" + str(uuid.uuid4())
+    def get_reference_image_upload_url(self) -> ImageUploadUrlDto:
+        s3_key = create_reference_image_s3_key()
         upload_url = self.s3_client.create_put_presigned_url(s3_key=s3_key)
-        return ReferenceImageUploadUrlResponse(
+        return ImageUploadUrlDto(
             upload_url=upload_url,
             s3_key=s3_key,
         )

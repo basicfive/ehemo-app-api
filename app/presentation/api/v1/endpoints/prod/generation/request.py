@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from typing import List
 
-from app.application.generation.request.dto.request import GenerationRequestRequest, GenerationRequestResponse, ReferenceImageUploadUrlResponse
+from app.application.generation.request.dto.request import GenerationRequestRequest, GenerationRequestResponse, ImageUploadUrlDto
 from app.application.user.auth import validate_user_token
 from app.application.generation.request.request_generation_service import RequestGenerationService, get_request_generation_service
 from app.application.generation.request.request_info_service import get_generation_request_info_service, GenerationRequestInfoService
@@ -23,7 +23,7 @@ def calculate_token_cost(
 def get_reference_image_upload_url(
     _: int = Depends(validate_user_token),
     service: RequestGenerationService = Depends(get_request_generation_service)
-) -> ReferenceImageUploadUrlResponse:
+) -> ImageUploadUrlDto:
     return service.get_reference_image_upload_url()
 
 @router.post("/request")
