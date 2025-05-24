@@ -11,7 +11,11 @@ class CalculateRemainingTimeService:
     ):
         self.generation_job_repo = generation_job_repo
     
-    def _get_generation_wait_time(self, pending_jobs_with_resolution: List[GenerationJob], generation_consumer_count: int) -> int:
+    def _get_generation_wait_time(
+            self,
+            pending_jobs_with_resolution: List[GenerationJob],
+            generation_consumer_count: int,
+        ) -> int:
         # 고화질 이미지, 기본 이미지 갯수 구하기
         high_resolution_pending_image_count = 0
         default_resolution_pending_image_count = 0
@@ -30,7 +34,11 @@ class CalculateRemainingTimeService:
         
         return generation_time
     
-    def _get_upscale_wait_time(self, pending_upscale_jobs: List[GenerationJob], upscale_consumer_count: int) -> int:
+    def _get_upscale_wait_time(
+            self,
+            pending_upscale_jobs: List[GenerationJob],
+            upscale_consumer_count: int,
+        ) -> int:
         # 업스케일 이미지 갯수
         pending_upscale_images_count = 0
         for pending_upscale_job in pending_upscale_jobs:
@@ -44,13 +52,13 @@ class CalculateRemainingTimeService:
         return upscale_time
 
     def get_generation_upscale_wait_time(self, generation_consumer_count: int, upscale_consumer_count: int) -> Tuple[int, int]:
-        pending_jobs_with_resolution = self.generation_job_repo.get_pending_jobs_with_resolution()
-        pending_upscale_jobs = self.generation_job_repo.get_pending_upscale_jobs()
+        pending_jobs_with_resolution: List[GenerationJob] = self.generation_job_repo.get_pending_jobs_with_resolution()
+        pending_upscale_jobs: List[GenerationJob] = self.generation_job_repo.get_pending_upscale_jobs()
 
         pending_upscale_jobs += pending_jobs_with_resolution
 
-        generation_time = self._get_generation_wait_time(pending_jobs_with_resolution, generation_consumer_count)
-        upscale_time = self._get_upscale_wait_time(pending_upscale_jobs, upscale_consumer_count)
+        generation_time: int = self._get_generation_wait_time(pending_jobs_with_resolution, generation_consumer_count)
+        upscale_time: int = self._get_upscale_wait_time(pending_upscale_jobs, upscale_consumer_count)
 
         return generation_time, upscale_time
     
@@ -74,20 +82,17 @@ class CalculateRemainingTimeService:
         generation_duration = self._get_single_generation_duration(is_high_resolution, image_count)
         upscale_duration = self._get_single_upscale_duration(image_count)
         """
-        MAX(
-            (생성 작업 대기 시간 + 현재 이미지 작업 시간),
-            (업스케일 대기 시간 + 현재 이미지 작업 시간 + 업스케일 시간)
-        ) * 여유 버퍼 (1.2)
+        업스케일 시작까지 예상 대기 시간 = MAX((생성 작업 대기 시간 + 현재 이미지 작업 시간), (업스케일 대기 시간)
+        업스케일 종료까지 예상 대기 시간 = (업스케일 시작까지 예상 대기 시간 + 업스케일 작업 시간) * 여유 버퍼 (1.2)
         """
         generation_wait_time, upscale_wait_time = self.get_generation_upscale_wait_time(
             generation_consumer_count=generation_consumer_count,
             upscale_consumer_count=upscale_consumer_count,
         )
-        duration = max(
-            generation_wait_time + generation_duration,
-            upscale_wait_time + generation_duration + upscale_duration
-        ) 
-        return int(duration * image_generation_settings.IMAGE_GENERATION_JOB_EXPIRE_TIME_MULTIPLIER)
+        wait_time_until_upscale_start = max(generation_wait_time + generation_duration, upscale_wait_time)
+        wait_time_until_upscale_end = wait_time_until_upscale_start + upscale_duration
+
+        return int(wait_time_until_upscale_end * image_generation_settings.IMAGE_GENERATION_JOB_EXPIRE_TIME_MULTIPLIER)
 
 
 from fastapi import Depends
