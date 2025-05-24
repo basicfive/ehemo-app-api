@@ -46,7 +46,7 @@ class RequestTrainingService(TransactionalService):
             )
         return upload_urls
 
-    # @transactional
+    @transactional
     async def request_training(self, request: UserHairStyleRegisterRequest, user_id: int) -> UserHairStyleRegisterResponse:
         # 1. 업로드 된 이미지 갯수 validation (서버 쪽에서 한 번 더)
         if len(request.uploaded_image_s3_keys) < training_settings.MINIMUM_IMAGE_CNT_FOR_TRAINING:
@@ -55,9 +55,9 @@ class RequestTrainingService(TransactionalService):
             raise ValueException(f"이미지 최대 갯수 {training_settings.MAXIMUM_IMAGE_CNT_FOR_TRAINING}를 초과했어요")
         
         # 2. 현재 학습 서버 연결 여부 확인
-        # _, consumer_count = await self.rabbit_mq_service.get_queue_info(queue_name=rabbit_mq_settings.RABBITMQ_TRAINING_CONSUME)
-        # if consumer_count < 1:
-        #     raise NoTrainingConsumerException()
+        _, consumer_count = await self.rabbit_mq_service.get_queue_info(queue_name=rabbit_mq_settings.RABBITMQ_TRAINING_CONSUME)
+        if consumer_count < 1:
+            raise NoTrainingConsumerException()
 
         # 3. 사용자 존재 여부 확인
         try:
@@ -92,18 +92,18 @@ class RequestTrainingService(TransactionalService):
         )
         print(training_message.model_dump())
 
-        # await self.rabbit_mq_service.publish(
-        #     message=TrainingPublishMessage(
-        #         gender=training_job.gender,
-        #         training_job_id=training_job.id,
-        #         user_hair_lora_s3_key=user_hair_lora_s3_key,
-        #         user_hair_lora_name=user_hair_lora_name,
-        #         uploaded_image_s3_keys=[image_for_training.s3_key for image_for_training in images_for_training],
-        #         total_steps=training_job.total_steps,
-        #         epoch=training_job.epoch,
-        #     ).model_dump_json(),
-        #     queue_name=rabbit_mq_settings.RABBITMQ_TRAINING_PUBLISH,
-        # )
+        await self.rabbit_mq_service.publish(
+            message=TrainingPublishMessage(
+                gender=training_job.gender,
+                training_job_id=training_job.id,
+                user_hair_lora_s3_key=user_hair_lora_s3_key,
+                user_hair_lora_name=user_hair_lora_name,
+                uploaded_image_s3_keys=[image_for_training.s3_key for image_for_training in images_for_training],
+                total_steps=training_job.total_steps,
+                epoch=training_job.epoch,
+            ).model_dump_json(),
+            queue_name=rabbit_mq_settings.RABBITMQ_TRAINING_PUBLISH,
+        )
 
         estimated_time_sec: int = self.training_request_service.calculate_training_request_eta_sec()
         return UserHairStyleRegisterResponse(
