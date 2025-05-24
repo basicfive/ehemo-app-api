@@ -20,6 +20,7 @@ from app.domain.training.schemas.training.training_job import TrainingJobUpdate
 from app.infrastructure.repositories.training.training import TrainingJobRepository
 from app.domain.training.enums.training_status import TrainingJobStatus
 from app.application.generation.request.dto.upscale_mq import UpscaleImageInfo
+from app.domain.training.services.thumbnail_generation import get_thumbnail_image_size
 
 logger = logging.getLogger(__name__)
 
@@ -81,9 +82,9 @@ class ThumbnailGenerationResultHandler(TransactionalService):
                 training_job_id=message.training_job_id,
                 image_info_list=image_info_list,
                 time_to_live_sec=time_to_live_sec,
-                prompt=message.prompt,
-                width=message.width,
-                height=message.height,
+                prompt=training_job.thumbnail_prompt,
+                width=training_job.thumbnail_width,
+                height=training_job.thumbnail_height,
             ).model_dump_json(),
             queue_name=rabbit_mq_settings.RABBITMQ_UPSCALE_PUBLISH,
         )
@@ -105,6 +106,7 @@ class ThumbnailGenerationResultHandler(TransactionalService):
 
 
 from app.core.db.base import get_db
+from app.infrastructure.repositories.user.user import get_user_repository
 from app.infrastructure.database.unit_of_work import get_unit_of_work
 from app.infrastructure.mq.rabbit_mq_service import get_rabbit_mq_service_singleton
 from app.infrastructure.repositories.training.training import get_training_job_repository, get_training_request_repository
@@ -113,6 +115,7 @@ from app.infrastructure.s3.s3_client import get_s3_client
 async def handle_thumbnail_generation_result(body: bytes) -> None:
     db = next(get_db())
     try:
+        user_repository: UserRepository = get_user_repository(db)
         training_request_repository: TrainingRequestRepository = get_training_request_repository(db)
         training_job_repository: TrainingJobRepository = get_training_job_repository(db)
 
@@ -121,6 +124,7 @@ async def handle_thumbnail_generation_result(body: bytes) -> None:
         unit_of_work: UnitOfWork = get_unit_of_work(db)
 
         message_handler = ThumbnailGenerationResultHandler(
+            user_repo=user_repository,
             training_request_repo=training_request_repository,
             training_job_repo=training_job_repository,
             rabbit_mq_service=rabbit_mq_service,

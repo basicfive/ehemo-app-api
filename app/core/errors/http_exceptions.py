@@ -24,23 +24,23 @@ class CustomHttpException(HTTPException):
 
 # HTTP EXCEPTIONS
 class NotFoundException(CustomHttpException):
-    def __init__(self, message: str, context: Optional[str]):
+    def __init__(self, message: str, context: Optional[str] = None):
         super().__init__(404, "Not Found", message, context)
 
 class UnauthorizedException(CustomHttpException):
-    def __init__(self, message: str, context: Optional[str]):
+    def __init__(self, message: str, context: Optional[str] = None):
         super().__init__(401, "Unauthorized", message, context)
 
 class ForbiddenException(CustomHttpException):
-    def __init__(self, message: str, context: Optional[str]):
+    def __init__(self, message: str, context: Optional[str] = None):
             super().__init__(403, "Forbidden", message, context)
 
 class ValueException(CustomHttpException):
-    def __init__(self, message: str, context: Optional[str]):
+    def __init__(self, message: str, context: Optional[str] = None):
         super().__init__(400, "Bad Request", message, context)
 
 class ResourceConflictException(CustomHttpException):
-    def __init__(self, message: str, context: Optional[str]):
+    def __init__(self, message: str, context: Optional[str] = None):
         super().__init__(409, "Conflict", message, context)
 
 

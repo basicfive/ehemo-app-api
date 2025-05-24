@@ -105,3 +105,37 @@ class ThumbnailUpscaleResultHandler(TransactionalService):
             self._handle_success_and_notify_fcm(message)
         else:
             self._handle_failure(message)
+
+
+from app.core.db.base import get_db
+from app.infrastructure.database.unit_of_work import get_unit_of_work
+from app.infrastructure.repositories.training.training import get_training_job_repository, get_training_request_repository
+from app.infrastructure.repositories.training.user_hair_style import get_user_hair_style_repository
+from app.infrastructure.repositories.user.user import get_user_repository
+from app.infrastructure.s3.s3_client import get_s3_client
+from app.infrastructure.fcm.fcm_service import get_fcm_service
+
+def handle_thumbnail_upscale_result(body: bytes) -> None:
+    db = next(get_db())
+
+    try:
+        training_job_repo = get_training_job_repository(db)
+        training_request_repo = get_training_request_repository(db)
+        user_hair_style_repo = get_user_hair_style_repository(db)
+        user_repo = get_user_repository(db)
+        s3_client = get_s3_client()
+        fcm_service = get_fcm_service()
+        unit_of_work = get_unit_of_work(db)
+
+        service = ThumbnailUpscaleResultHandler(
+            training_job_repo=training_job_repo,
+            training_request_repo=training_request_repo,
+            user_hair_style_repo=user_hair_style_repo,
+            user_repo=user_repo,
+            s3_client=s3_client,
+            fcm_service=fcm_service,
+            unit_of_work=unit_of_work,
+        )
+        service.handle_thumbnail_upscale_result(body)
+    finally:
+        db.close()

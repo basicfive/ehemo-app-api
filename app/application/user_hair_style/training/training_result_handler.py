@@ -33,7 +33,6 @@ from app.infrastructure.repositories.training.user_hair_style import UserHairSty
 from app.domain.training.models.user_hair_style import UserHairStyle
 from app.domain.training.schemas.user_hair_style.user_hair_style import UserHairStyleUpdate
 from app.domain.training.enums.user_hair_style_status import UserHairStyleStatus
-from app.domain.training.services.thumbnail_generation import ThumbnailPromptService
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +40,6 @@ class TrainingResultHandler(TransactionalService):
     def __init__(
             self,
             user_repo: UserRepository,
-            thumbnail_prompt_service: ThumbnailPromptService,
             training_request_repo: TrainingRequestRepository,
             training_job_repo: TrainingJobRepository,
             user_hair_style_lora_repo: UserHairStyleLoraRepository,
@@ -53,7 +51,6 @@ class TrainingResultHandler(TransactionalService):
     ):
         super().__init__(unit_of_work)
         self.user_repo = user_repo
-        self.thumbnail_prompt_service = thumbnail_prompt_service
 
         self.training_request_repo = training_request_repo
         self.training_job_repo = training_job_repo
@@ -153,24 +150,22 @@ class TrainingResultHandler(TransactionalService):
         training_job, user_hair_lora, user_hair_style = await self._handle_success(message)
 
         thumbnail_s3_key: str = user_hair_style.thumbnail_s3_key
-        width, height = get_thumbnail_image_size()
 
         time_to_live_sec: int = int((training_job.thumbnail_creation_expires_at - datetime.now(UTC)).total_seconds())
-
-        prompt = self.thumbnail_prompt_service.create_thumbnail_prompt(training_job.gender)
 
         # 썸네일 생성 작업 publish
         await self.rabbit_mq_service.publish(
             message=ThumbnailGenerationPublishMessage(
                 training_job_id=training_job.id,
+                image_count=1,
                 image_info_list=[ImageInfo(s3_key=thumbnail_s3_key, generated_image_id=0)],
                 time_to_live_sec=time_to_live_sec,
                 is_user_hair_style=True,
                 user_hair_lora_model_s3_key=user_hair_lora.lora_s3_key,
                 hair_lora_model_name=user_hair_lora.lora_name,
-                prompt=prompt,
-                width=width,
-                height=height,
+                prompt=training_job.thumbnail_prompt,
+                width=training_job.thumbnail_width,
+                height=training_job.thumbnail_height,
                 distilled_cfg_scale=image_generation_settings.DISTILLED_CFG_SCALE,
                 is_user_reference_image=False,
             ).model_dump_json(),
@@ -216,21 +211,11 @@ from app.infrastructure.database.unit_of_work import get_unit_of_work
 from app.domain.generation.services.calculate_remaining_time import get_calculate_remaining_time_service
 from app.infrastructure.repositories.generation.generation import get_generation_job_repository
 from app.infrastructure.repositories.training.user_hair_style import get_user_hair_style_repository
-from app.infrastructure.repositories.generation.prompt import get_clothing_prompt_example_repository, get_pose_prompt_example_repository
-from app.domain.training.services.thumbnail_generation import get_thumbnail_prompt_service
-from app.infrastructure.repositories.generation.prompt import ClothingPromptExampleRepository, PosePromptExampleRepository
 
 async def handle_training_result(body: bytes) -> None:
     db = next(get_db())
     try:
         user_repository: UserRepository = get_user_repository(db)
-        clothing_prompt_example_repository: ClothingPromptExampleRepository = get_clothing_prompt_example_repository(db)
-        pose_prompt_example_repository: PosePromptExampleRepository = get_pose_prompt_example_repository(db)
-
-        thumbnail_prompt_service: ThumbnailPromptService = get_thumbnail_prompt_service(
-            clothing_prompt_example_repo=clothing_prompt_example_repository,
-            pose_prompt_example_repo=pose_prompt_example_repository,
-        )
 
         training_request_repository: TrainingRequestRepository = get_training_request_repository(db)
         training_job_repository: TrainingJobRepository = get_training_job_repository(db)
@@ -246,7 +231,6 @@ async def handle_training_result(body: bytes) -> None:
 
         message_handler = TrainingResultHandler(
             user_repo=user_repository,
-            thumbnail_prompt_service=thumbnail_prompt_service,
             training_request_repo=training_request_repository,
             training_job_repo=training_job_repository,
             user_hair_style_lora_repo=user_hair_style_lora_repository,

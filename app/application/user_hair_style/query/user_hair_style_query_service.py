@@ -23,7 +23,7 @@ class UserHairStyleQueryService:
         self.s3_client = s3_client
 
     def get_all_user_hair_style_infos(self, user_id: int) -> List[UserHairStyleInfo]:
-        user_hair_style_list: List[UserHairStyle] = self.user_hair_style_repo.get_all_by_user(user_id)
+        user_hair_style_list: List[UserHairStyle] = self.user_hair_style_repo.get_all_active_by_user(user_id)
         user_hair_style_list = sorted(user_hair_style_list, key=lambda x: x.order, reverse=True)
 
         user_hair_style_infos: List[UserHairStyleInfo] = []

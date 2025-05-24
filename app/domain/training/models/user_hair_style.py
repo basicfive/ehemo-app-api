@@ -35,3 +35,6 @@ class UserHairStyle(TimeStampModel):
 
     user_hair_style_lora_id = Column(Integer, ForeignKey("user_hair_style_lora.id"), nullable=True)
     user_hair_style_lora = relationship("UserHairStyleLora")
+
+    training_request_id = Column(Integer, ForeignKey("training_request.id"), nullable=False)
+    training_request = relationship("TrainingRequest")

@@ -14,6 +14,10 @@ class TrainingJobCreate(BaseModel):
     epoch: int
 
     requested_at: datetime
+    thumbnail_s3_key: str
+    thumbnail_width: int
+    thumbnail_height: int
+    thumbnail_prompt: str
 
 class TrainingJobUpdate(BaseModel):
     status: Optional[TrainingJobStatus] = None
@@ -36,6 +40,11 @@ class TrainingJobInDB(BaseModel):
 
     thumbnail_creation_failure_count: Optional[int] = None
     thumbnail_creation_expires_at: Optional[datetime] = None
+
+    thumbnail_s3_key: str
+    thumbnail_width: int
+    thumbnail_height: int
+    thumbnail_prompt: str
 
     class Config:
         from_attributes = True

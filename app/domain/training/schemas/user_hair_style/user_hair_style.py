@@ -11,6 +11,7 @@ class UserHairStyleCreate(BaseModel):
     title: str
     description: str
     order: int
+    training_request_id: int
 
 class UserHairStyleUpdate(BaseModel):
     status: Optional[UserHairStyleStatus] = None
@@ -29,6 +30,7 @@ class UserHairStyleInDB(BaseModel):
     user_hair_style_lora_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
+    training_request_id: int
 
     class Config:
         from_attributes = True

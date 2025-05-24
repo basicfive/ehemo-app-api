@@ -26,12 +26,12 @@ class ThumbnailPromptService:
         clothing_prompt_example = self.clothing_prompt_example_repo.get_random_by_gender(gender)
         pose_prompt_example = self.pose_prompt_example_repo.get_random()
 
-        gender_prompt = "man" if gender == Gender.MALE else "woman"
+        gender_prompt = "남성" if gender == Gender.MALE else "여성"
 
         return (
-            f"A photo of 25 years old {gender_prompt} Korean {gender_prompt}, "
-            f"(ohwx hair:1.4), wearing {clothing_prompt_example.prompt}, {pose_prompt_example.prompt}, "
-            f"against a white wall"
+            f"25세 한국인 {gender_prompt}의 사진, "
+            f"(ohwx hair:1.4), {clothing_prompt_example.prompt}, {pose_prompt_example.prompt}, "
+            f"흰색 벽 앞에 서 있음"
         )
 
 from fastapi import Depends

@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import Depends
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.orm import joinedload
 
 from app.infrastructure.repositories.crud_repository import CRUDRepository
@@ -9,6 +9,7 @@ from app.core.db.base import get_db
 from app.domain.training.models.user_hair_style import UserHairStyle, UserHairStyleLora
 from app.domain.training.schemas.user_hair_style.user_hair_style import UserHairStyleCreate, UserHairStyleUpdate
 from app.domain.training.schemas.user_hair_style.user_hair_style_lora import UserHairStyleLoraCreate, UserHairStyleLoraUpdate
+from app.domain.training.enums.user_hair_style_status import UserHairStyleStatus
 
 class UserHairStyleLoraRepository(CRUDRepository[UserHairStyleLora, UserHairStyleLoraCreate, UserHairStyleLoraUpdate]):
     def __init__(self, db: Session):
@@ -43,10 +44,16 @@ class UserHairStyleRepository(CRUDRepository[UserHairStyle, UserHairStyleCreate,
         stmt = select(UserHairStyle).options(joinedload(UserHairStyle.user_hair_style_lora)).filter(UserHairStyle.id == id)
         return self.db.execute(stmt).scalars().one()
     
-    def get_all_by_user(self, user_id: int) -> List[UserHairStyle]:
+    def get_all_active_by_user(self, user_id: int) -> List[UserHairStyle]:
         stmt = (
             select(UserHairStyle)
             .where(UserHairStyle.user_id == user_id)
+            .where(
+                or_(
+                    UserHairStyle.status == UserHairStyleStatus.PENDING, 
+                    UserHairStyle.status == UserHairStyleStatus.REGISTERED,
+                )
+            )
         )
         result = self.db.execute(stmt)
         return list(result.scalars().all())

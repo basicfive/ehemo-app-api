@@ -40,3 +40,8 @@ class TrainingJob(TimeStampModel):
 
     thumbnail_creation_failure_count = Column(Integer, default=0, nullable=False)
     thumbnail_creation_expires_at = Column(DateTime(timezone=True), nullable=True)
+
+    thumbnail_s3_key = Column(String, nullable=True)
+    thumbnail_width = Column(Integer, nullable=True)
+    thumbnail_height = Column(Integer, nullable=True)
+    thumbnail_prompt = Column(String, nullable=True)

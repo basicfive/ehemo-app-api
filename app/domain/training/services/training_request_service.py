@@ -17,6 +17,7 @@ from app.domain.training.services.thumbnail_generation import create_user_hair_s
 from app.infrastructure.repositories.training.user_hair_style import UserHairStyleRepository
 from app.infrastructure.repositories.training.training import TrainingRequestRepository, TrainingJobRepository
 from app.infrastructure.repositories.training.image import UploadedImageForTrainingRepository
+from app.domain.training.services.thumbnail_generation import get_thumbnail_image_size
 
 
 def is_register_concluded(status: TrainingRequestStatus) -> bool:
@@ -59,6 +60,7 @@ class TrainingRequestService:
             title: str,
             description: str,
             uploaded_images_s3_keys: List[str],
+            thumbnail_prompt: str,
         ) -> Tuple[TrainingRequest, List[UploadedImageForTraining], TrainingJob, UserHairStyle]:
 
         # 1. 학습 요청 생성
@@ -88,6 +90,8 @@ class TrainingRequestService:
         epoch: int = calculate_training_epoch(image_count)
         total_steps: int = epoch * image_count
 
+        thumbnail_width, thumbnail_height = get_thumbnail_image_size()
+
         # 3. 학습 작업 생성
         training_job: TrainingJob = self.training_job_repo.create_with_flush(
             obj_in=TrainingJobCreate(
@@ -98,10 +102,14 @@ class TrainingRequestService:
                 total_steps=total_steps,
                 image_count=image_count,
                 epoch=epoch,
+                thumbnail_s3_key=create_user_hair_style_thumbnail_s3_key(),
+                thumbnail_prompt=thumbnail_prompt,
+                thumbnail_width=thumbnail_width,
+                thumbnail_height=thumbnail_height,
             )
         )
 
-        user_hair_styles: List[UserHairStyle] = self.user_hair_style_repo.get_all_by_user(user_id=user.id)
+        user_hair_styles: List[UserHairStyle] = self.user_hair_style_repo.get_all_active_by_user(user_id=user.id)
         user_hair_style_order: int = len(user_hair_styles) + 1
 
         # 4. 헤어스타일 생성
@@ -113,6 +121,7 @@ class TrainingRequestService:
                 title=title,
                 description=description,
                 order=user_hair_style_order,
+                training_request_id=training_request.id,
             )
     )
 
