@@ -6,6 +6,7 @@ from app.domain.training.enums.training_status import TrainingJobStatus
 from app.domain.common.enums.gender import Gender
 
 class TrainingJobCreate(BaseModel):
+    expires_at: datetime
     gender: Gender
     training_request_id: int
     status: TrainingJobStatus
@@ -20,6 +21,7 @@ class TrainingJobCreate(BaseModel):
     thumbnail_prompt: str
 
 class TrainingJobUpdate(BaseModel):
+    expires_at: Optional[datetime] = None
     status: Optional[TrainingJobStatus] = None
     actual_training_time_sec: Optional[int] = None
     response_at: Optional[datetime] = None
@@ -28,6 +30,7 @@ class TrainingJobUpdate(BaseModel):
 
 class TrainingJobInDB(BaseModel):
     id: int
+    expires_at: datetime = None
     training_request_id: int
     gender: Gender
     status: TrainingJobStatus

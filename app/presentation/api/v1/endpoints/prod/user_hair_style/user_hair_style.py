@@ -9,6 +9,7 @@ from app.application.user_hair_style.training.naming_suggestion_service import N
 from app.application.user_hair_style.training.dto.suggestion import NamingSuggestions
 from app.application.user_hair_style.query.dto.query import UserHairStyleInfo, UserHairStyleDetail
 from app.application.generation.request.dto.request import ImageUploadUrlDto
+from app.application.user_hair_style.query.dto.status import RegisterStatus
 
 router = APIRouter()
 
@@ -57,3 +58,18 @@ def get_user_hair_style_detail(
     service: UserHairStyleQueryService = Depends(get_user_hair_style_query_service)
 ) -> UserHairStyleDetail:
     return service.get_user_hair_style_detail(user_hair_style_id)
+
+@router.get("/pending")
+def get_pending_user_hair_styles(
+    user_id: int = Depends(validate_user_token),
+    service: UserHairStyleQueryService = Depends(get_user_hair_style_query_service)
+) -> List[RegisterStatus]:
+    return service.get_pending_user_hair_styles()
+
+@router.get("/{user_hair_style_id}/status")
+def get_user_hair_style_status(
+    user_hair_style_id: int,
+    user_id: int = Depends(validate_user_token),
+    service: UserHairStyleQueryService = Depends(get_user_hair_style_query_service)
+) -> RegisterStatus:
+    return service.get_user_hair_style_status(user_hair_style_id, user_id)

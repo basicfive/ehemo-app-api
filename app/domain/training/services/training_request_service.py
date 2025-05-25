@@ -3,8 +3,8 @@ from typing import List, Tuple, Optional
 from app.domain.training.services.training_steps_calculator import calculate_training_epoch
 from app.domain.common.enums.gender import Gender
 from app.domain.user.models.user import User
-from datetime import datetime
-from app.core.config import training_settings
+from datetime import datetime, UTC, timedelta
+from app.core.config import training_settings, image_generation_settings
 from app.domain.training.models.training import TrainingRequest, TrainingJob
 from app.domain.training.schemas.training.training_request import TrainingRequestCreate
 from app.domain.training.schemas.training.training_job import TrainingJobCreate
@@ -43,15 +43,26 @@ class TrainingRequestService:
             return True
         return False
     
-    def calculate_training_request_eta_sec(self) -> int:
-        # 현재 학습 중인 모델의 진행 상황을 고려하지 않고(아예 새로 시작해야한다고 가정) 예상 시간을 계산함.
+    def _calculate_pending_training_jobs_total_steps(self) -> int:
         pending_training_jobs: List[TrainingJob] = self.training_job_repo.get_pending_training_jobs()
 
         total_steps: int = 0
         for training_job in pending_training_jobs:
             total_steps += training_job.total_steps
 
-        return int(total_steps * training_settings.TIME_PER_STEP_ON_A100_SEC)
+        return int(total_steps)
+    
+    def calculate_training_request_eta_sec(self, current_job_total_steps: int) -> int:
+        """
+        현재 학습 중인 모델의 진행 상황을 고려하지 않고(아예 새로 시작해야한다고 가정) 예상 시간을 계산함.
+        예상 시간 = ((현재 학습 중인 모델의 총 스텝 * 평균 스텝당 소요 시간) + 썸네일 생성 시간 + 업스케일 시간) * 여유 버퍼 (1.1)
+        """
+        pending_total_steps: int = self._calculate_pending_training_jobs_total_steps()
+        return (
+            int((pending_total_steps + current_job_total_steps) * training_settings.TIME_PER_STEP_ON_A100_SEC)
+            + image_generation_settings.SINGLE_INFERENCE_SEC_EST
+            + image_generation_settings.SINGLE_INFERENCE_UPSCALE_SEC_EST
+        ) * training_settings.TRAINING_JOB_EXPIRE_TIME_MULTIPLIER
 
     def create_training_request_and_job(
             self,
@@ -89,16 +100,18 @@ class TrainingRequestService:
         image_count: int = len(uploaded_images_s3_keys)
         epoch: int = calculate_training_epoch(image_count)
         total_steps: int = epoch * image_count
+        estimated_time_sec: int = self.calculate_training_request_eta_sec(current_job_total_steps=total_steps)
 
         thumbnail_width, thumbnail_height = get_thumbnail_image_size()
 
         # 3. 학습 작업 생성
         training_job: TrainingJob = self.training_job_repo.create_with_flush(
             obj_in=TrainingJobCreate(
+                expires_at=datetime.now(UTC) + timedelta(seconds=estimated_time_sec),
                 training_request_id=training_request.id,
                 gender=gender,
                 status=TrainingJobStatus.PENDING,
-                requested_at=datetime.now(),
+                requested_at=datetime.now(UTC),
                 total_steps=total_steps,
                 image_count=image_count,
                 epoch=epoch,

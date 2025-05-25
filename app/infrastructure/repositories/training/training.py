@@ -45,6 +45,21 @@ def get_training_request_repository(db: Session = Depends(get_db)) -> TrainingRe
 class TrainingJobRepository(CRUDRepository[TrainingJob, TrainingJobCreate, TrainingJobUpdate]):
     def __init__(self, db: Session):
         super().__init__(model=TrainingJob, db=db)
+    
+    def get_by_training_request(self, training_request_id: int) -> TrainingJob:
+        stmt = (
+            select(TrainingJob)
+            .where(TrainingJob.training_request_id == training_request_id)
+        )
+        return self.db.execute(stmt).scalars().one()
+
+    def get_all_by_training_requests(self, training_request_ids: List[int]) -> List[TrainingJob]:
+        stmt = (
+            select(TrainingJob)
+            .where(TrainingJob.training_request_id.in_(training_request_ids))
+        )
+        result = self.db.execute(stmt)
+        return list(result.scalars().all())
 
     def get_pending_training_jobs(self) -> List[TrainingJob]:
         stmt = (

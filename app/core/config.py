@@ -114,6 +114,8 @@ class TrainingSetting(BaseModel):
     MINIMUM_EPOCH: int = 200
     MINIMUM_ESTIAMATE_TRAINING_TIME_SEC: int = 46800  # 13 hours
 
+    TRAINING_JOB_EXPIRE_TIME_MULTIPLIER: float = 1.1
+
 
 base_settings = BaseSetting()
 rabbit_mq_settings = RabbitMQSetting()

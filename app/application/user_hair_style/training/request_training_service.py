@@ -1,4 +1,5 @@
 from typing import List, Tuple
+from datetime import datetime, UTC
 
 from app.application.user_hair_style.training.dto.training_mq import TrainingPublishMessage
 from app.core.config import training_settings, rabbit_mq_settings
@@ -98,7 +99,6 @@ class RequestTrainingService(TransactionalService):
         user_hair_lora_name: str = create_user_hair_lora_name()
         user_hair_lora_s3_key: str = create_user_hair_lora_s3_key(user_hair_lora_name)
 
-        # 테스트 용도로 로깅 출력만 함.
         training_message = TrainingPublishMessage(
             gender=training_job.gender,
             training_job_id=training_job.id,
@@ -108,7 +108,8 @@ class RequestTrainingService(TransactionalService):
             total_steps=training_job.total_steps,
             epoch=training_job.epoch,
         )
-        estimated_time_sec: int = self.training_request_service.calculate_training_request_eta_sec()
+
+        estimated_time_sec: int = int((training_job.expires_at - datetime.now(UTC)).total_seconds())
         response = UserHairStyleRegisterResponse(
             estimated_time_sec=estimated_time_sec,
         )

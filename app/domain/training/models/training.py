@@ -25,6 +25,8 @@ class TrainingJob(TimeStampModel):
     training_request_id = Column(Integer, ForeignKey("training_request.id"), index=True)
     training_request = relationship("TrainingRequest")
 
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+
     gender = Column(Enum(Gender), nullable=False)
 
     total_steps = Column(Integer, nullable=False)

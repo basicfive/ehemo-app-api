@@ -40,6 +40,16 @@ class UserHairStyleRepository(CRUDRepository[UserHairStyle, UserHairStyleCreate,
         result = self.db.execute(stmt)
         return result.scalars().one()
     
+    def get_all_pending_by_user_with_training_request(self, user_id: int) -> List[UserHairStyle]:
+        stmt = (
+            select(UserHairStyle)
+            .where(UserHairStyle.user_id == user_id)
+            .where(UserHairStyle.status == UserHairStyleStatus.PENDING)
+            .options(joinedload(UserHairStyle.training_request))
+        )
+        result = self.db.execute(stmt)
+        return list(result.scalars().all())
+    
     def get_with_lora(self, id: int) -> UserHairStyle:
         stmt = select(UserHairStyle).options(joinedload(UserHairStyle.user_hair_style_lora)).filter(UserHairStyle.id == id)
         return self.db.execute(stmt).scalars().one()
