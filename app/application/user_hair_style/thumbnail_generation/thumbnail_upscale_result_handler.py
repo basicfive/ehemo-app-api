@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Tuple
 
 from app.application.user_hair_style.thumbnail_generation.dto.thumbnail_mq import ThumbnailUpscaleConsumeMessage
@@ -22,6 +23,7 @@ from app.domain.training.enums.user_hair_style_status import UserHairStyleStatus
 from app.domain.user.models.user import User
 from app.core.constants import FCMConstants
 from app.infrastructure.repositories.user.user import UserRepository
+from app.core.utils import convert_image_to_webp_from_url
 
 class ThumbnailUpscaleResultHandler(TransactionalService):
     def __init__(
@@ -42,6 +44,24 @@ class ThumbnailUpscaleResultHandler(TransactionalService):
         self.fcm_service = fcm_service
         self.s3_client = s3_client
 
+    def _convert_thumbnail_to_webp(self, s3_key: str) -> None:
+        # S3에서 이미지 다운로드를 위한 presigned URL 생성
+        download_url = self.s3_client.create_get_presigned_url(s3_key)
+        if not download_url:
+            raise Exception(f"Failed to create presigned URL for downloading: {s3_key}")
+        
+        # 유틸리티 함수를 사용하여 WebP로 변환
+        webp_bytes = convert_image_to_webp_from_url(download_url, quality=90)
+        
+        # 동일한 S3 키에 WebP 이미지 업로드
+        upload_success = self.s3_client.upload_to_s3(
+            key=s3_key,
+            image_data=webp_bytes,
+            image_format='WEBP'
+        )
+        
+        if not upload_success:
+            raise Exception(f"Failed to upload WebP thumbnail: {s3_key}")
 
     @transactional
     def mark_after_upscale_failure(self, training_job_id: int) -> TrainingJob:
@@ -77,13 +97,15 @@ class ThumbnailUpscaleResultHandler(TransactionalService):
                 status=UserHairStyleStatus.REGISTERED,
             )
         )
-
         return training_job, training_request, user_hair_style
 
-    
     def _handle_success_and_notify_fcm(self, message: ThumbnailUpscaleConsumeMessage) -> None:
         # transaction
         training_job, training_request, user_hair_style = self.mark_after_upscale_success(message.training_job_id)
+
+        # 썸네일 이미지를 WebP로 변환하여 재업로드
+        if training_job.thumbnail_s3_key:
+            self._convert_thumbnail_to_webp(training_job.thumbnail_s3_key)
 
         user: User = self.user_repo.get(training_request.user_id)
        

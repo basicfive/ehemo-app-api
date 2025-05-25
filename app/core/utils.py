@@ -164,3 +164,47 @@ def extract_valid_uuid(id_array: list[str]) -> str:
             continue
 
     raise ValueError("No valid UUID found in array")
+
+
+def convert_image_to_webp_from_url(image_url: str, quality: int = 85) -> bytes:
+    """
+    이미지 URL에서 이미지를 다운로드하여 WebP 형식으로 변환합니다.
+    
+    Args:
+        image_url (str): 이미지 다운로드 URL (presigned URL 등)
+        quality (int): WebP 압축 품질 (1-100, 기본값 85)
+        
+    Returns:
+        bytes: WebP 형식으로 변환된 이미지 바이트 데이터
+        
+    Raises:
+        Exception: 이미지 다운로드 또는 변환 실패 시
+    """
+    try:
+        # 이미지 다운로드
+        response = requests.get(image_url)
+        response.raise_for_status()
+        image_bytes = response.content
+        
+        # PIL Image로 변환
+        img = Image.open(BytesIO(image_bytes))
+        
+        # RGBA 모드인 경우 RGB로 변환 (WebP는 투명도를 지원하지만 호환성을 위해)
+        if img.mode == 'RGBA':
+            # 흰색 배경으로 합성
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[-1])  # 알파 채널을 마스크로 사용
+            img = background
+        elif img.mode != 'RGB':
+            img = img.convert('RGB')
+        
+        # WebP 형식으로 변환
+        webp_buffer = BytesIO()
+        img.save(webp_buffer, format='WEBP', quality=quality, optimize=True)
+        webp_bytes = webp_buffer.getvalue()
+        
+        return webp_bytes
+        
+    except Exception as e:
+        logging.error(f"Error during WebP conversion from URL {image_url}: {str(e)}")
+        raise
