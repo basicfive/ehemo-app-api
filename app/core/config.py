@@ -91,10 +91,10 @@ class ImageGenerationSetting(BaseModel):
     IMAGE_GENERATION_JOB_EXPIRE_TIME_MULTIPLIER: float = 1.2
 
 class TokenSetting(BaseModel):
-    MONTHLY_REFILLED_TOKEN: int = 15
-    FREE_TRIAL_TOKEN: int = 1
+    MONTHLY_REFILLED_TOKEN: int = 1500
+    FREE_TRIAL_TOKEN: int = 100
 
-    TOKENS_PER_GENERATION: int = 1
+    BASE_TOKENS_PER_GENERATION: int = 100
 
 class RevenueCatSetting(BaseModel):
     AUTHORIZATION_HEADER_UUID: str = os.getenv("REVENUECAT_UUID")
