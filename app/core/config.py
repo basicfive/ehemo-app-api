@@ -116,6 +116,9 @@ class TrainingSetting(BaseModel):
 
     TRAINING_JOB_EXPIRE_TIME_MULTIPLIER: float = 1.1
 
+class VersioningSetting(BaseModel):
+    APP_VERSION_IOS_STORE_URL: str = os.getenv("APP_VERSION_IOS_STORE_URL")
+    APP_VERSION_ANDROID_STORE_URL: str = os.getenv("APP_VERSION_ANDROID_STORE_URL")
 
 base_settings = BaseSetting()
 rabbit_mq_settings = RabbitMQSetting()
@@ -128,3 +131,4 @@ token_settings = TokenSetting()
 revenuecat_settings = RevenueCatSetting()
 timezone_settings = TimezoneSetting()
 training_settings = TrainingSetting()
+versioning_settings = VersioningSetting()

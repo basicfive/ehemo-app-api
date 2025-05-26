@@ -13,8 +13,29 @@ class AppVersionRepository(CRUDRepository[AppVersion, AppVersionCreate, AppVersi
     def __init__(self, db: Session):
         super().__init__(db=db, model=AppVersion)
 
-    def get_by_platform(self, platform: PlatformEnum):
-        stmt = select(AppVersion).where(AppVersion.platform == platform)
+
+    def get_version_by_platform_and_version_number(self, platform: PlatformEnum, version: str):
+        stmt = (
+            select(AppVersion)
+            .where(AppVersion.platform == platform)
+            .where(AppVersion.version == version)
+        )
+        return self.db.execute(stmt).scalar_one()
+    
+    def get_latest_by_platform(self, platform: PlatformEnum):
+        stmt = (
+            select(AppVersion)
+            .where(AppVersion.platform == platform)
+            .where(AppVersion.is_latest_version == True)
+        )
+        return self.db.execute(stmt).scalar_one()
+
+    def get_minimum_by_platform(self, platform: PlatformEnum):
+        stmt = (
+            select(AppVersion)
+            .where(AppVersion.platform == platform)
+            .where(AppVersion.is_minimum_version == True)
+        )
         return self.db.execute(stmt).scalar_one()
 
 def get_app_version_repository(db: Session = Depends(get_db)):
