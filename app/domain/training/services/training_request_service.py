@@ -130,7 +130,7 @@ class TrainingRequestService:
             obj_in=UserHairStyleCreate(
                 user_id=user.id,
                 gender=gender,
-                thumbnail_s3_key=create_user_hair_style_thumbnail_s3_key(),
+                thumbnail_s3_key=training_job.thumbnail_s3_key,
                 title=title,
                 description=description,
                 order=user_hair_style_order,

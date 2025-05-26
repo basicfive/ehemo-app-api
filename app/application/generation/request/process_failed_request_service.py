@@ -11,7 +11,7 @@ from app.domain.token.models.token import TokenWallet
 from app.domain.token.enums.token import TokenSourceType
 from app.domain.generation.schemas.generation.generation_request import GenerationRequestUpdate
 from app.domain.generation.schemas.generation.generation_job import GenerationJobUpdate
-from app import FCMConstants, token_settings
+from app.core.constants import FCMConstants, GenerationMessageData
 from app.domain.generation.models.generation import GenerationRequest
 from app.infrastructure.repositories.generation.generation import GenerationRequestRepository
 from app.infrastructure.repositories.user.user import UserRepository
@@ -57,9 +57,11 @@ class ProcessFailedRequestService(TransactionalService):
         try:
             self.fcm_service.send_to_token(
                 token=fcm_token,
-                title=FCMConstants.FAILURE_TITLE,
-                body=FCMConstants.FAILURE_BODY,
-                data={"generation_request_id": str(expired_job.generation_request_id)},
+                title=FCMConstants.GENERATION_FAILURE_TITLE,
+                body=FCMConstants.GENERATION_FAILURE_BODY,
+                data=GenerationMessageData(
+                    generation_request_id=expired_job.generation_request_id,
+                ).model_dump_str(),
             )
         except Exception as e:
             logger.error(

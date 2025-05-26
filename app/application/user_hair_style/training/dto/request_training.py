@@ -7,6 +7,7 @@ class UserHairStyleRegisterRequest(BaseModel):
     title: str
     description: str
     uploaded_image_s3_keys: List[str]
+    length_prompt: str
 
 class UserHairStyleRegisterResponse(BaseModel):
     estimated_time_sec: int

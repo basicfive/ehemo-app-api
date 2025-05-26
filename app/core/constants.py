@@ -1,16 +1,41 @@
+from enum import Enum
+from pydantic import BaseModel
+
+class FCMMessageType(Enum):
+    GENERATION = "GENERATION"
+    TRAINING = "TRAINING"
+
+class GenerationMessageData(BaseModel):
+    type: FCMMessageType = FCMMessageType.GENERATION
+    generation_request_id: int
+    
+    def model_dump_str(self) -> dict[str, str]:
+        """FCM data 필드를 위해 모든 값을 문자열로 변환"""
+        data = self.model_dump(mode='json')
+        return {key: str(value) for key, value in data.items()}
+
+class TrainingMessageData(BaseModel):
+    type: FCMMessageType = FCMMessageType.TRAINING
+    user_hair_style_id: int
+    
+    def model_dump_str(self) -> dict[str, str]:
+        """FCM data 필드를 위해 모든 값을 문자열로 변환"""
+        data = self.model_dump(mode='json')
+        return {key: str(value) for key, value in data.items()}
+
 class FCMConstants:
-    CATEGORY: str = "GENERATION_RESULT"
-    IDENTIFIER_PREFIX: str = "request_"
-
-    SUCCESS_TITLE: str = "요청하신 이미지가 제작되었어요"
-    SUCCESS_BODY: str = "제작된 이미지를 확인해보세요"
-
-    FAILURE_TITLE: str = "모델 이미지 제작 중에 문제가 생겼어요"
-    FAILURE_BODY: str = "토큰은 반환되었으니, 잠시 후에 다시 시도해주세요"
-
+    # token
     TOKEN_REFILL_TITLE: str = "이번 달 토큰이 충전되었어요"
     TOKEN_REFILL_BODY: str = "새로운 헤어모델 이미지를 제작해보세요"
 
+    # generation
+    GENERATION_SUCCESS_TITLE: str = "요청하신 이미지가 제작되었어요"
+    GENERATION_SUCCESS_BODY: str = "제작된 이미지를 확인해보세요"
+
+    GENERATION_FAILURE_TITLE: str = "모델 이미지 제작 중에 문제가 생겼어요"
+    GENERATION_FAILURE_BODY: str = "토큰은 반환되었으니, 잠시 후에 다시 시도해주세요"
+
+    # training
     USER_HAIRSTYLE_REGISTER_COMPLETED_TITLE: str = "새로운 헤어스타일 등록이 완료되었어요"
     USER_HAIRSTYLE_REGISTER_COMPLETED_BODY: str = "등록된 스타일로 헤어모델 이미지를 제작해보세요"
 

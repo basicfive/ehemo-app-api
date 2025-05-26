@@ -10,7 +10,7 @@ from app.application.user_hair_style.thumbnail_generation.dto.thumbnail_mq impor
 from app.domain.training.models.training import TrainingRequest
 from app.core.config import rabbit_mq_settings
 from app.infrastructure.alert.discord_webhook import send_error_notification
-from app.core.constants import FCMConstants
+from app.core.constants import FCMConstants, TrainingMessageData
 from app.domain.training.schemas.training.training_job import TrainingJobUpdate
 from app.domain.user.models.user import User
 from app.domain.training.models.training import TrainingJob
@@ -149,7 +149,7 @@ class TrainingResultHandler(TransactionalService):
         # transaction
         training_job, user_hair_lora, user_hair_style = await self._handle_success(message)
 
-        thumbnail_s3_key: str = user_hair_style.thumbnail_s3_key
+        thumbnail_s3_key: str = training_job.thumbnail_s3_key
 
         time_to_live_sec: int = int((training_job.thumbnail_creation_expires_at - datetime.now(UTC)).total_seconds())
 
@@ -186,6 +186,9 @@ class TrainingResultHandler(TransactionalService):
             token=user.fcm_token,
             title=FCMConstants.USER_HAIRSTYLE_TRAINING_FAILURE_TITLE,
             body=FCMConstants.USER_HAIRSTYLE_TRAINING_FAILURE_BODY,
+            data=TrainingMessageData(
+                user_hair_style_id=user_hair_style.id,
+            ).model_dump_str(),
         )
 
     async def handle_training_result(self, body: bytes):

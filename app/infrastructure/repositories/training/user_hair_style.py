@@ -54,6 +54,15 @@ class UserHairStyleRepository(CRUDRepository[UserHairStyle, UserHairStyleCreate,
         stmt = select(UserHairStyle).options(joinedload(UserHairStyle.user_hair_style_lora)).filter(UserHairStyle.id == id)
         return self.db.execute(stmt).scalars().one()
     
+    def get_all_registered_by_user(self, user_id: int) -> List[UserHairStyle]:
+        stmt = (
+            select(UserHairStyle)
+            .where(UserHairStyle.user_id == user_id)
+            .where(UserHairStyle.status == UserHairStyleStatus.REGISTERED)
+        )
+        result = self.db.execute(stmt)
+        return list(result.scalars().all())
+    
     def get_all_active_by_user(self, user_id: int) -> List[UserHairStyle]:
         stmt = (
             select(UserHairStyle)

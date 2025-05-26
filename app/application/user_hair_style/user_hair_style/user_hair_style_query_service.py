@@ -4,13 +4,12 @@ from app.infrastructure.s3.s3_client import S3Client
 from app.infrastructure.repositories.training.user_hair_style import UserHairStyleRepository
 from app.domain.training.models.user_hair_style import UserHairStyle
 from app.domain.training.schemas.user_hair_style.user_hair_style import UserHairStyleInDB
-from app.application.user_hair_style.query.dto.query import UserHairStyleInfo
-from app.domain.training.models.user_hair_style import UserHairStyleLora
-from app.application.user_hair_style.query.dto.query import UserHairStyleDetail
+from app.application.user_hair_style.user_hair_style.dto.query import UserHairStyleInfo
+from app.application.user_hair_style.user_hair_style.dto.query import UserHairStyleDetail
 from app.infrastructure.repositories.training.image import UploadedImageForTrainingRepository
 from app.domain.training.models.image import UploadedImageForTraining
-from app.application.user_hair_style.query.dto.query import UploadedImageData
-from app.application.user_hair_style.query.dto.status import RegisterStatus
+from app.application.user_hair_style.user_hair_style.dto.query import UploadedImageData
+from app.application.user_hair_style.user_hair_style.dto.status import RegisterStatus
 from app.domain.training.models.training import TrainingJob
 from app.infrastructure.repositories.training.training import TrainingJobRepository
 from app.core.errors.http_exceptions import AccessUnauthorizedException

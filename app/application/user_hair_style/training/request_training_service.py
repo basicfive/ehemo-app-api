@@ -84,7 +84,7 @@ class RequestTrainingService(TransactionalService):
             raise ValueException("현재 등록 중인 헤어스타일이 있어요. 등록이 완료된 후 새로운 스타일을 등록해주세요")
 
         # 5. 썸네일 프롬프트 생성
-        korean_thumbnail_prompt: str = self.thumbnail_prompt_service.create_thumbnail_prompt(gender=request.gender)
+        korean_thumbnail_prompt: str = self.thumbnail_prompt_service.create_thumbnail_prompt(gender=request.gender, length_prompt=request.length_prompt)
         english_thumbnail_prompt: str = await async_gemini_translate_prompt(korean_thumbnail_prompt)
 
         training_request, images_for_training, training_job, user_hair_style = self.training_request_service.create_training_request_and_job(

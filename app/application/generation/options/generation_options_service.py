@@ -32,7 +32,7 @@ class GenerationOptionsService:
         hair_style: List[HairStyle] = self.hair_style_repo.get_all()
         hair_style = sorted(hair_style, key=lambda x: x.order, reverse=True)
 
-        user_hair_style: List[UserHairStyle] = self.user_hair_style_repo.get_all_active_by_user(user_id)
+        user_hair_style: List[UserHairStyle] = self.user_hair_style_repo.get_all_registered_by_user(user_id)
         user_hair_style = sorted(user_hair_style, key=lambda x: x.order, reverse=True)
 
         hair_style_options: List[HairStyleOption] = []

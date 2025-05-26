@@ -22,7 +22,7 @@ class ThumbnailPromptService:
         self.clothing_prompt_example_repo = clothing_prompt_example_repo
         self.pose_prompt_example_repo = pose_prompt_example_repo
 
-    def create_thumbnail_prompt(self, gender: Gender) -> str:
+    def create_thumbnail_prompt(self, gender: Gender, length_prompt: str) -> str:
         clothing_prompt_example = self.clothing_prompt_example_repo.get_random_by_gender(gender)
         pose_prompt_example = self.pose_prompt_example_repo.get_random()
 
@@ -30,7 +30,7 @@ class ThumbnailPromptService:
 
         return (
             f"25세 한국인 {gender_prompt}의 사진, "
-            f"(ohwx hair:1.4), {clothing_prompt_example.prompt}, {pose_prompt_example.prompt}, "
+            f"{length_prompt}, (ohwx hair:1.4), {clothing_prompt_example.prompt}, {pose_prompt_example.prompt}, "
             f"흰색 벽 앞에 서 있음"
         )
 

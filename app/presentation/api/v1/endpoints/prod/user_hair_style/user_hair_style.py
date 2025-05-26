@@ -1,15 +1,16 @@
 from fastapi import APIRouter, Depends
-from typing import List
+from typing import List, Optional
 
 from app.application.user_hair_style.training.dto.request_training import UserHairStyleRegisterRequest, UserHairStyleRegisterResponse
 from app.application.user_hair_style.training.request_training_service import RequestTrainingService, get_request_training_service
-from app.application.user_hair_style.query.user_hair_style_query_service import UserHairStyleQueryService, get_user_hair_style_query_service
+from app.application.user_hair_style.user_hair_style.user_hair_style_query_service import UserHairStyleQueryService, get_user_hair_style_query_service
 from app.application.user.auth import validate_user_token
 from app.application.user_hair_style.training.naming_suggestion_service import NamingSuggestionService, get_naming_suggestion_service
 from app.application.user_hair_style.training.dto.suggestion import NamingSuggestions
-from app.application.user_hair_style.query.dto.query import UserHairStyleInfo, UserHairStyleDetail
+from app.application.user_hair_style.user_hair_style.dto.query import UserHairStyleInfo, UserHairStyleDetail
 from app.application.generation.request.dto.request import ImageUploadUrlDto
-from app.application.user_hair_style.query.dto.status import RegisterStatus
+from app.application.user_hair_style.user_hair_style.dto.status import RegisterStatus
+from app.application.user_hair_style.user_hair_style.user_hair_style_update_service import UserHairStyleUpdateService, get_user_hair_style_update_service
 
 router = APIRouter()
 
@@ -64,7 +65,7 @@ def get_pending_user_hair_styles(
     user_id: int = Depends(validate_user_token),
     service: UserHairStyleQueryService = Depends(get_user_hair_style_query_service)
 ) -> List[RegisterStatus]:
-    return service.get_pending_user_hair_styles()
+    return service.get_pending_user_hair_styles(user_id)
 
 @router.get("/{user_hair_style_id}/status")
 def get_user_hair_style_status(
@@ -73,3 +74,21 @@ def get_user_hair_style_status(
     service: UserHairStyleQueryService = Depends(get_user_hair_style_query_service)
 ) -> RegisterStatus:
     return service.get_user_hair_style_status(user_hair_style_id, user_id)
+
+@router.post("/{user_hair_style_id}/delete")
+def soft_delete_user_hair_style(
+    user_hair_style_id: int,
+    user_id: int = Depends(validate_user_token),
+    service: UserHairStyleUpdateService = Depends(get_user_hair_style_update_service)
+) -> None:
+    service.soft_delete_user_hair_style(user_hair_style_id, user_id)
+
+@router.put("/{user_hair_style_id}/title-and-description")
+def update_user_hair_style_title_and_description(
+    user_hair_style_id: int,
+    title: Optional[str] = None,
+    description: Optional[str] = None,
+    user_id: int = Depends(validate_user_token),
+    service: UserHairStyleUpdateService = Depends(get_user_hair_style_update_service)
+) -> None:
+    service.update_user_hair_style_title_and_description(user_id, user_hair_style_id, title, description)

@@ -5,7 +5,7 @@ from app.domain.token.models.token import TokenWallet
 from app.domain.token.models.token import TokenSourceType
 from app.domain.user.models.user import User
 from app.infrastructure.repositories.user.user import UserRepository
-from app.core.constants import FCMConstants
+from app.core.constants import FCMConstants, GenerationMessageData
 from app.infrastructure.fcm.fcm_service import FCMService
 from app.application.generation.request.dto.upscale_mq import NormalUpscaleConsumeMessage
 from app.domain.generation.models.generation import GenerationJob, GenerationRequest
@@ -71,16 +71,20 @@ class UpscaleResultHandler(TransactionalService):
         if is_success:
             self.fcm_service.send_to_token(
                 token=user.fcm_token,
-                title=FCMConstants.SUCCESS_TITLE,
-                body=FCMConstants.SUCCESS_BODY,
-                data={"generation_request_id": str(generation_request_id)},
+                title=FCMConstants.GENERATION_SUCCESS_TITLE,
+                body=FCMConstants.GENERATION_SUCCESS_BODY,
+                data=GenerationMessageData(
+                    generation_request_id=generation_request_id,
+                ).model_dump_str(),
             )
         else:
             self.fcm_service.send_to_token(
                 token=user.fcm_token,
-                title=FCMConstants.FAILURE_TITLE,
-                body=FCMConstants.FAILURE_BODY,
-                data={"generation_request_id": str(generation_request_id)},
+                title=FCMConstants.GENERATION_FAILURE_TITLE,
+                body=FCMConstants.GENERATION_FAILURE_BODY,
+                data=GenerationMessageData(
+                    generation_request_id=generation_request_id,
+                ).model_dump_str(),
             )
 
 

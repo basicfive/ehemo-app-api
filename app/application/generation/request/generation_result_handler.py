@@ -8,7 +8,7 @@ from app.application.generation.request.dto.upscale_mq import NormalUpscalePubli
 from app.domain.generation.models.generated_image import GeneratedImage
 from app.domain.generation.models.generation import GenerationJob, GenerationRequest
 from app.domain.user.models.user import User
-from app.core.constants import FCMConstants
+from app.core.constants import FCMConstants, GenerationMessageData
 from app.infrastructure.database.transaction import transactional
 from app.application.generation.request.dto.generation_mq import NormalGenerationConsumeMessage
 from app.domain.generation.services.generation_request_service import GenerationRequestService
@@ -115,9 +115,11 @@ class GenerationResultHandler(TransactionalService):
     ):
         self.fcm_service.send_to_token(
             token=user.fcm_token,
-            title=FCMConstants.FAILURE_TITLE,
-            body=FCMConstants.FAILURE_BODY,
-            data={"generation_request_id": str(generation_request_id)},
+            title=FCMConstants.GENERATION_FAILURE_TITLE,
+            body=FCMConstants.GENERATION_FAILURE_BODY,
+            data=GenerationMessageData(
+                generation_request_id=generation_request_id,
+            ).model_dump_str(),
         )
 
     async def _resize_and_reupload_image(self, s3_key: str) -> None:

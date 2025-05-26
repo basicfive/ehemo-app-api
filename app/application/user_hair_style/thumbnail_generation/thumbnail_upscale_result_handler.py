@@ -21,7 +21,7 @@ from app.infrastructure.repositories.training.user_hair_style import UserHairSty
 from app.domain.training.schemas.user_hair_style.user_hair_style import UserHairStyleUpdate
 from app.domain.training.enums.user_hair_style_status import UserHairStyleStatus
 from app.domain.user.models.user import User
-from app.core.constants import FCMConstants
+from app.core.constants import FCMConstants, TrainingMessageData
 from app.infrastructure.repositories.user.user import UserRepository
 from app.core.utils import convert_image_to_webp_from_url
 
@@ -113,6 +113,9 @@ class ThumbnailUpscaleResultHandler(TransactionalService):
             token=user.fcm_token,
             title=FCMConstants.USER_HAIRSTYLE_REGISTER_COMPLETED_TITLE,
             body=FCMConstants.USER_HAIRSTYLE_REGISTER_COMPLETED_BODY,
+            data=TrainingMessageData(
+                user_hair_style_id=user_hair_style.id,
+            ).model_dump_str(),
         )
 
     def _handle_failure(self, message: ThumbnailUpscaleConsumeMessage) -> None:

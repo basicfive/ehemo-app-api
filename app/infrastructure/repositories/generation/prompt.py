@@ -12,10 +12,16 @@ from app.domain.generation.schemas.prompt.prompt_component_suggestion import Pro
 from app.domain.generation.schemas.prompt.length_prompt_enhancement import LengthPromptEnhancementCreate, LengthPromptEnhancementUpdate
 from app.domain.generation.schemas.prompt.clothing_prompt_example import ClothingPromptExampleCreate, ClothingPromptExampleUpdate
 from app.domain.generation.schemas.prompt.pose_prompt_example import PosePromptExampleCreate, PosePromptExampleUpdate
+from app.domain.generation.enums.prompt_component import PromptComponentType
 
 class PromptComponentQuestionRepository(CRUDRepository[PromptComponentQuestion, PromptComponentQuestionCreate, PromptComponentQuestionUpdate]):
     def __init__(self, db: Session):
         super().__init__(model=PromptComponentQuestion, db=db)
+    
+    def get_all_by_component_type(self, component_type: PromptComponentType) -> List[PromptComponentQuestion]:
+        stmt = select(PromptComponentQuestion).filter(PromptComponentQuestion.component_type == component_type)
+        result = self.db.execute(stmt)
+        return list(result.scalars().all())
     
     def get_by_ids(self, ids: List[int]) -> List[PromptComponentQuestion]:
         stmt = select(PromptComponentQuestion).filter(PromptComponentQuestion.id.in_(ids))
@@ -33,6 +39,11 @@ def get_prompt_component_question_repository(db: Session = Depends(get_db)) -> P
 class PromptComponentSuggestionRepository(CRUDRepository[PromptComponentSuggestion, PromptComponentSuggestionCreate, PromptComponentSuggestionUpdate]):
     def __init__(self, db: Session):
         super().__init__(model=PromptComponentSuggestion, db=db)
+    
+    def get_all_by_question_ids(self, question_ids: List[int]) -> List[PromptComponentSuggestion]:
+        stmt = select(PromptComponentSuggestion).where(PromptComponentSuggestion.question_id.in_(question_ids))
+        result = self.db.execute(stmt)
+        return list(result.scalars().all())
     
     def get_all_with_question(self) -> List[PromptComponentSuggestion]:
         stmt = select(PromptComponentSuggestion).options(joinedload(PromptComponentSuggestion.question))
