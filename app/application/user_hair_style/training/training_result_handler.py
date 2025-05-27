@@ -8,7 +8,7 @@ from app.core.config import image_generation_settings
 from app.domain.training.services.thumbnail_generation import get_thumbnail_image_size
 from app.application.user_hair_style.thumbnail_generation.dto.thumbnail_mq import ThumbnailGenerationPublishMessage
 from app.domain.training.models.training import TrainingRequest
-from app.core.config import rabbit_mq_settings
+from app.core.config import rabbit_mq_settings, base_settings
 from app.infrastructure.alert.discord_webhook import send_error_notification
 from app.core.constants import FCMConstants, TrainingMessageData
 from app.domain.training.schemas.training.training_job import TrainingJobUpdate
@@ -182,7 +182,10 @@ class TrainingResultHandler(TransactionalService):
         user: User = self.user_repo.get(training_request.user_id)
 
         # 스타일 등록 실패 디스코드(for 개발) 및 fcm 알림(for 유저) 전송
-        send_error_notification(f"스타일 학습 실패: {training_job.id}")
+        send_error_notification(
+            webhook_url=base_settings.ALERT_DISCORD_WEBHOOK,
+            error=Exception(f"스타일 학습 실패: {training_job.id}"),
+        )
 
         self.fcm_service.send_to_token(
             token=user.fcm_token,
