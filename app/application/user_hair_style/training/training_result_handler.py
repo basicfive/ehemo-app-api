@@ -129,14 +129,16 @@ class TrainingResultHandler(TransactionalService):
         )
 
         training_request: TrainingRequest = self.training_request_repo.update_with_flush(
-            obj_id=message.training_request_id,
+            obj_id=training_job.training_request_id,
             obj_in=TrainingRequestUpdate(
                 status=TrainingRequestStatus.FAILED,
             )
         )
 
+        user_hair_style: UserHairStyle = self.user_hair_style_repo.get_by_training_request(training_job.training_request_id)
+
         user_hair_style: UserHairStyle = self.user_hair_style_repo.update_with_flush(
-            obj_id=training_request.user_hair_style_id,
+            obj_id=user_hair_style.id,
             obj_in=UserHairStyleUpdate(
                 status=UserHairStyleStatus.FAILED,
             )
