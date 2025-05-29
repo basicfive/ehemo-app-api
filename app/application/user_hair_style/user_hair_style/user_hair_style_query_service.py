@@ -55,9 +55,9 @@ class UserHairStyleQueryService:
         )
 
     def get_user_hair_style_detail(self, user_hair_style_id: int) -> UserHairStyleDetail:
-        training_request_id: int = self.user_hair_style_repo.get_training_request_id(user_hair_style_id)
+        user_hair_style: UserHairStyle = self.user_hair_style_repo.get(user_hair_style_id)
         uploaded_images_for_training: List[UploadedImageForTraining] = (
-            self.uploaded_images_for_training_repo.get_all_by_training_request(training_request_id)
+            self.uploaded_images_for_training_repo.get_all_by_training_request(user_hair_style.training_request_id)
         )
 
         uploaded_image_data_list: List[UploadedImageData] = [
