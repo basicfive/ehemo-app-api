@@ -260,6 +260,7 @@ class GenerationRequestInfoService(TransactionalService):
             selected_hair_style_option=selected_hair_style_option,
             selected_prompt_component_answer=selected_prompt_component_answer,
             selected_image_ratio_option=selected_image_ratio_option,
+            is_high_resolution=image_resolution.is_high_resolution,
         )
 
 

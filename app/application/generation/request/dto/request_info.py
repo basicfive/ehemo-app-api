@@ -37,6 +37,7 @@ class GenerationRequestInfo(BaseModel):
     selected_hair_style_option: HairStyleOption
     selected_prompt_component_answer: List[PromptComponentAnswer]
     selected_image_ratio_option: ImageRatioOption
+    is_high_resolution: bool
 
     is_user_reference_image: bool
     user_reference_image_s3_key: Optional[str] = None
