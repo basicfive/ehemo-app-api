@@ -65,6 +65,8 @@ class GenerationOptionsService:
     def get_prompt_component_options(self) -> List[PromptComponentOption]:
         prompt_component_questions: List[PromptComponentQuestion] = self.prompt_component_question_repo.get_all_with_suggestions()
 
+        prompt_component_questions = sorted(prompt_component_questions, key=lambda x: x.order)
+
         prompt_component_options: List[PromptComponentOption] = []
         for question in prompt_component_questions:
             suggestions: List[PromptComponentSuggestion] = question.suggestions

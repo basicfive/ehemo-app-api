@@ -85,9 +85,11 @@ class RequestGenerationService(TransactionalService):
             raise NoInferenceConsumerException()
 
         # 업스케일 서버 연결 여부
-        _, upscale_consumer_count = await self.rabbit_mq_service.get_queue_info(rabbit_mq_settings.RABBITMQ_UPSCALE_PUBLISH)
-        if upscale_consumer_count < 1:
-            raise NoUpscaleConsumerException()
+        # _, upscale_consumer_count = await self.rabbit_mq_service.get_queue_info(rabbit_mq_settings.RABBITMQ_UPSCALE_PUBLISH)
+        # if upscale_consumer_count < 1:
+        #     raise NoUpscaleConsumerException()
+
+        upscale_consumer_count = 1
 
         # 유저 토큰 충분한지 계산
         user_with_wallet: User = self.user_repo.get_with_token_wallets(user_id)

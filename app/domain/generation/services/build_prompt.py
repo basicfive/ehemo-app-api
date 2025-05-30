@@ -58,7 +58,7 @@ class BuildPromptService:
                 korean_prompt = korean_prompt.replace(length_prompt_enhancement.keyword, length_prompt_enhancement.enhance_prompt)
                 break
 
-        return korean_prompt[:-2]
+        return korean_prompt
 
     def _sort_prompt_component_question_answer(
             self,
@@ -96,29 +96,41 @@ class BuildPromptService:
         korean_prompt = f"25세 한국 {gender_prompt} 의 사진, "
 
         for question_answer in prompt_question_answer_list_sorted:
+            if question_answer.answer_info.is_not_selected:
+                # 사용자가 선택하지 않은 경우 프롬프트에 추가하지 않음.
+                continue
+            
+            to_concat_prompt = question_answer.answer_info.answer
+
             if question_answer.answer_info.is_random:
                 # 사용자가 랜덤을 선택한 경우 example 중에서 랜덤 프롬프트를 가져온다.
                 if question_answer.question.component_type == PromptComponentType.CLOTHING:
                     # 의상 랜덤이라면
                     clothing_prompt_example = self.clothing_prompt_example_repo.get_random_by_gender(gender)
-                    korean_prompt += f"{clothing_prompt_example.prompt}, "
+                    to_concat_prompt = clothing_prompt_example.prompt
                 elif question_answer.question.component_type == PromptComponentType.POSE:
                     # 자세 랜덤이라면
                     pose_prompt_example = self.pose_prompt_example_repo.get_random()
-                    korean_prompt += f"{pose_prompt_example.prompt}, "
+                    to_concat_prompt = pose_prompt_example.prompt
                 else:
                     # 이외의 경우 랜덤 답변을 허용하지 않음.
                     raise ValueError(f"랜덤 답변을 허용하지 않는 질문입니다. 질문: {question_answer.question.question}")
-            elif question_answer.answer_info.is_not_selected:
-                # 사용자가 선택하지 않은 경우 프롬프트에 추가하지 않음.
-                continue
-            elif question_answer.question.component_type == PromptComponentType.HAIR_COLOR:
-                # 색상에는 머리색이라는 명시
-                korean_prompt += f"{question_answer.answer_info.answer} 머리색, "
-            else:
-                korean_prompt += f"{question_answer.answer_info.answer}, "
 
-        return korean_prompt[:-2]
+            if question_answer.question.component_type == PromptComponentType.HAIR_COLOR:
+                # 색상에는 머리색이라는 명시
+                to_concat_prompt += " 머리색"
+            elif question_answer.question.component_type == PromptComponentType.BACKGROUND:
+                to_concat_prompt += " 배경"
+            elif question_answer.question.component_type == PromptComponentType.CLOTHING:
+                to_concat_prompt += " 을 입고 있음"
+            
+            korean_prompt += f"{to_concat_prompt}, "
+
+        # 마지막에 있는 ", "만 제거
+        if korean_prompt.endswith(", "):
+            return korean_prompt[:-2]
+        else:
+            return korean_prompt
 
 
 from fastapi import Depends
