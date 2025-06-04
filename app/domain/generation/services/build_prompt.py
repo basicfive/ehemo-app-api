@@ -112,9 +112,12 @@ class BuildPromptService:
                     # 자세 랜덤이라면
                     pose_prompt_example = self.pose_prompt_example_repo.get_random()
                     to_concat_prompt = pose_prompt_example.prompt
-                else:
-                    # 이외의 경우 랜덤 답변을 허용하지 않음.
-                    raise ValueError(f"랜덤 답변을 허용하지 않는 질문입니다. 질문: {question_answer.question.question}")
+
+                # 이외의 경우 랜덤 답변을 허용하지 않음.
+                # raise ValueError(f"랜덤 답변을 허용하지 않는 질문입니다. 질문: {question_answer.question.question}")
+
+                # FIXED -> 에러를 굳이 발생시킬 필요가 없음. 
+                # (프론트에서 과거 요청 불러오기 해서 "랜덤" 파싱해서, 본래 is_random 값을 True 표시하지 않는 component type 도 True가 되기에 에러가 발생할 수 있음.
 
             if question_answer.question.component_type == PromptComponentType.HAIR_COLOR:
                 # 색상에는 머리색이라는 명시
