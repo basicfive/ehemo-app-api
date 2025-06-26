@@ -27,6 +27,7 @@ dependencies = [
     "python-multipart~=0.0.18",
     "pytz>=2025.2",
     "redis~=5.2.0",
+    "replicate>=1.0.7",
     "requests~=2.32.3",
     "sqlalchemy~=2.0.35",
     "starlette~=0.40.0",

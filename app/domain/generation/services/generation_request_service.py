@@ -178,21 +178,22 @@ class GenerationRequestService:
         # 생성 작업 생성
         is_user_hair_style = generation_request.is_user_hair_style
 
-        hair_lora_model_name = None
-        user_hair_lora_model_s3_key = None
-
         if is_user_hair_style:
             user_hair_style: UserHairStyle = self.user_hair_style_repository.get_with_lora(generation_request.user_hair_style_id)
             user_hair_lora_model: UserHairStyleLora = user_hair_style.user_hair_style_lora
-            hair_lora_model_name = user_hair_lora_model.lora_name
-            user_hair_lora_model_s3_key = user_hair_lora_model.lora_s3_key
+
+            lora_model_name = user_hair_lora_model.lora_name
+            lora_model_s3_key = user_hair_lora_model.lora_s3_key
         else:
             hair_style: HairStyle = self.hair_style_repository.get_with_lora(generation_request.hair_style_id)
             hair_lora_model: HairStyleLora = hair_style.hair_style_lora
-            hair_lora_model_name = hair_lora_model.lora_name
+
+            lora_model_name = hair_lora_model.lora_name
+            lora_model_s3_key = hair_lora_model.lora_s3_key
         
         width = image_resolution.width
         height = image_resolution.height
+
         denoise_strength = None
         if generation_request.user_reference_image_similarity:
             denoise_strength = generation_request.user_reference_image_similarity.float_value
@@ -206,8 +207,8 @@ class GenerationRequestService:
                 prompt=generation_request.final_generation_prompt,
 
                 is_user_hair_style=generation_request.is_user_hair_style,
-                user_hair_lora_model_s3_key=user_hair_lora_model_s3_key,
-                hair_lora_model_name=hair_lora_model_name,
+                lora_model_s3_key=lora_model_s3_key,
+                lora_model_name=lora_model_name,
 
                 distilled_cfg_scale=image_generation_settings.DISTILLED_CFG_SCALE,
                 width=width,

@@ -1,16 +1,12 @@
-from typing import List, Tuple
-import uuid
+from typing import Tuple
 
-from app.core.enums.inference_types import InferenceType
-from app.core.config import rabbit_mq_settings
 from app.infrastructure.s3.s3_client import S3Client
 from app.domain.generation.schemas.generation.generation_job import GenerationJobInDB
 from app.domain.generation.services.calculate_remaining_time import CalculateRemainingTimeService
-from app.core.errors.exceptions import NoInferenceConsumerException, NoUpscaleConsumerException
-from app.application.generation.request.dto.generation_mq import ImageInfo, NormalGenerationPublishMessage
+from app.application.generation.request.dto.generation_mq import ImageInfo, GenerationPublishMessage
 from app.domain.generation.dto.request_generation import RequestGenerationDto
 from app.domain.generation.services.build_prompt import replace_hair_with_ohwx_hair, BuildPromptService
-from app.infrastructure.google_genai.genai_api import async_gemini_translate_prompt
+from app.infrastructure.google_genai.genai_api import gemini_translate_prompt
 from app.domain.common.enums.gender import Gender
 from app.domain.generation.services.calculate_token import calculate_token_cost
 from app.core.errors.http_exceptions import UserHasNotEnoughTokenException
@@ -20,13 +16,14 @@ from app.domain.token.services.token_domain_sevice import TokenService
 from app.domain.user.models.user import User
 from app.infrastructure.database.transaction import transactional
 from app.infrastructure.database.unit_of_work import UnitOfWork
-from app.infrastructure.mq.rabbit_mq_service import RabbitMQService
 from app.infrastructure.repositories.user.user import UserRepository
 from app.application.transactional_service import TransactionalService
 from app.domain.generation.services.generation_request_service import GenerationRequestService
 from app.application.generation.request.dto.request import GenerationRequestRequest, GenerationRequestResponse
 from app.application.generation.request.dto.request import ImageUploadUrlDto
 from app.domain.generation.services.reference_image import create_reference_image_s3_key
+from app.infrastructure.replicate.replicate import replicate_predict
+from app.core.config import replicate_settings
 
 class RequestGenerationService(TransactionalService):
     def __init__(
@@ -36,7 +33,6 @@ class RequestGenerationService(TransactionalService):
             calculate_remaining_time_service: CalculateRemainingTimeService,
             generation_request_serivce: GenerationRequestService,
             build_prompt_service: BuildPromptService,
-            rabbit_mq_service: RabbitMQService,
             s3_client: S3Client,
             unit_of_work: UnitOfWork,
     ):
@@ -46,7 +42,6 @@ class RequestGenerationService(TransactionalService):
         self.calculate_remaining_time_service = calculate_remaining_time_service
         self.generation_request_serivce = generation_request_serivce
         self.build_prompt_service = build_prompt_service
-        self.rabbit_mq_service = rabbit_mq_service
         self.s3_client = s3_client
 
     def calculate_token_cost(self,
@@ -63,31 +58,12 @@ class RequestGenerationService(TransactionalService):
             s3_key=s3_key,
         )
 
-    async def request_generation(
+    @transactional
+    def request_generation(
             self,
             request: GenerationRequestRequest,
             user_id: int
     ) -> GenerationRequestResponse:
-        message, response = await self._request_generation(request, user_id)
-        await self._publish_message(message)
-        return response
-
-
-    @transactional
-    async def _request_generation(
-            self,
-            request: GenerationRequestRequest,
-            user_id: int
-    ) -> Tuple[NormalGenerationPublishMessage, GenerationRequestResponse]:
-        # 생성 서버 연결 여부
-        _, inference_consumer_count = await self.rabbit_mq_service.get_queue_info(rabbit_mq_settings.RABBITMQ_INFERENCE_PUBLISH)
-        if inference_consumer_count < 1:
-            raise NoInferenceConsumerException()
-
-        # 업스케일 서버 연결 여부
-        _, upscale_consumer_count = await self.rabbit_mq_service.get_queue_info(rabbit_mq_settings.RABBITMQ_UPSCALE_PUBLISH)
-        if upscale_consumer_count < 1:
-            raise NoUpscaleConsumerException()
 
         # 유저 토큰 충분한지 계산
         user_with_wallet: User = self.user_repo.get_with_token_wallets(user_id)
@@ -99,13 +75,11 @@ class RequestGenerationService(TransactionalService):
             raise UserHasNotEnoughTokenException()
 
         # 프롬프트 제작
-        english_prompt = await self._build_prompt(request)
+        english_prompt = self._build_prompt(request)
 
         # 예상 이미지 생성 만료 시간
         generation_job_expire_time = self.calculate_remaining_time_service.get_generation_job_expire_time(
             is_high_resolution=request.is_high_res,
-            generation_consumer_count=inference_consumer_count,
-            upscale_consumer_count=upscale_consumer_count,
         )
 
         # 생성 요청, 생성 작업, 생성 이미지 생성
@@ -124,9 +98,10 @@ class RequestGenerationService(TransactionalService):
             source_type=TokenSourceType.IMAGE_GENERATION,
         )
 
-        # 메시지 및 응답 생성
+        # 메시지 생성
         generation_job_indb = GenerationJobInDB.model_validate(generation_job)
-        message = NormalGenerationPublishMessage(
+        message = GenerationPublishMessage(
+            generation_job_id=generation_job.id,
             image_info_list=[
                 ImageInfo(
                     generated_image_id=generated_image.id,
@@ -136,17 +111,21 @@ class RequestGenerationService(TransactionalService):
             ],
             **generation_job_indb.model_dump(),
             time_to_live_sec=generation_job_expire_time,
-            generation_job_id=generation_job.id,
         )
-        
-        response = GenerationRequestResponse(
+        # 생성 요청 전송
+        replicate_predict(
+            replicate_model=replicate_settings.REPLICATE_GENERATION_MODEL,
+            message=message.model_dump_json(),
+            webhook_url=replicate_settings.REPLICATE_GENERATION_WEBHOOK_URL,
+        )
+
+        return GenerationRequestResponse(
             generation_request_id=generation_request.id,
             remaining_sec=generation_job_expire_time,
         )
-        return message, response
 
 
-    async def _build_prompt(
+    def _build_prompt(
             self,
             request: GenerationRequestRequest,
     ) -> str:
@@ -161,26 +140,14 @@ class RequestGenerationService(TransactionalService):
             prompt_component_answers=request.prompt_component_answers,
         )
         # 영어 번역
-        english_prompt = await async_gemini_translate_prompt(korean_prompt)
+        english_prompt = gemini_translate_prompt(korean_prompt)
 
         # 영어 프롬프트 조정
         return replace_hair_with_ohwx_hair(english_prompt)
 
 
-    async def _publish_message(
-            self,
-            message: NormalGenerationPublishMessage,
-    ):
-        await self.rabbit_mq_service.publish(
-            message=message.model_dump_json(),
-            queue_name=rabbit_mq_settings.RABBITMQ_INFERENCE_PUBLISH,
-            expiration_sec=message.time_to_live_sec,
-        )
-
-
 from fastapi import Depends
 from app.infrastructure.repositories.user.user import get_user_repository
-from app.infrastructure.mq.rabbit_mq_service import get_rabbit_mq_service
 from app.infrastructure.database.unit_of_work import get_unit_of_work
 from app.domain.token.services.token_domain_sevice import get_token_service
 from app.domain.generation.services.calculate_remaining_time import get_calculate_remaining_time_service
@@ -194,7 +161,6 @@ def get_request_generation_service(
         calculate_remaining_time_service: CalculateRemainingTimeService = Depends(get_calculate_remaining_time_service),
         generation_request_serivce: GenerationRequestService = Depends(get_generation_request_service),
         build_prompt_service: BuildPromptService = Depends(get_build_prompt_service),
-        rabbit_mq_service: RabbitMQService = Depends(get_rabbit_mq_service),
         s3_client: S3Client = Depends(get_s3_client),
         unit_of_work: UnitOfWork = Depends(get_unit_of_work),
 ) -> RequestGenerationService:
@@ -204,7 +170,6 @@ def get_request_generation_service(
         calculate_remaining_time_service=calculate_remaining_time_service,
         generation_request_serivce=generation_request_serivce,
         build_prompt_service=build_prompt_service,
-        rabbit_mq_service=rabbit_mq_service,
         s3_client=s3_client,
         unit_of_work=unit_of_work,
     )

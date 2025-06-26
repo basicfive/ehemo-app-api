@@ -27,12 +27,12 @@ def get_reference_image_upload_url(
     return service.get_reference_image_upload_url()
 
 @router.post("/request")
-async def generation_request(
+def generation_request(
     request: GenerationRequestRequest,
     user_id: int = Depends(validate_user_token),
     service: RequestGenerationService = Depends(get_request_generation_service)
 ) -> GenerationRequestResponse:
-    return await service.request_generation(request, user_id)
+    return service.request_generation(request, user_id)
 
 @router.get("/request-info/all/preview")
 def get_generation_request_info_previews(

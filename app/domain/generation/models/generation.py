@@ -51,8 +51,8 @@ class GenerationJob(TimeStampModel):
     prompt = Column(String(1024), nullable=False)
 
     is_user_hair_style = Column(Boolean, nullable=False)
-    user_hair_lora_model_s3_key = Column(String(1024), nullable=True)
-    hair_lora_model_name = Column(String(1024), nullable=False)
+    lora_model_s3_key = Column(String(1024), nullable=True)
+    lora_model_name = Column(String(1024), nullable=True) # nullable for backwards compatibility
 
     distilled_cfg_scale = Column(Float, nullable=False)
     width = Column(Integer, nullable=False)

@@ -2,7 +2,6 @@ from google import genai
 from google.genai import types
 import os
 from pydantic import BaseModel
-import asyncio
 from functools import partial
 
 class GoogleGenaiConfig(BaseModel):
@@ -22,12 +21,3 @@ def gemini_translate_prompt(korean_prompt: str) -> str:
         contents=korean_prompt,
     )
     return response.text
-
-async def async_gemini_translate_prompt(korean_prompt: str) -> str:
-    """
-    비동기 환경에서 Gemini API 호출을 위한 래퍼 함수
-    """
-    # run_in_executor를 사용하여 동기식 함수를 비동기 컨텍스트에서 실행
-    loop = asyncio.get_event_loop()
-    func = partial(gemini_translate_prompt, korean_prompt)
-    return await loop.run_in_executor(None, func)

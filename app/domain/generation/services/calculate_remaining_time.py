@@ -75,22 +75,23 @@ class CalculateRemainingTimeService:
     def get_generation_job_expire_time(
             self,
             is_high_resolution: bool,
-            generation_consumer_count: int,
-            upscale_consumer_count: int,
             image_count: int = image_generation_settings.GENERATED_IMAGE_CNT_PER_REQUEST,
         ) -> int:
         generation_duration = self._get_single_generation_duration(is_high_resolution, image_count)
         upscale_duration = self._get_single_upscale_duration(image_count)
         """
-        업스케일 시작까지 예상 대기 시간 = MAX((생성 작업 대기 시간 + 현재 이미지 작업 시간), (업스케일 대기 시간)
-        업스케일 종료까지 예상 대기 시간 = (업스케일 시작까지 예상 대기 시간 + 업스케일 작업 시간) * 여유 버퍼 (1.2)
+        업스케일 시작까지 예상 대기 시간 = MAX((생성 작업 대기 시간 + 현재 이미지 작업 시간 + replicate 서버 설정 시간), (업스케일 대기 시간)
+        업스케일 종료까지 예상 대기 시간 = (업스케일 시작까지 예상 대기 시간 + 업스케일 작업 시간) + replicate 서버 설정 시간
         """
         generation_wait_time, upscale_wait_time = self.get_generation_upscale_wait_time(
-            generation_consumer_count=generation_consumer_count,
-            upscale_consumer_count=upscale_consumer_count,
+            generation_consumer_count=image_generation_settings.GENERATION_SERVER_COUNT,
+            upscale_consumer_count=image_generation_settings.UPSCALE_SERVER_COUNT,
         )
-        wait_time_until_upscale_start = max(generation_wait_time + generation_duration, upscale_wait_time)
-        wait_time_until_upscale_end = wait_time_until_upscale_start + upscale_duration
+        wait_time_until_upscale_start = max(
+            generation_wait_time + generation_duration + image_generation_settings.REPLICATE_SERVER_SETUP_SEC_EST,
+            upscale_wait_time
+        )
+        wait_time_until_upscale_end = wait_time_until_upscale_start + upscale_duration + image_generation_settings.REPLICATE_SERVER_SETUP_SEC_EST
 
         return int(wait_time_until_upscale_end * image_generation_settings.IMAGE_GENERATION_JOB_EXPIRE_TIME_MULTIPLIER)
 

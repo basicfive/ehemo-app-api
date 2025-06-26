@@ -1,5 +1,5 @@
-from typing import Callable
+# from typing import Callable
 
-class BaseRouter:
-    def handle(self, body: bytes) -> Callable:
-        raise NotImplementedError
+# class BaseRouter:
+#     def handle(self, body: bytes) -> Callable:
+#         raise NotImplementedError

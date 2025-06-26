@@ -81,11 +81,15 @@ class ImageGenerationSetting(BaseModel):
     GENERATED_IMAGE_CNT_PER_REQUEST: int = 4
     DISTILLED_CFG_SCALE: float = 2.0
 
+    GENERATION_SERVER_COUNT: int = 1
+    UPSCALE_SERVER_COUNT: int = 1
+
     # SINGLE_INFERENCE_SEC_EST: int = 1000
+    REPLICATE_SERVER_SETUP_SEC_EST: int = 60 * 5 # 5 minutes
     SINGLE_INFERENCE_SEC_EST: int = 30
     SINGLE_INFERENCE_HIGH_RES_SEC_EST: int = 60
     
-    SINGLE_INFERENCE_UPSCALE_SEC_EST: int = 180
+    SINGLE_INFERENCE_UPSCALE_SEC_EST: int = 60
     # SINGLE_INFERENCE_UPSCALE_SEC_EST: int = 10
 
     IMAGE_GENERATION_JOB_EXPIRE_TIME_MULTIPLIER: float = 1.2
@@ -120,6 +124,14 @@ class VersioningSetting(BaseModel):
     APP_VERSION_IOS_STORE_URL: str = os.getenv("APP_VERSION_IOS_STORE_URL")
     APP_VERSION_ANDROID_STORE_URL: str = os.getenv("APP_VERSION_ANDROID_STORE_URL")
 
+class ReplicateSetting(BaseModel):
+    REPLICATE_GENERATION_MODEL: str = os.getenv("REPLICATE_GENERATION_MODEL")
+    REPLICATE_GENERATION_WEBHOOK_URL: str = os.getenv("REPLICATE_GENERATION_WEBHOOK_URL")
+
+    REPLICATE_UPSCALE_MODEL: str = os.getenv("REPLICATE_UPSCALE_MODEL")
+    REPLICATE_UPSCALE_WEBHOOK_URL: str = os.getenv("REPLICATE_UPSCALE_WEBHOOK_URL")
+
+
 base_settings = BaseSetting()
 rabbit_mq_settings = RabbitMQSetting()
 redis_settings = RedisSetting()
@@ -132,3 +144,4 @@ revenuecat_settings = RevenueCatSetting()
 timezone_settings = TimezoneSetting()
 training_settings = TrainingSetting()
 versioning_settings = VersioningSetting()
+replicate_settings = ReplicateSetting()

@@ -13,8 +13,8 @@ class GenerationJobCreate(BaseModel):
     prompt: str
 
     is_user_hair_style: bool
-    user_hair_lora_model_s3_key: Optional[str] = None
-    hair_lora_model_name: str
+    lora_model_s3_key: str
+    lora_model_name: str
 
     distilled_cfg_scale: float
     width: int
@@ -42,8 +42,8 @@ class GenerationJobInDB(BaseModel):
     image_count: int
     prompt: str
     is_user_hair_style: bool
-    user_hair_lora_model_s3_key: Optional[str] = None
-    hair_lora_model_name: str
+    lora_model_s3_key: Optional[str] = None # nullable for backwards compatibility
+    lora_model_name: Optional[str] = None # nullable for backwards compatibility
 
     distilled_cfg_scale: float
     width: int

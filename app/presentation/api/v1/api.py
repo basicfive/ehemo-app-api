@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from app.presentation.api.v1.endpoints.dev.user import auth as dev_auth
 
 from app.presentation.api.v1.endpoints.prod.generated_image import generated_image
-from app.presentation.api.v1.endpoints.prod.generation import request, options
+from app.presentation.api.v1.endpoints.prod.generation import request, options, webhook
 from app.presentation.api.v1.endpoints.prod.user import auth as prod_auth
 from app.presentation.api.v1.endpoints.prod.user import user
 from app.presentation.api.v1.endpoints.prod.user import deletion_survey
@@ -20,6 +20,7 @@ router.include_router(store_url.router, prefix="/prod/store", tags=['store'])
 
 router.include_router(request.router, prefix="/prod/generation", tags=['generation'])
 router.include_router(options.router, prefix="/prod/generation", tags=['generation'])
+router.include_router(webhook.router, prefix="/prod/generation", tags=['generation'])
 
 router.include_router(prod_auth.router, prefix="/prod/user", tags=['user'])
 router.include_router(user.router, prefix="/prod/user", tags=['user'])
