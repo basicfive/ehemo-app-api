@@ -31,6 +31,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+
 app.add_middleware(ConcurrentRequestMiddleware, max_concurrent=15)
 app.add_exception_handler(Exception, handle_general_exception)
 app.include_router(router, prefix=base_settings.API_V1_STR)
