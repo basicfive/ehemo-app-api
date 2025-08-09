@@ -7,6 +7,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
     - uses: actions/checkout@v3
@@ -17,7 +20,7 @@ jobs:
         # SSH 키 저장을 위한 디렉토리 생성
         mkdir -p $HOME/.ssh
         
-        echo "DOCKER_IMAGE=ghcr.io/${{ github.actor }}/ehemo-app-api" >> $GITHUB_ENV
+        echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/ehemo-app-api" >> $GITHUB_ENV
         
         # 브랜치별 환경 설정
         if [[ ${{ github.ref }} == 'refs/heads/prod' ]]; then
@@ -27,7 +30,7 @@ jobs:
           
           # 환경 변수 설정
           {
-            echo "GITHUB_TOKEN=${{ secrets.GHCR_TOKEN }}"
+            echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}"
             echo "AWS_REGION=${{ secrets.PROD_AWS_REGION }}"
             echo "AWS_ACCESS_KEY=${{ secrets.PROD_AWS_ACCESS_KEY }}"
             echo "AWS_SECRET_KEY=${{ secrets.PROD_AWS_SECRET_KEY }}"
@@ -49,7 +52,7 @@ jobs:
           
           # 환경 변수 설정
           {
-            echo "GITHUB_TOKEN=${{ secrets.GHCR_TOKEN }}"
+            echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}"
             echo "AWS_REGION=${{ secrets.DEV_AWS_REGION }}"
             echo "AWS_ACCESS_KEY=${{ secrets.DEV_AWS_ACCESS_KEY }}"
             echo "AWS_SECRET_KEY=${{ secrets.DEV_AWS_SECRET_KEY }}"
@@ -75,10 +78,11 @@ jobs:
       uses: docker/login-action@v2
       with:
         registry: ghcr.io
-        username: ${{ github.actor }}
+        username: ${{ github.repository_owner }}
         password: ${{ env.GITHUB_TOKEN }}
 
     - name: Build and push Docker image
+      id: docker_build
       uses: docker/build-push-action@v4
       with:
         context: .
@@ -91,7 +95,7 @@ jobs:
       run: echo ${{ steps.docker_build.outputs.digest }}
 
     - name: Get Github action IP
-      run: echo "IP=$(curl -s ifconfig.me)" >> $GITHUB_ENV
+      run: echo "IP=$(curl -s https://api.ipify.org)" >> $GITHUB_ENV
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -141,11 +145,11 @@ jobs:
         
         # GHCR 로그인
         echo "Logging into GHCR..."
-        echo "${{ env.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        echo "${{ env.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
         
         # 1. 컨테이너 중지
         echo "Stopping containers..."
-        docker-compose down
+        docker compose down
         
         # 2. 기존 서버 이미지 삭제
         echo "Removing existing server image..."
@@ -161,13 +165,13 @@ jobs:
         
         # 4. 컨테이너 시작
         echo "Starting containers..."
-        if ! docker-compose up -d; then
+        if ! docker compose up -d; then
           echo "Failed to start containers"
           exit 1
         fi
         
         echo "=== Final Container Status ==="
-        docker-compose ps
+        docker compose ps
         ENDSSH
 
     - name: Remove IP from bastion security group
