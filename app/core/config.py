@@ -12,6 +12,7 @@ class BaseSetting(BaseModel):
     API_V1_STR: str = "/api/v1"
     DATABASE_URL: str = os.getenv("DATABASE_URL")
     ALERT_DISCORD_WEBHOOK: str = os.getenv("ALERT_DISCORD_WEBHOOK")
+    SERVER_ENDPOINT: str = os.getenv("SERVER_ENDPOINT")
 
 class RabbitMQSetting(BaseSetting):
     RABBITMQ_HOST: str = os.getenv('RABBITMQ_HOST')
@@ -50,6 +51,10 @@ class AWSS3Setting(BaseSetting):
 
     PRESIGNED_URL_EXPIRATION_SEC: int = 3600
 
+class RunpodSetting(BaseModel):
+    RUNPOD_API_KEY: str = os.getenv("RUNPOD_API_KEY")
+    RUNPOD_ENDPOINT: str = os.getenv("RUNPOD_ENDPOINT")
+
 class JwtSetting(BaseModel):
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY")
 
@@ -78,7 +83,7 @@ class OAuthSetting(BaseModel):
     KAKAO_CLIENT_SECRET: str = os.getenv("KAKAO_CLIENT_SECRET")
 
 class ImageGenerationSetting(BaseModel):
-    GENERATED_IMAGE_CNT_PER_REQUEST: int = 4
+    GENERATED_IMAGE_CNT_PER_REQUEST: int = 8
     DISTILLED_CFG_SCALE: float = 2.0
 
     GENERATION_SERVER_COUNT: int = 1
@@ -124,12 +129,12 @@ class VersioningSetting(BaseModel):
     APP_VERSION_IOS_STORE_URL: str = os.getenv("APP_VERSION_IOS_STORE_URL")
     APP_VERSION_ANDROID_STORE_URL: str = os.getenv("APP_VERSION_ANDROID_STORE_URL")
 
-class ReplicateSetting(BaseModel):
-    REPLICATE_GENERATION_MODEL: str = os.getenv("REPLICATE_GENERATION_MODEL")
-    REPLICATE_GENERATION_WEBHOOK_URL: str = os.getenv("REPLICATE_GENERATION_WEBHOOK_URL")
+# class ReplicateSetting(BaseModel):
+#     REPLICATE_GENERATION_MODEL: str = os.getenv("REPLICATE_GENERATION_MODEL")
+#     REPLICATE_GENERATION_WEBHOOK_URL: str = os.getenv("REPLICATE_GENERATION_WEBHOOK_URL")
 
-    REPLICATE_UPSCALE_MODEL: str = os.getenv("REPLICATE_UPSCALE_MODEL")
-    REPLICATE_UPSCALE_WEBHOOK_URL: str = os.getenv("REPLICATE_UPSCALE_WEBHOOK_URL")
+#     REPLICATE_UPSCALE_MODEL: str = os.getenv("REPLICATE_UPSCALE_MODEL")
+#     REPLICATE_UPSCALE_WEBHOOK_URL: str = os.getenv("REPLICATE_UPSCALE_WEBHOOK_URL")
 
 
 base_settings = BaseSetting()
@@ -144,4 +149,4 @@ revenuecat_settings = RevenueCatSetting()
 timezone_settings = TimezoneSetting()
 training_settings = TrainingSetting()
 versioning_settings = VersioningSetting()
-replicate_settings = ReplicateSetting()
+runpod_settings = RunpodSetting()

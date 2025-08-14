@@ -57,6 +57,7 @@ class GenerationJob(TimeStampModel):
     distilled_cfg_scale = Column(Float, nullable=False)
     width = Column(Integer, nullable=False)
     height = Column(Integer, nullable=False)
+    is_high_res = Column(Boolean, nullable=True) # TODO: nullable for backwards compatibility
 
     is_user_reference_image = Column(Boolean, nullable=False)
     user_reference_image_s3_key = Column(String(1024), nullable=True)

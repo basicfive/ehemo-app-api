@@ -1,4 +1,5 @@
-from typing import Tuple
+from typing import List, Optional
+import logging
 
 from app.infrastructure.s3.s3_client import S3Client
 from app.domain.generation.schemas.generation.generation_job import GenerationJobInDB
@@ -6,6 +7,7 @@ from app.domain.generation.services.calculate_remaining_time import CalculateRem
 from app.application.generation.request.dto.generation_mq import ImageInfo, GenerationPublishMessage
 from app.domain.generation.dto.request_generation import RequestGenerationDto
 from app.domain.generation.services.build_prompt import replace_hair_with_ohwx_hair, BuildPromptService
+from app.domain.generation.services.reference_image_preprocess import ReferenceImagePreprocessService
 from app.infrastructure.google_genai.genai_api import gemini_translate_prompt
 from app.domain.common.enums.gender import Gender
 from app.domain.generation.services.calculate_token import calculate_token_cost
@@ -22,8 +24,12 @@ from app.domain.generation.services.generation_request_service import Generation
 from app.application.generation.request.dto.request import GenerationRequestRequest, GenerationRequestResponse
 from app.application.generation.request.dto.request import ImageUploadUrlDto
 from app.domain.generation.services.reference_image import create_reference_image_s3_key
-from app.infrastructure.replicate.replicate import replicate_predict
-from app.core.config import replicate_settings
+from app.infrastructure.runpod.runpod_inference import request_runpod
+from app.infrastructure.runpod.dto import InferencePayload, Output
+from app.core.config import base_settings
+from app.domain.generation.models.generation import GenerationRequest
+from app.domain.generation.models.generation import GenerationJob
+from app.domain.generation.models.generated_image import GeneratedImage
 
 class RequestGenerationService(TransactionalService):
     def __init__(
@@ -35,6 +41,7 @@ class RequestGenerationService(TransactionalService):
             build_prompt_service: BuildPromptService,
             s3_client: S3Client,
             unit_of_work: UnitOfWork,
+            reference_image_preprocess_service: ReferenceImagePreprocessService,
     ):
         super().__init__(unit_of_work)
         self.user_repo = user_repo
@@ -43,6 +50,19 @@ class RequestGenerationService(TransactionalService):
         self.generation_request_serivce = generation_request_serivce
         self.build_prompt_service = build_prompt_service
         self.s3_client = s3_client
+        self.reference_image_preprocess_service = reference_image_preprocess_service
+
+    def _maybe_downscale_reference_image(self, s3_key: str) -> None:
+        try:
+            image_bytes: Optional[bytes] = self.s3_client.get_object_bytes(s3_key)
+            if not image_bytes:
+                return
+            processed: Optional[bytes] = self.reference_image_preprocess_service.maybe_downscale(image_bytes)
+            if processed is None:
+                return
+            self.s3_client.upload_to_s3(key=s3_key, image_data=processed, image_format='JPEG')
+        except Exception as e:
+            logging.exception("Failed to downscale reference image: %s", e)
 
     def calculate_token_cost(self,
             is_high_res: bool,
@@ -57,6 +77,47 @@ class RequestGenerationService(TransactionalService):
             upload_url=upload_url,
             s3_key=s3_key,
         )
+
+    def _build_runpod_request(
+            self,
+            generation_request: GenerationRequest,
+            generation_job: GenerationJob,
+            generated_images: List[GeneratedImage],
+    ) -> InferencePayload:
+
+        denoise = generation_job.user_reference_image_denoise_strength 
+        if denoise is None:
+            denoise = 1.0
+        if generation_job.is_user_reference_image:
+            image_url = self.s3_client.create_get_presigned_url(generation_job.user_reference_image_s3_key)
+            width = None
+            height = None
+        else:
+            image_url = None
+            width = generation_job.width
+            height = generation_job.height
+        
+        return InferencePayload(
+            job_id=generation_job.id,
+            webhook_url=f"{base_settings.SERVER_ENDPOINT}{base_settings.API_V1_STR}/prod/generation/webhook/runpod",
+            outputs=[
+                Output(
+                    upload_url=self.s3_client.create_put_presigned_url(generated_image.upscaled_s3_key),
+                    image_format="JPEG",
+                )
+                for generated_image in generated_images
+            ],
+            is_img2img=generation_request.is_user_reference_image,
+            image_url=image_url,
+            width=width,
+            height=height,
+            iterations=generation_job.image_count,
+            is_upscale=generation_job.is_high_res,
+            prompt=generation_job.prompt,
+            lora_name=f"{generation_job.lora_model_name}.safetensors", # TODO: 하드 코딩 개선
+            denoise=denoise,
+        )
+        
 
     @transactional
     def request_generation(
@@ -73,6 +134,10 @@ class RequestGenerationService(TransactionalService):
 
         if not token_wallet.has_available_token(consumed_token):
             raise UserHasNotEnoughTokenException()
+
+        # 참조 이미지가 있으면 필요 시 다운스케일 후 동일 키로 덮어쓰기
+        if request.is_user_reference_image and request.user_reference_image_s3_key:
+            self._maybe_downscale_reference_image(request.user_reference_image_s3_key)
 
         # 프롬프트 제작
         english_prompt = self._build_prompt(request)
@@ -100,24 +165,15 @@ class RequestGenerationService(TransactionalService):
 
         # 메시지 생성
         generation_job_indb = GenerationJobInDB.model_validate(generation_job)
-        message = GenerationPublishMessage(
-            generation_job_id=generation_job.id,
-            image_info_list=[
-                ImageInfo(
-                    generated_image_id=generated_image.id,
-                    s3_key=generated_image.s3_key,
-                )
-                for generated_image in generated_images
-            ],
-            **generation_job_indb.model_dump(),
-            time_to_live_sec=generation_job_expire_time,
+
+        payload = self._build_runpod_request(
+            generation_request=generation_request,
+            generation_job=generation_job,
+            generated_images=generated_images,
         )
+
         # 생성 요청 전송
-        replicate_predict(
-            replicate_model=replicate_settings.REPLICATE_GENERATION_MODEL,
-            message=message.model_dump_json(),
-            webhook_url=replicate_settings.REPLICATE_GENERATION_WEBHOOK_URL,
-        )
+        request_runpod(payload=payload)
 
         return GenerationRequestResponse(
             generation_request_id=generation_request.id,
@@ -154,6 +210,7 @@ from app.domain.generation.services.calculate_remaining_time import get_calculat
 from app.domain.generation.services.generation_request_service import get_generation_request_service
 from app.domain.generation.services.build_prompt import get_build_prompt_service
 from app.infrastructure.s3.s3_client import get_s3_client
+from app.domain.generation.services.reference_image_preprocess import get_reference_image_preprocess_service
 
 def get_request_generation_service(
         user_repo: UserRepository = Depends(get_user_repository),
@@ -163,6 +220,7 @@ def get_request_generation_service(
         build_prompt_service: BuildPromptService = Depends(get_build_prompt_service),
         s3_client: S3Client = Depends(get_s3_client),
         unit_of_work: UnitOfWork = Depends(get_unit_of_work),
+        reference_image_preprocess_service: ReferenceImagePreprocessService = Depends(get_reference_image_preprocess_service),
 ) -> RequestGenerationService:
     return RequestGenerationService(
         user_repo=user_repo,
@@ -172,5 +230,6 @@ def get_request_generation_service(
         build_prompt_service=build_prompt_service,
         s3_client=s3_client,
         unit_of_work=unit_of_work,
+        reference_image_preprocess_service=reference_image_preprocess_service,
     )
 

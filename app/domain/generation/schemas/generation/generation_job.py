@@ -26,6 +26,8 @@ class GenerationJobCreate(BaseModel):
 
     generation_request_id: int
 
+    is_high_res: bool
+
 
 class GenerationJobUpdate(BaseModel):
     status: Optional[GenerationJobStatus] = None
@@ -48,7 +50,8 @@ class GenerationJobInDB(BaseModel):
     distilled_cfg_scale: float
     width: int
     height: int
-
+    is_high_res: Optional[bool] = None # TODO: nullable for backwards compatibility
+    
     is_user_reference_image: bool
     user_reference_image_s3_key: Optional[str] = None
     user_reference_image_denoise_strength: Optional[float] = None

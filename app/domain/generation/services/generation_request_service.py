@@ -213,6 +213,7 @@ class GenerationRequestService:
                 distilled_cfg_scale=image_generation_settings.DISTILLED_CFG_SCALE,
                 width=width,
                 height=height,
+                is_high_res=image_resolution.is_high_resolution,
 
                 is_user_reference_image=generation_request.is_user_reference_image,
                 user_reference_image_s3_key=generation_request.user_reference_image_s3_key,
