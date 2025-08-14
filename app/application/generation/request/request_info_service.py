@@ -122,7 +122,7 @@ class GenerationRequestInfoService(TransactionalService):
 
         return GenerationRequestInfoPreview(
             generation_request_id=generation_request.id,
-            thumbnail_url=self.s3_client.create_get_presigned_url(generated_image.s3_key),
+            thumbnail_url=self.s3_client.create_get_presigned_url(generated_image.upscaled_s3_key),
             created_at=generation_request.created_at,
             result=generation_request.result,
             hair_style_name=hair_style_name,
@@ -170,7 +170,7 @@ class GenerationRequestInfoService(TransactionalService):
                 selected_options += f"{request_prompt_component_question_answer.answer}, "
 
             # 생성된 대표 이미지            
-            thumbnail_url: str = self.s3_client.create_get_presigned_url(generated_images_dict[generation_request.id].s3_key)
+            thumbnail_url: str = self.s3_client.create_get_presigned_url(generated_images_dict[generation_request.id].upscaled_s3_key)
 
             generation_request_infos.append(
                 GenerationRequestInfoPreview(
