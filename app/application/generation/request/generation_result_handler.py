@@ -17,6 +17,7 @@ from app.infrastructure.repositories.user.user import UserRepository
 from app.infrastructure.repositories.generation.generation import GenerationRequestRepository
 from app.infrastructure.s3.s3_client import S3Client
 from app.infrastructure.runpod.dto import WebhookResponse
+from app.domain.token.services.token_domain_sevice import TokenService
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ class GenerationResultHandler(TransactionalService):
             user_repo: UserRepository,
             generation_request_service: GenerationRequestService,
             generation_request_repo: GenerationRequestRepository,
+            token_service: TokenService,
             fcm_service: FCMService,
             s3_client: S3Client,
             unit_of_work: UnitOfWork,
@@ -34,6 +36,7 @@ class GenerationResultHandler(TransactionalService):
         self.user_repo = user_repo
         self.generation_request_service = generation_request_service
         self.generation_request_repo = generation_request_repo
+        self.token_service = token_service
         self.fcm_service = fcm_service
         self.s3_client = s3_client
 
@@ -103,11 +106,13 @@ from app.infrastructure.repositories.generation.generation import get_generation
 from app.infrastructure.fcm.fcm_service import get_fcm_service
 from app.infrastructure.s3.s3_client import get_s3_client
 from app.infrastructure.database.unit_of_work import get_unit_of_work
+from app.domain.token.services.token_domain_sevice import get_token_service
 
 def get_generation_result_handler(
         user_repo: UserRepository = Depends(get_user_repository),
         generation_request_service: GenerationRequestService = Depends(get_generation_request_service),
         generation_request_repo: GenerationRequestRepository = Depends(get_generation_request_repository),
+        token_service: TokenService = Depends(get_token_service),
         fcm_service: FCMService = Depends(get_fcm_service),
         s3_client: S3Client = Depends(get_s3_client),
         unit_of_work: UnitOfWork = Depends(get_unit_of_work),
@@ -116,6 +121,7 @@ def get_generation_result_handler(
         user_repo=user_repo,
         generation_request_service=generation_request_service,
         generation_request_repo=generation_request_repo,
+        token_service=token_service,
         fcm_service=fcm_service,
         s3_client=s3_client,
         unit_of_work=unit_of_work,
