@@ -1,6 +1,8 @@
 from typing import List, Optional
 import logging
 
+from app.core.config import base_settings
+from app.infrastructure.alert.discord_webhook import send_error_notification
 from app.infrastructure.s3.s3_client import S3Client
 from app.domain.generation.schemas.generation.generation_job import GenerationJobInDB
 from app.domain.generation.services.calculate_remaining_time import CalculateRemainingTimeService
@@ -63,6 +65,10 @@ class RequestGenerationService(TransactionalService):
             self.s3_client.upload_to_s3(key=s3_key, image_data=processed, image_format='JPEG')
         except Exception as e:
             logging.exception("Failed to downscale reference image: %s", e)
+            send_error_notification(
+                webhook_url=base_settings.ALERT_DISCORD_WEBHOOK,
+                error=e,
+            )
 
     def calculate_token_cost(self,
             is_high_res: bool,

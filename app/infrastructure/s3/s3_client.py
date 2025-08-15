@@ -114,6 +114,23 @@ class S3Client:
             http_method='PUT'
         )
 
+    def get_object_bytes(self, s3_key: str) -> Optional[bytes]:
+        """
+        지정된 S3 키의 객체를 바이트로 다운로드합니다.
+
+        Args:
+            s3_key (str): 다운로드할 S3 객체 키
+
+        Returns:
+            Optional[bytes]: 성공 시 객체 바이트, 실패 시 None
+        """
+        try:
+            response = self.s3_client.get_object(Bucket=self.bucket_name, Key=s3_key)
+            return response['Body'].read()
+        except ClientError as e:
+            logging.error(e)
+            return None
+
     def upload_to_s3(self, key, image_data, image_format='JPEG'):
         """
         이미지 데이터를 S3에 업로드
