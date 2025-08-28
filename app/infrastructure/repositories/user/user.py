@@ -40,6 +40,14 @@ class UserRepository(CRUDRepository[User, UserCreate, UserUpdate]):
             .where(User.uuid == user_uuid)
         )
         return self.db.execute(stmt).unique().scalar_one()
+    
+    def get_by_uuid_with_wallet(self, user_uuid: str) -> User:
+        stmt = (
+            select(User)
+            .options(joinedload(User.token_wallets))
+            .where(User.uuid == user_uuid)
+        )
+        return self.db.execute(stmt).unique().scalar_one()
 
     def get_with_token_wallets(self, user_id: int) -> User:
         stmt = (

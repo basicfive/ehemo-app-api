@@ -11,6 +11,8 @@ from app.presentation.api.v1.endpoints.prod.versioning import app_version
 from app.presentation.api.v1.endpoints.prod.store import store_url
 from app.presentation.api.v1.endpoints.prod.subscription import free_subscription, paid_subscription, plans
 from app.presentation.api.v1.endpoints.prod.user_hair_style import user_hair_style
+from app.presentation.api.v1.endpoints.prod.product import store_product
+from app.presentation.api.v1.endpoints.prod.token import token
 
 router = APIRouter()
 
@@ -35,3 +37,6 @@ router.include_router(app_version.router, prefix="/prod/versioning", tags=['vers
 router.include_router(free_subscription.router, prefix="/prod/subscription", tags=['subscription'])
 router.include_router(paid_subscription.router, prefix="/prod/subscription", tags=['subscription'])
 router.include_router(plans.router, prefix="/prod/subscription", tags=['subscription'])
+
+router.include_router(store_product.router, prefix="/prod/product", tags=['product'])
+router.include_router(token.router, prefix="/prod/token", tags=['token'])

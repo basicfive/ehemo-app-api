@@ -8,8 +8,8 @@ from app.application.subscription.dto.revenue_cat.event import *
 from app.application.transactional_service import TransactionalService
 from app.core.errors.http_exceptions import RevenuecatWebhookException
 from app.core.utils import ms_to_datetime, extract_valid_uuid
-from app.domain import User, SubscriptionPlan, SubscriptionStatus, UserSubscription, TokenWallet, TokenSourceType, \
-    SubscriptionPlanType
+from app.domain import User, SubscriptionPlan, SubscriptionStatus, UserSubscription, TokenWallet, TokenSourceType
+from app.domain.product.models.user_purchase import UserPurchase
 from app.domain.subscription.schemas.user_subscription import UserSubscriptionCreate, UserSubscriptionUpdate
 from app.domain.token.services.refill import calculate_next_refill_date
 from app.domain.token.services.token_domain_sevice import TokenService, get_token_service
@@ -18,22 +18,32 @@ from app.infrastructure.database.unit_of_work import UnitOfWork, get_unit_of_wor
 from app.infrastructure.repositories.subscription.subscription import UserSubscriptionRepository, \
     SubscriptionPlanRepository, get_subscription_plan_repository, get_user_subscription_repository
 from app.infrastructure.repositories.user.user import UserRepository, get_user_repository
-
+from app.domain.product.services.product_purchase_service import ProductPurchaseService
+from app.infrastructure.fcm.fcm_data import FCMData
+from app.infrastructure.fcm.fcm_service import FCMService
+from app.infrastructure.alert.discord_webhook import send_error_notification
+from app.core.config import base_settings
+from app.core.constants import FCMConstants
+from app.infrastructure.fcm.notification_type import NotificationType
 
 class PaidSubscriptionApplicationService(TransactionalService):
     def __init__(
             self,
             user_sub_repo: UserSubscriptionRepository,
             subscription_plan_repo: SubscriptionPlanRepository,
+            product_purchase_service: ProductPurchaseService,
             token_domain_service: TokenService,
             user_repo: UserRepository,
+            fcm_service: FCMService,
             unit_of_work: UnitOfWork,
     ):
         super().__init__(unit_of_work)
         self.user_sub_repo = user_sub_repo
         self.subscription_plan_repo = subscription_plan_repo
+        self.product_purchase_service = product_purchase_service
         self.token_domain_service = token_domain_service
         self.user_repo = user_repo
+        self.fcm_service = fcm_service
         self.logger = logging.getLogger(__name__)
 
     def _get_user_sub_with_validation(self, event: BaseEvent) -> UserSubscription:
@@ -280,6 +290,32 @@ class PaidSubscriptionApplicationService(TransactionalService):
                 latest_transaction_id=event.transaction_id,
             )
         )
+    
+    @transactional
+    def handle_non_renewing_purchase(self, event: NonRenewingPurchase):
+        """일회성 토큰 구매 처리"""
+        user: User = self.user_repo.get_by_uuid_with_wallet(event.app_user_id)
+        wallet: TokenWallet = user.current_token_wallet
+        # 토큰 구매처리
+        user_purchase: UserPurchase = self.product_purchase_service.purchase_product(
+            user_id=user.id,
+            product_id=event.product_id,
+            transaction_id=event.transaction_id,
+        )
+        # 토큰 추가
+        self.token_domain_service.deposit_token(
+            token_wallet=wallet,
+            amount=user_purchase.received_token_amount,
+            source_type=TokenSourceType.STORE_PURCHASE,
+        )
+
+        # 유저에게 충전 알리는 메시지 전송
+        self._send_fcm_message(
+            fcm_token=user.fcm_token,
+            title=FCMConstants.TOKEN_PURCHASE_TITLE,
+            body=FCMConstants.get_token_purchase_body(amount=user_purchase.received_token_amount),
+            data=FCMData(type=NotificationType.TOKEN).model_dump(exclude_none=True),
+        )
 
     @transactional
     def handle_expiration(self, event: Expiration):
@@ -343,12 +379,37 @@ class PaidSubscriptionApplicationService(TransactionalService):
         from_user_wallet: TokenWallet = self.token_domain_service.get_wallet(user_id=from_user.id)
         self.token_domain_service.change_wallet_user(token_wallet=from_user_wallet, user_id=to_user.id)
 
+    def _send_fcm_message(
+        self,
+        fcm_token: str,
+        title: str,
+        body: str,
+        data: Optional[Dict[str, str]] = None
+    ):
+        try:
+            self.fcm_service.send_to_token(
+                token=fcm_token,
+                title=title,
+                body=body,
+                data=data,
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to send FCM message: {e}")
+            send_error_notification(
+                webhook_url=base_settings.ALERT_DISCORD_WEBHOOK,
+                error=e,
+            )
+
+from app.domain.product.services.product_purchase_service import get_product_purchase_service
+from app.infrastructure.fcm.fcm_service import get_fcm_service
 
 def get_paid_subscription_application_service(
         user_sub_repo: UserSubscriptionRepository = Depends(get_user_subscription_repository),
         subscription_plan_repo: SubscriptionPlanRepository = Depends(get_subscription_plan_repository),
         token_domain_service: TokenService = Depends(get_token_service),
         user_repo: UserRepository = Depends(get_user_repository),
+        product_purchase_service: ProductPurchaseService = Depends(get_product_purchase_service),
+        fcm_service: FCMService = Depends(get_fcm_service),
         unit_of_work: UnitOfWork = Depends(get_unit_of_work),
 ) -> PaidSubscriptionApplicationService:
     return PaidSubscriptionApplicationService(
@@ -356,5 +417,7 @@ def get_paid_subscription_application_service(
         subscription_plan_repo=subscription_plan_repo,
         token_domain_service=token_domain_service,
         user_repo=user_repo,
+        product_purchase_service=product_purchase_service,
+        fcm_service=fcm_service,
         unit_of_work=unit_of_work,
     )

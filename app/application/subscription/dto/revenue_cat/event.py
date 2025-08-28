@@ -13,6 +13,7 @@ class EventType(str, Enum):
     PRODUCT_CHANGE = "PRODUCT_CHANGE"
     EXPIRATION = "EXPIRATION"
     TRANSFER = "TRANSFER"
+    NON_RENEWING_PURCHASE = "NON_RENEWING_PURCHASE"
     TEST = "TEST"
 
 class SubscriberAttribute(BaseModel):
@@ -80,6 +81,9 @@ class Expiration(BaseEvent):
     model_config = ConfigDict(extra='ignore')
     expiration_reason: str
 
+class NonRenewingPurchase(BaseEvent):
+    model_config = ConfigDict(extra='ignore')
+    pass
 
 class Transfer(BaseModel):
     model_config = ConfigDict(extra='ignore')
@@ -94,7 +98,6 @@ class Transfer(BaseModel):
     id: str
     app_id: str
 
-
 class EventParser:
     _parsers: Dict[EventType, Type[Union[BaseEvent, Transfer]]] = {
         EventType.INITIAL_PURCHASE: InitialPurchase,
@@ -104,6 +107,7 @@ class EventParser:
         EventType.PRODUCT_CHANGE: ProductChange,
         EventType.EXPIRATION: Expiration,
         EventType.TRANSFER: Transfer,
+        EventType.NON_RENEWING_PURCHASE: NonRenewingPurchase,
         # EventType.TEST: Test
     }
 

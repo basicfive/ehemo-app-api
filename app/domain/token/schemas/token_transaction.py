@@ -1,5 +1,6 @@
 from typing import Optional
 from pydantic import BaseModel
+from datetime import datetime
 
 from app.domain.token.enums.token import TokenTransactionType, TokenSourceType
 
@@ -38,6 +39,9 @@ class TokenTransactionInDB(BaseModel):
     description: Optional[str]
 
     token_wallet_id: int
+
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes=True

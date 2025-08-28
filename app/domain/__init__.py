@@ -17,6 +17,10 @@ from app.domain.training.models.image import *
 from app.domain.training.models.suggestion import *
 from app.domain.training.models.user_hair_style import *
 
+# product
+from app.domain.product.models.user_purchase import *
+from app.domain.product.models.store_product import *
+
 # user
 from app.domain.user.models.user import *
 from app.domain.user.models.deletion_survey import *

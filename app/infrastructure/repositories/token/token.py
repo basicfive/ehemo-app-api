@@ -1,4 +1,5 @@
 from fastapi import Depends
+from typing import List
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -30,6 +31,14 @@ def get_token_wallet_repository(db: Session = Depends(get_db)) -> TokenWalletRep
 class TokenTransactionRepository(CRUDRepository[TokenTransaction, TokenTransactionCreate, TokenTransactionUpdate]):
     def __init__(self, db: Session):
         super().__init__(db=db, model=TokenTransaction)
+    
+    def get_all_by_wallet(self, wallet_id: int) -> List[TokenTransaction]:
+        stmt = (
+            select(TokenTransaction)
+            .where(TokenTransaction.token_wallet_id == wallet_id)
+            .order_by(TokenTransaction.created_at.desc())
+        )
+        return list(self.db.execute(stmt).scalars().all())
 
 def get_token_transaction_repository(db: Session = Depends(get_db)) -> TokenTransactionRepository:
     return TokenTransactionRepository(db=db)

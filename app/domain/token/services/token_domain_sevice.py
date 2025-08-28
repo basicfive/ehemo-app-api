@@ -13,104 +13,103 @@ from app.infrastructure.repositories.token.token import TokenWalletRepository, T
     get_token_wallet_repository, get_token_transaction_repository
 
 """
-token wallet / token transaction 일관성을 유지해야하기 때문에,
-애플리케이션 레이어에서 repo로의 직접 접근을 허용하지 않음.
-이가 코드 레벨에서 드러나도록 구분하는 법에 대한 고민이 필요함.
+TODO: 같은 역할을 하는 메서드가 너무 TransactionType / Description 등의 구분 때문에 중복되고 있음.
+리팩터링 필요함.
 """
 class TokenService:
-   def __init__(
-           self,
-           token_wallet_repo: TokenWalletRepository,
-           token_transaction_repo: TokenTransactionRepository,
-   ):
-       self.token_wallet_repo = token_wallet_repo
-       self.token_transaction_repo = token_transaction_repo
+    def __init__(
+            self,
+            token_wallet_repo: TokenWalletRepository,
+            token_transaction_repo: TokenTransactionRepository,
+    ):
+        self.token_wallet_repo = token_wallet_repo
+        self.token_transaction_repo = token_transaction_repo
 
-   def get_wallet(self, user_id: int) -> TokenWallet:
-       return self.token_wallet_repo.get_current_by_user(user_id)
+    def get_wallet(self, user_id: int) -> TokenWallet:
+        return self.token_wallet_repo.get_current_by_user(user_id)
 
-   def create_wallet_with_flush(self, wallet_create: TokenWalletCreate) -> TokenWallet:
-       return self.token_wallet_repo.create_with_flush(obj_in=wallet_create)
+    def create_wallet_with_flush(self, wallet_create: TokenWalletCreate) -> TokenWallet:
+        return self.token_wallet_repo.create_with_flush(obj_in=wallet_create)
 
-   def change_wallet_user(self, token_wallet: TokenWallet, user_id: int):
-       return self.token_wallet_repo.update(
-           obj_id=token_wallet.id,
-           obj_in=TokenWalletUpdate(user_id=user_id)
-       )
+    def change_wallet_user(self, token_wallet: TokenWallet, user_id: int):
+        return self.token_wallet_repo.update(
+            obj_id=token_wallet.id,
+            obj_in=TokenWalletUpdate(user_id=user_id)
+        )
 
-   def disable_wallet(self, token_wallet: TokenWallet):
-       return self.token_wallet_repo.update(
-           obj_id=token_wallet.id,
-           obj_in=TokenWalletUpdate(is_current=False)
-       )
+    def disable_wallet(self, token_wallet: TokenWallet):
+        return self.token_wallet_repo.update(
+            obj_id=token_wallet.id,
+            obj_in=TokenWalletUpdate(is_current=False)
+        )
 
-   def create_and_init_wallet(
-           self,
-           fill_amount: int,
-           user_id: int,
-           user_subscription_id: int,
-           next_refill_date: datetime,
-           current_time: datetime,
-   ) -> TokenWallet:
-       token_wallet = self.token_wallet_repo.create_with_flush(
-           obj_in=TokenWalletCreate(
-               remaining_token=0,
-               is_current=True,
-               total_received_tokens=0,
-               next_refill_date=next_refill_date,
-               last_refill_date=current_time,
-               user_id=user_id,
-               user_subscription_id=user_subscription_id,
-           )
-       )
-       self.refill_token(
-           token_wallet=token_wallet,
-           amount=fill_amount,
-           next_refill_date=next_refill_date,
-           current_time=current_time,
-           source_type=TokenSourceType.INITIAL,
-       )
-       return token_wallet
+    def create_and_init_wallet(
+            self,
+            fill_amount: int,
+            user_id: int,
+            user_subscription_id: int,
+            next_refill_date: datetime,
+            current_time: datetime,
+    ) -> TokenWallet:
+        token_wallet = self.token_wallet_repo.create_with_flush(
+            obj_in=TokenWalletCreate(
+                remaining_token=0,
+                is_current=True,
+                total_received_tokens=0,
+                next_refill_date=next_refill_date,
+                last_refill_date=current_time,
+                user_id=user_id,
+                user_subscription_id=user_subscription_id,
+            )
+        )
+        self.refill_token(
+            token_wallet=token_wallet,
+            amount=fill_amount,
+            next_refill_date=next_refill_date,
+            current_time=current_time,
+            source_type=TokenSourceType.INITIAL,
+        )
+        return token_wallet
 
-   def consume_token(
-           self,
-           token_wallet: TokenWallet,
-           amount: int,
-           source_type: TokenSourceType,
-           description: Optional[str] = TokenTransactionConstants.CONSUME_MESSAGE,
-   ) -> Tuple[TokenWallet, TokenTransaction]:
-       if amount < 0:
-           ValueError(f"amount should always be a positive number, amount: {amount}")
+    def consume_token(
+            self,
+            token_wallet: TokenWallet,
+            amount: int,
+            source_type: TokenSourceType,
+            description: Optional[str] = TokenTransactionConstants.CONSUME_MESSAGE,
+    ) -> Tuple[TokenWallet, TokenTransaction]:
+        if amount < 0:
+            ValueError(f"amount should always be a positive number, amount: {amount}")
 
-       current_token = token_wallet.remaining_token
-       token_wallet: TokenWallet = self.token_wallet_repo.update_with_flush(
-           obj_id=token_wallet.id,
-           obj_in=TokenWalletUpdate(
-               remaining_token=current_token - amount
-           )
-       )
+        current_token = token_wallet.remaining_token
+        token_wallet: TokenWallet = self.token_wallet_repo.update_with_flush(
+            obj_id=token_wallet.id,
+            obj_in=TokenWalletUpdate(
+                remaining_token=current_token - amount
+            )
+        )
 
-       token_transaction: TokenTransaction = self.token_transaction_repo.create_with_flush(
-           obj_in=TokenTransactionCreate(
-               transaction_type=TokenTransactionType.USE,
-               source_type=source_type,
-               amount=-amount,
-               balance_before=current_token,
-               balance_after=current_token - amount,
-               description=description,
-               token_wallet_id=token_wallet.id,
-           )
-       )
+        token_transaction: TokenTransaction = self.token_transaction_repo.create_with_flush(
+            obj_in=TokenTransactionCreate(
+                transaction_type=TokenTransactionType.USE,
+                source_type=source_type,
+                amount=-amount,
+                balance_before=current_token,
+                balance_after=current_token - amount,
+                description=description,
+                token_wallet_id=token_wallet.id,
+            )
+        )
 
-       return token_wallet, token_transaction
-
-   def refund_token(
-           self,
-           token_wallet: TokenWallet,
-           amount: int,
-           source_type: TokenSourceType,
-           description: Optional[str] = TokenTransactionConstants.REFUND_MESSAGE,
-   ) -> Tuple[TokenWallet, TokenTransaction]:
+        return token_wallet, token_transaction
+        
+    def deposit_token(
+            self,
+            token_wallet: TokenWallet,
+            amount: int,
+            source_type: TokenSourceType,
+            description: Optional[str] = TokenTransactionConstants.DEPOSIT_MESSAGE,
+    ) -> Tuple[TokenWallet, TokenTransaction]:
        if amount < 0:
            ValueError(f"amount should always be a positive number, amount: {amount}")
 
@@ -124,7 +123,7 @@ class TokenService:
 
        token_transaction: TokenTransaction = self.token_transaction_repo.create_with_flush(
            obj_in=TokenTransactionCreate(
-               transaction_type=TokenTransactionType.REFUND,
+               transaction_type=TokenTransactionType.DEPOSIT,
                source_type=source_type,
                amount=amount,
                balance_before=current_token,
@@ -136,42 +135,74 @@ class TokenService:
 
        return token_wallet, token_transaction
 
-   def refill_token(
-           self,
-           token_wallet: TokenWallet,
-           amount: int,
-           next_refill_date: datetime,
-           current_time: datetime,
-           source_type: TokenSourceType,
-           description: Optional[str] = TokenTransactionConstants.REFILL_MESSAGE,
-   ) -> Tuple[TokenWallet, TokenTransaction]:
-       if amount < 0:
-           ValueError(f"amount should always be a positive number, amount: {amount}")
+    def refund_token(
+            self,
+            token_wallet: TokenWallet,
+            amount: int,
+            source_type: TokenSourceType,
+            description: Optional[str] = TokenTransactionConstants.REFUND_MESSAGE,
+    ) -> Tuple[TokenWallet, TokenTransaction]:
+        if amount < 0:
+            ValueError(f"amount should always be a positive number, amount: {amount}")
 
-       current_token = token_wallet.remaining_token
-       token_wallet: TokenWallet = self.token_wallet_repo.update_with_flush(
-           obj_id=token_wallet.id,
-           obj_in=TokenWalletUpdate(
-               remaining_token=amount,
-               total_received_tokens=token_wallet.total_received_tokens + amount,
-               next_refill_date=next_refill_date,
-               last_refill_date=current_time,
-           )
-       )
+        current_token = token_wallet.remaining_token
+        token_wallet: TokenWallet = self.token_wallet_repo.update_with_flush(
+            obj_id=token_wallet.id,
+            obj_in=TokenWalletUpdate(
+                remaining_token=current_token + amount
+            )
+        )
 
-       token_transaction: TokenTransaction = self.token_transaction_repo.create_with_flush(
-           obj_in=TokenTransactionCreate(
-               transaction_type=TokenTransactionType.REFILL,
-               source_type=source_type,
-               amount=amount,
-               balance_before=current_token,
-               balance_after=current_token + amount,
-               description=description,
-               token_wallet_id=token_wallet.id,
-           )
-       )
+        token_transaction: TokenTransaction = self.token_transaction_repo.create_with_flush(
+            obj_in=TokenTransactionCreate(
+                transaction_type=TokenTransactionType.REFUND,
+                source_type=source_type,
+                amount=amount,
+                balance_before=current_token,
+                balance_after=current_token + amount,
+                description=description,
+                token_wallet_id=token_wallet.id,
+            )
+        )
 
-       return token_wallet, token_transaction
+        return token_wallet, token_transaction
+
+    def refill_token(
+            self,
+            token_wallet: TokenWallet,
+            amount: int,
+            next_refill_date: datetime,
+            current_time: datetime,
+            source_type: TokenSourceType,
+            description: Optional[str] = TokenTransactionConstants.REFILL_MESSAGE,
+    ) -> Tuple[TokenWallet, TokenTransaction]:
+        if amount < 0:
+            ValueError(f"amount should always be a positive number, amount: {amount}")
+
+        current_token = token_wallet.remaining_token
+        token_wallet: TokenWallet = self.token_wallet_repo.update_with_flush(
+            obj_id=token_wallet.id,
+            obj_in=TokenWalletUpdate(
+                remaining_token=amount,
+                total_received_tokens=token_wallet.total_received_tokens + amount,
+                next_refill_date=next_refill_date,
+                last_refill_date=current_time,
+            )
+        )
+
+        token_transaction: TokenTransaction = self.token_transaction_repo.create_with_flush(
+            obj_in=TokenTransactionCreate(
+                transaction_type=TokenTransactionType.REFILL,
+                source_type=source_type,
+                amount=amount,
+                balance_before=current_token,
+                balance_after=current_token + amount,
+                description=description,
+                token_wallet_id=token_wallet.id,
+            )
+        )
+
+        return token_wallet, token_transaction
 
 
 def get_token_service(

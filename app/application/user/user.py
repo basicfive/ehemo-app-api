@@ -1,7 +1,7 @@
 from fastapi import Depends
 
 from app.application.transactional_service import TransactionalService
-from app.application.user.dto.user_info import UserInfoResponse, UserTokenResponse
+from app.application.user.dto.user_info import UserInfoResponse
 from app.domain.user.models.user import User
 from app.domain.user.schemas.user import UserUpdate
 from app.infrastructure.database.transaction import transactional
@@ -17,10 +17,6 @@ class UserApplicationService(TransactionalService):
     ):
         super().__init__(unit_of_work)
         self.user_repo = user_repo
-
-    def get_user_token(self, user_id: int) -> UserTokenResponse:
-        user_with_wallet: User = self.user_repo.get_with_token_wallets(user_id=user_id)
-        return UserTokenResponse(token=user_with_wallet.current_token_wallet.remaining_token)
 
     def get_user_info(self, user_id: int) -> UserInfoResponse:
         user: User = self.user_repo.get(obj_id=user_id)
